@@ -1,0 +1,17 @@
+ventures:
+  - name: Founder HQ
+    path: context/founder-hq_v0.41/
+    sot: founder-hq-context.yaml
+    changelog: CHANGELOG.md
+  - name: Operations Studio
+    path: context/ops-studio_v0.1/
+    sot: ops-studio_spec.md
+  - name: Digital Case Worker
+    path: context/digital-case-worker_v0.3/
+    sot: schema.json
+
+workspace:
+  name: Professional Planning
+  files:
+    - project/project_context.md
+    - agents/agents_registry.json

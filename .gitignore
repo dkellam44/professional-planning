@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+
+# Node/venv if used later
+node_modules/
+venv/
+
+# Editors
+.vscode/
+.idea/
+
+# Archives & exports
+archive/*.zip
+*.xlsx
