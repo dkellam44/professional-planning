@@ -1,0 +1,21 @@
+flowchart TD
+    KD["KamalaDevi — Vision & Teaching"]
+    Offers["Offers & Programs\n(Books / Courses / Retreats)"]
+    Community["Community & Audience\n(Students / Patrons / Partners)"]
+    Channels["Channels\n(Website / Email / Social)"]
+    Ops["Operations Hub\n(Calendar / Inbox / Tasks / Assets)"]
+    EA["Executive Assistant\n(Kali Das)"]
+    Assistant["Assistant Role\n(Systems + Comms + Orchestration)"]
+    Events["Events & Launches\n(Retreats / Workshops / Releases)"]
+
+    KD --> Offers
+    KD --> Community
+    Offers --> Channels
+    Channels --> Community
+    KD --> EA
+    EA --> Assistant
+    Assistant --> Ops
+    Assistant --> Channels
+    Assistant --> Events
+    Ops --> Events
+    Ops --> Channels
