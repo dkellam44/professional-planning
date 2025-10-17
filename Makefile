@@ -1,11 +1,16 @@
-plan:
-	python eval/run_eval_stub.py
-	@echo "Route mode and refresh planning brief manually or via chat mission."
+# -------- Makefile (eval gate) --------
+
+.PHONY: help eval eval-strict lint
+
+help:
+	@echo "Targets:"
+	@echo "  make eval         - run eval (prints averages; pass/fail by gate)"
+	@echo "  make eval-strict  - run eval and exit non-zero if gate not met"
 
 eval:
-	python eval/run_eval_stub.py
+	@echo "Running evaluation (gate from eval/dspy_config.yaml)..."
+	@python3 eval/run_ragas_eval.py
 
-promote:
-	python scripts/promote_notes_stub.py || true
-	@echo "Promote durable notes per ADR rules (stub)."
-
+eval-strict:
+	@echo "Running evaluation (strict gate)..."
+	@python3 eval/run_ragas_eval.py || (echo 'Eval gate failed. Block changes until fixed.' && exit 1)
