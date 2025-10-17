@@ -1,0 +1,111 @@
+{
+  "version": "0.1",
+  "portfolio": {
+    "required": [
+      "architecture-spec_v0.2.md",
+      "SCHEMA_GUIDE_v0.1.md",
+      "sot/",
+      "prompts/",
+      "eval/",
+      "decisions/",
+      "context/",
+      "logs/"
+    ],
+    "notes": "SoT lives here; never copy sot/prompts downwards."
+  },
+  "venture": {
+    "folders": [
+      "context/",
+      "context/playbooks/",
+      "offers/",
+      "programs/",
+      "engagements/",
+      "decisions/"
+    ],
+    "required": [
+      "context/venture_brief.md",
+      ".contextrc.yaml"
+    ],
+    "inherits": [
+      "../../sot",
+      "../../prompts",
+      "../../eval"
+    ]
+  },
+  "engagement": {
+    "folders": [
+      "context/",
+      "decisions/"
+    ],
+    "required": [
+      "context/engagement_brief_v01.md"
+    ]
+  },
+  "program": {
+    "folders": [
+      "context/",
+      "decisions/"
+    ],
+    "required": [
+      "context/program_roadmap_v01.md"
+    ]
+  },
+  "project": {
+    "folders": [
+      "context/",
+      "decisions/",
+      "deliverables/",
+      "sprints/",
+      "logs/"
+    ],
+    "required": [
+      "context/planning_brief_v01.md",
+      "context/execution_brief_v01.md",
+      "context/review_brief_v01.md",
+      "context/SHO.json",
+      ".contextrc.yaml"
+    ]
+  },
+  "area": {
+    "folders": [
+      "context/",
+      "kpi/"
+    ],
+    "required": [
+      "context/area_playbook_v01.md"
+    ]
+  },
+  "campaign": {
+    "folders": [
+      "context/",
+      "assets/"
+    ],
+    "required": [
+      "context/campaign_brief_v01.md"
+    ]
+  },
+  "experiment": {
+    "folders": [
+      "context/"
+    ],
+    "required": [
+      "context/experiment_card_v01.md"
+    ]
+  },
+  "learning": {
+    "folders": [
+      "context/"
+    ],
+    "required": [
+      "context/learning_plan_v01.md"
+    ]
+  },
+  "environment": {
+    "folders": [
+      "context/"
+    ],
+    "required": [
+      "context/env_runbook_v01.md"
+    ]
+  }
+}

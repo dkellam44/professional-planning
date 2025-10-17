@@ -1,0 +1,15 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Env & secrets
+.env
+*.env
+
+# Local data (optionally keep samples only)
+coda/data/*.csv
+
+# OS/editor
+.DS_Store
+.vscode/

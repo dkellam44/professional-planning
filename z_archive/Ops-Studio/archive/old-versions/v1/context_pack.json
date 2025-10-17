@@ -1,0 +1,35 @@
+{
+  "id": "ctx_kd_assistant_opportunity_v01",
+  "name": "KD Collaboration Opportunity",
+  "version": "0.4.2",
+  "linked_venture": "Operations Studio",
+  "people": [
+    {
+      "name": "KamalaDevi McClure",
+      "role": "Founder / Visionary",
+      "organization": "BlissCoach / KamalaDevi Creative"
+    },
+    {
+      "name": "Kali Das",
+      "role": "Executive Assistant / Intermediary",
+      "organization": "KamalaDevi Creative"
+    }
+  ],
+  "files": [
+  "READMEv2.md",
+  "context_you.md",
+  "context_kd.md",
+  "kd_profile_summary.md",
+  "intermediary_strategy.md",
+  "response_blueprint.md",
+  "fit_map.mmd"
+]
+,
+  "success_criteria": [
+    "Exploratory call or interview scheduled",
+    "Trial sprint confirmed",
+    "Operational rapport established"
+  ],
+  "linked_context": "founder-hq-v042-context.txt",
+  "created": "2025-10-07"
+}
