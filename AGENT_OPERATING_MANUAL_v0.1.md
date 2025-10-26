@@ -1,6 +1,6 @@
 # Agent Operating Manual (v0.1) — Context Architecture
 
-**Purpose.** This manual tells any AI agent (or human) how to build and maintain the context system across Portfolio → Venture → Project layers.
+**Purpose.** This manual tells any AI agent (or human) how to build and maintain the context system across Portfolio → Venture → Project layers. Pair this with `agents.md` for role definitions and startup checklist.
 
 ---
 
@@ -81,15 +81,134 @@
 - Zones: `public | internal | private | restricted`. Redact before publishing.
 - Secrets never appear in prompts or MD. Use environment/secret store for tokens.
 
-## 12) Acceptance for “Good Build”
+## 12) Acceptance for "Good Build"
 - All required files present at each layer.
 - Briefs include metadata headers and correct mode content.
 - Eval gate passes (≥ 0.80). Logs updated. No vendor‑locked memory used as SoT.
 
 ---
 
-**Quick Start for Agents**  
-1) Read `.contextrc.yaml` to find the portfolio SoT/Prompts/Eval.  
-2) Ensure mode (PLANNING/EXECUTION/REVIEW) and select the brief template.  
-3) Apply Claude Code Mission Protocol for any code change.  
+## 13) SyncBricks Infrastructure Pattern (ADOPTED 2025-10-26)
+
+For infrastructure projects (Docker-based multi-service deployments), adopt the SyncBricks pattern:
+
+### Core Components
+1. **nginx-proxy** - Auto-discovery reverse proxy
+   - Monitors `/var/run/docker.sock` for service changes
+   - Reads `VIRTUAL_HOST` environment variable from service labels
+   - Dynamically generates nginx config (no manual Caddyfile)
+   - Scales trivially to 10+ services
+
+2. **acme-companion** - Automatic SSL certificate management
+   - Watches for `LETSENCRYPT_HOST` labels
+   - Requests Let's Encrypt certificates automatically
+   - Renews 30 days before expiry (no manual intervention)
+   - Updates nginx config on renewal
+
+3. **Token-Based Cloudflare Tunnel** - Secure external connectivity
+   - Tunnel token passed in docker-compose environment (not config files)
+   - Simpler token rotation
+   - Better for containerized environments
+   - Hides all internal IPs from internet
+
+4. **Two-Network Design** - Security isolation
+   - `proxy` network: public-facing services only
+   - `syncbricks` network: backend services (databases, internal APIs)
+   - Database NOT accessible from proxy layer
+   - Network-level security boundary
+
+### Adding a New Service
+```yaml
+# 1. Add service to docker-compose.yml
+services:
+  new-service:
+    image: new-service:latest
+    networks:
+      - proxy              # IMPORTANT: attach to proxy network
+      - syncbricks         # Optional: if needs backend access
+    environment:
+      - VIRTUAL_HOST=new-service.bestviable.com
+      - LETSENCRYPT_HOST=new-service.bestviable.com
+    labels:
+      - "com.github.jrcs.letsencrypt_nginx_proxy_companion.main=new-service.bestviable.com"
+
+# 2. Deploy
+docker-compose -f docker-compose.production.yml up -d
+
+# 3. Done! nginx-proxy auto-discovers via docker.sock
+#    acme-companion auto-generates SSL certificate
+#    Service available at https://new-service.bestviable.com immediately
+```
+
+### When to Use
+✅ **Use SyncBricks if:**
+- Multiple services needing external HTTPS access
+- Services may scale or change frequently
+- Want automatic SSL management
+- Need to hide internal IPs (security isolation)
+- No manual reverse proxy config desired
+
+❌ **Don't use if:**
+- Single monolithic service only
+- Internal-only services (no external access)
+- Kubernetes already adopted
+- IP/port-based routing required
+
+### Reference Implementation
+See `/portfolio/docs/infrastructure/syncbricks_solution_breakdown_v1.md` for complete pattern explanation.
+
+See `/portfolio/ops/docker-compose.production.yml` for production configuration.
+
+---
+
+## 14) Infrastructure Documentation Standards
+
+For infrastructure projects, maintain these documentation artifacts:
+
+### Required Files
+1. **State Analysis** - Current vs Target comparison
+   - Location: `/docs/infrastructure/infrastructure_state_comparison_v1.md`
+   - Shows before/after metrics, security improvements, risks
+
+2. **Solution Design** - Pattern explanations
+   - Location: `/docs/infrastructure/<pattern>_solution_breakdown_v1.md`
+   - Explains each component, data flows, configuration
+
+3. **Deployment Procedure** - Step-by-step guide
+   - Location: `/docs/infrastructure/droplet_migration_procedure_v1.md`
+   - Phases, health checks, troubleshooting, rollback
+
+4. **Operations Guide** - Token setup, monitoring, maintenance
+   - Location: `/docs/infrastructure/cloudflare_tunnel_token_guide_v1.md`
+   - How to obtain, configure, rotate, monitor
+
+5. **Full Analysis** - Decision process documentation
+   - Location: `/docs/infrastructure/<system>_full_analysis_v1.md`
+   - Problem statement, alternative evaluation, decision rationale
+   - Include conversation transcripts for future learning
+
+6. **Quick Reference** - One-page deployment guide
+   - Location: `/ops/PRODUCTION_DEPLOYMENT_QUICKSTART.md`
+   - Pre-deployment checklist, configuration, validation
+   - Estimated time, troubleshooting quick links
+
+### Documentation Standard
+All files include metadata headers:
+```markdown
+- entity: infrastructure
+- level: documentation
+- zone: internal
+- version: vNN
+- tags: [infrastructure, ...]
+- source_path: /docs/infrastructure/...
+- date: YYYY-MM-DD
+```
+
+---
+
+**Quick Start for Agents**
+1) Read `.contextrc.yaml` to find the portfolio SoT/Prompts/Eval.
+2) Ensure mode (PLANNING/EXECUTION/REVIEW) and select the brief template.
+3) Apply Claude Code Mission Protocol for any code change.
 4) Update logs and, if durable, promote notes per TTL rules.
+5) **For infrastructure work**: Follow SyncBricks pattern + maintain documentation standards above.

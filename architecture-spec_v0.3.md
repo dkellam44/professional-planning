@@ -91,8 +91,11 @@ This architecture is governed by the following accepted decisions:
 - **Retrieval Scope Policy:** `/decisions/2025-10-17_retrieval-scope-policy_v01.md`  
   Mode-aware scopes: Planning (portfolio/venture + comparables), Execution (current project canonical facts; exact lookups), Review (current project + decisions + last N attempts). Hybrid→rerank (`k_in=30 → k_out=6–8`), citations required, verify IDs/dates against structured SoT.
 
-- **Context TTL & Promotion Policy (expanded):** `/decisions/2025-10-17_context-ttl-policy_v01.md`  
+- **Context TTL & Promotion Policy (expanded):** `/decisions/2025-10-17_context-ttl-policy_v01.md`
   Session notes 14–30d (default 21); planning scratch 30d; project briefs = project_end + 90d; logs 180d; playbooks/offers/ADRs = no TTL (versioned). Promotions: Project → Venture → Portfolio with ADR + PR. Weekly automation proposes promotions/archives.
+
+- **Infrastructure SyncBricks Adoption:** `/decisions/2025-10-26_infrastructure-syncbricks-adoption_v01.md`
+  Adopt SyncBricks pattern for Docker-based multi-service deployments: nginx-proxy auto-discovery reverse proxy, acme-companion automatic SSL, token-based Cloudflare Tunnel, two-network design (proxy + backend isolation). Scales trivially from 2 to 10+ services without manual config files. Production-ready configuration in `/ops/docker-compose.production.yml` with comprehensive documentation in `/docs/infrastructure/`.
 
 ## Evaluation & Optimization
 - **Default optimization framework:** **DSPy** (programmatic optimization).
