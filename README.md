@@ -14,7 +14,7 @@
 
 This is an **AI-ready context architecture** for a solo operator, designed for portability, verifiability, and mode-aware retrieval across planning (chat) and execution (Claude Code CLI).
 
-**Current Status**: ✅ Foundation complete; ✅ Infrastructure documentation & production configuration deployed (2025-10-26)
+**Current Status**: ✅ Foundation complete; ✅ Infrastructure documentation & production configuration deployed (2025-10-26); ✅ Docker deployment operational (2025-10-27)
 
 ---
 
