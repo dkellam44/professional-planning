@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Production Docker Compose Configuration for bestviable.com Infrastructure
 # Implements SyncBricks pattern with:
 # - nginx-proxy for auto-discovery reverse proxy
@@ -41,8 +39,6 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     networks:
       - proxy
-    depends_on:
-      - acme-companion
     environment:
       - TRUST_DOWNSTREAM_PROXY=false
     healthcheck:
@@ -69,8 +65,6 @@ services:
     environment:
       - NGINX_PROXY_CONTAINER=nginx-proxy
       - DEFAULT_EMAIL=${LETSENCRYPT_EMAIL:-admin@bestviable.com}
-    depends_on:
-      - nginx-proxy
     healthcheck:
       test: ["CMD", "test", "-f", "/etc/acme.sh/bestviable.com/bestviable.com.cer"]
       interval: 300s
@@ -212,7 +206,6 @@ services:
       start_period: 60s
     labels:
       # nginx-proxy auto-discovery
-      - "com.github.jrcs.letsencrypt_nginx_proxy_companion.main=n8n.${DOMAIN}"
       - "virtual.host=n8n.${DOMAIN}"
       - "virtual.port=5678"
 
@@ -291,7 +284,6 @@ services:
       start_period: 30s
     labels:
       # nginx-proxy auto-discovery
-      - "com.github.jrcs.letsencrypt_nginx_proxy_companion.main=coda.${DOMAIN}"
       - "virtual.host=coda.${DOMAIN}"
       - "virtual.port=8080"
 
