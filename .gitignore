@@ -25,3 +25,8 @@ z_archive/
 *.swp
 *.tmp
 *~
+
+# MCP Secrets (never commit API keys or tokens)
+.mcp/.env
+.mcp/data/
+/workspace/mcp-configs/user-scope/.env
