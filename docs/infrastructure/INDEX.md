@@ -57,6 +57,12 @@ Complete reference guide for SyncBricks pattern infrastructure (nginx-proxy, acm
 ---
 
 ### For Operations (Ongoing Management)
+**Current State:** `droplet_state_2025-10-28.md`
+- Production service inventory
+- Network configuration
+- External endpoints status
+- Recent configuration changes
+
 **Reference:** `cloudflare_tunnel_token_guide_v1.md` (Part 3-7)
 - Service health checks
 - Token rotation
@@ -200,6 +206,27 @@ Complete reference guide for SyncBricks pattern infrastructure (nginx-proxy, acm
 
 ---
 
+### 7. droplet_state_2025-10-28.md
+- **Purpose:** Point-in-time production infrastructure snapshot for change tracking
+- **Length:** ~800 words
+- **Content:**
+  - **Deployment Summary** — Timeline, method, infrastructure pattern, droplet details
+  - **Service Inventory** — All 7 services with images, status, configuration, beginner explanations
+  - **Network Architecture** — Two-network design (proxy + syncbricks) with security benefits
+  - **External Endpoints** — Verified HTTPS endpoints and routing
+  - **Key Configuration Details** — SSL/TLS handling, environment variables, recent fixes
+  - **Health & Monitoring** — Health check configuration, manual verification commands, current status
+  - **Storage & Data** — Persistent volumes, backup considerations
+  - **Links to Documentation** — References to comprehensive infrastructure docs
+  - **Next Steps** — Immediate, short-term, and medium-term action items
+  - **Changelog** — Document creation and production state as of 2025-10-28
+- **Audience:** Operators, deployment agents, infrastructure team
+- **Estimated Reading Time:** 8-10 minutes
+- **Use Case:** Understand current production state, verify deployment, track infrastructure changes
+- **Related:** Deployment in `droplet_migration_procedure_v1.md`, configuration in `/docs/ops/docker-compose.production.yml`
+
+---
+
 ## Architecture Diagram
 
 **File:** `/portfolio/diagrams/network_wiring_diagram_v2.md`
@@ -313,7 +340,8 @@ ADR documenting:
 | droplet_migration_procedure_v1.md | 400+ | 4,000+ | 2025-10-26 | 2025-10-26 |
 | infrastructure_state_comparison_v1.md | 400+ | 3,000+ | 2025-10-26 | 2025-10-26 |
 | syncbricks_n8n_full_analysis_v1.md | 500+ | 4,500+ | 2025-10-26 | 2025-10-26 |
-| **TOTAL** | **2,350+** | **22,000+** | | |
+| droplet_state_2025-10-28.md | 450+ | 5,000+ | 2025-10-28 | 2025-10-28 |
+| **TOTAL** | **2,800+** | **27,000+** | | |
 
 ---
 
@@ -321,7 +349,12 @@ ADR documenting:
 
 ✅ **Complete** — All documentation files created and committed
 
-**Last Updated:** 2025-10-26
+**Last Updated:** 2025-10-28
+**Recent Additions:**
+- `droplet_state_2025-10-28.md` — Production state snapshot (2025-10-28)
+- System overview document linked from `/agents/context/system_overview_v01.md`
+
+**Original Deployment Docs:** 2025-10-26
 **Commit:** c29eee5 (Deploy: SyncBricks infrastructure documentation and production configuration)
 
 ---
