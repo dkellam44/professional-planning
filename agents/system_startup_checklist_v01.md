@@ -15,8 +15,9 @@ Use this checklist at the start of any new agent session (human or AI) so work b
 ---
 
 ## 1. Quick Orientation (5 min)
-1. **Read the System Overview**
-   - `context/system_overview_v01.md` (links to architecture spec, Founder HQ, droplet state, MCP plan, latest Session Handoff).
+1. **START HERE: Read CURRENT_FOCUS.md**
+   - `agents/CURRENT_FOCUS.md` (5-minute read for all new sessions).
+   - Gets you oriented immediately: current priorities, business stage, infrastructure status, links to everything.
 2. **Scan the latest Session Handoff**
    - `SESSION_HANDOFF_2025-10-28_v1.md` (or newest).
    - Confirm `next_3_MITs`, open questions, blockers, TTL.

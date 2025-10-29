@@ -52,7 +52,7 @@ Individual business initiatives or service lines. Each venture has:
    - Target: Small/midsize organizations improving business systems
    - Services: Workflow optimization, automation design, analytics setup, strategy consulting
    - Vision: Evolve from services into AI-powered professional services platform
-   - Status: Early client work (pilot engagement with KamalaDevi McClure)
+   - Status: Pre-revenue (zero active clients, building first offer and prospect pipeline)
 
 2. **Programming Learning** (Skills - Secondary)
    - Personal skill-building initiative for agentic systems development
@@ -381,6 +381,13 @@ Currently, if MCP tools are configured in this session, you should be able to:
 
 ## 8. Quick Links for Agents
 
+### 🌟 Primary Entry Point for New Sessions
+
+**CURRENT_FOCUS**: `/agents/CURRENT_FOCUS.md`
+- 5-minute read with today's priorities, business stage, infrastructure status
+- Links to everything you need (daily workflow, recovery procedures, Coda/GitHub guide)
+- Updated after each session to reflect new priorities
+
 ### Latest Context
 
 **Session Handoffs**: `/agents/context/sessions/`
@@ -432,10 +439,13 @@ Recent important decisions:
 
 ### When You Start a New Session
 
-1. **Read** this overview document (you're doing it now!)
-2. **Check** the latest session handoff for current MITs and blockers
-3. **Review** any relevant playbooks if working on specific initiatives
-4. **Verify** git status to understand pending changes
+1. **START HERE: Read CURRENT_FOCUS.md** (`agents/CURRENT_FOCUS.md`)
+   - Fast 5-minute orientation for every session
+   - Gets you: current priorities, business stage, what to work on today, what NOT to work on
+2. **Read this overview document** for deeper context and system architecture
+3. **Check** the latest session handoff for current MITs and blockers
+4. **Review** any relevant playbooks if working on specific initiatives
+5. **Verify** git status to understand pending changes
 
 ### When Creating/Editing Documentation
 
@@ -527,7 +537,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 ### Where to Look
 
 **For agents**:
-- This document (system_overview_v01.md) - high-level orientation
+- **CURRENT_FOCUS.md** (`/agents/CURRENT_FOCUS.md`) - START HERE for every session
+- This document (system_overview_v01.md) - comprehensive system orientation
 - Session handoffs (`/agents/context/sessions/`) - current state and priorities
 - Playbooks (`/agents/context/playbooks/`) - multi-phase initiative plans
 - ADRs (`/agents/decisions/`) - architecture decisions with rationale
