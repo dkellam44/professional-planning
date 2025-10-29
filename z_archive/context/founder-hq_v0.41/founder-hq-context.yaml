@@ -1,8 +1,0 @@
-# Mirror of current v0.41 context (pointer file)
-# For now, this references the canonical text content you already maintain.
-# If desired, migrate the full content from founder-hq-v041-context.txt into YAML later.
-
-source_of_truth: "founder-hq-v041-context.txt"
-notes: |
-  Use this file as a stable pointer for agents expecting YAML.
-  When ready, map tables/enums to strict YAML schema for machine parsing.

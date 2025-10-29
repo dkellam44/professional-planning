@@ -1,8 +1,0 @@
-# .contextrc.yaml — Portfolio (root)
-sot_root: "./"
-prompts_root: "./prompts/"
-eval_root: "./eval/"
-decisions_chain: ["./decisions"]
-zones_default: "internal"
-metadata_defaults:
-  portfolio: "default"

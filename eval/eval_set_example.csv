@@ -1,5 +1,0 @@
-id,question,expected_answer,expected_citations,notes
-E001,"What are the required metadata fields for a context chunk?","entity, level, zone, version, tags[], source_path, date","/sot/context_schemas_v01.yaml#retrieval.metadata_fields","Check exact match"
-E002,"How many tokens should a chunk target?","200–400","/sot/context_schemas_v01.yaml#retrieval.chunking","Accept numeric range"
-E003,"What is the default optimization framework and TS alternative?","DSPy; Ax (TypeScript)","/sot/context_schemas_v01.yaml#eval","Case-insensitive match"
-E004,"What is k_in and k_out in retrieval?","k_in=30; k_out=6–8 (6 in YAML seed)","/sot/context_schemas_v01.yaml#retrieval.strategy","Allow YAML seed exact numbers"

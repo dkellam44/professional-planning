@@ -284,12 +284,12 @@ This enables:
 - **Architecture Spec**: `architecture-spec_v0.3.md`
 - **Schema Guide**: `SCHEMA_GUIDE_v0.2.md`
 - **Builder Instructions**: `builder_prompt_v0.3.md`
-- **ADRs**: `/decisions/`
+- **ADRs**: `/agents/decisions/`
 - **Templates**: `/templates/`
-- **Reference Example**: `/ventures/reference-venture-example/`
+- 
 
 ---
 
-**Version**: 0.3
-**Last Updated**: 2025-10-17
+**Version**: 0.4
+**Last Updated**: 2025-10-28
 **Status**: Foundation complete, production-ready

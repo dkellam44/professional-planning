@@ -1,8 +1,0 @@
-# .contextrc.yaml — Venture
-sot_root: "../../../"            # up to portfolio root
-prompts_root: "../../../prompts/"
-eval_root: "../../../eval/"
-decisions_chain: ["../../../decisions", "../decisions"]
-zones_default: "internal"
-metadata_defaults:
-  venture: "<venture_slug>"
