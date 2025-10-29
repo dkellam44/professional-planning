@@ -206,9 +206,130 @@ All files include metadata headers:
 
 ---
 
+## 15) Session Shutdown Protocol
+
+**Purpose:** Canonical procedure for ending any agent session and ensuring continuity for the next agent.
+
+**Time estimate:** 5–10 minutes
+
+**When to use:** At the end of every session (human-initiated or token-limit reached)
+
+---
+
+### Shutdown Checklist (Required)
+
+Complete these steps in order before ending the session:
+
+#### 1. Update Active Playbooks
+- If working from a playbook (e.g., `/agents/context/playbooks/*.md`):
+  - Update phase progress (mark completed steps, note blockers)
+  - Add learnings or adjustments to approach
+  - Update estimated time remaining
+
+#### 2. Update or Create Session Handoff
+- File: `/agents/context/sessions/SESSION_HANDOFF_YYYY-MM-DD_v#.md`
+- Required fields:
+  - **What We Did Today:** Summary of accomplishments
+  - **Next 3 MITs:** Most Important Tasks for next session
+  - **Decisions Made:** Any choices that affect future work
+  - **Open Questions:** Blockers or uncertainties
+  - **Status:** GREEN/YELLOW/RED based on progress
+  - **TTL:** When this handoff expires (typically 3–14 days)
+
+#### 3. Update CURRENT_FOCUS.md (If Priorities Shifted)
+- File: `/agents/CURRENT_FOCUS.md`
+- Update if:
+  - Business priorities changed (e.g., client signed, blocker removed)
+  - Infrastructure status changed (services down/restored)
+  - New high-priority work emerged
+  - Deferred items should now be active
+- Update date in metadata header
+
+#### 4. Log Context Actions (If Significant Work)
+- File: `/logs/context_actions.csv`
+- Log if you:
+  - Created or updated documentation (ADRs, playbooks, specs)
+  - Made infrastructure changes (deployed services, config changes)
+  - Made architecture decisions
+  - Promoted session notes to durable docs
+- Format: `date,actor,action,entity,notes`
+
+#### 5. Communicate Next Steps to Human
+- Summarize:
+  - What was completed
+  - What's ready for next session (with links)
+  - Any blockers or questions requiring human input
+  - Recommended next actions
+- Be explicit about git state (commits ready to push, uncommitted changes, etc.)
+
+---
+
+### Conditional Updates (As Needed)
+
+#### Update Venture Documents
+- If working in `/ventures/[venture-name]/`:
+  - Update offer specs if definitions changed
+  - Update pipeline tracker if prospects changed
+  - Update engagement logs if client work occurred
+
+#### Promote Session Notes (Per TTL Policy)
+- If session notes contain durable learnings:
+  - Promote to relevant playbook
+  - Promote to venture context docs
+  - Promote to architecture specs
+- See Section 9 (TTL/Promotion) for criteria
+
+#### Create or Update ADRs
+- If architecture decisions were made:
+  - Create new ADR in `/agents/decisions/YYYY-MM-DD_topic_v01.md`
+  - Update related ADRs with cross-references
+  - Update architecture docs that the decision affects
+
+---
+
+### Quick Shutdown (Minimal Path)
+
+If time is limited or work was exploratory:
+
+1. **Create brief session handoff** (3 sentences: did X, next do Y, blocker Z)
+2. **Tell human next steps** (1–2 sentences)
+3. **Commit work if any files changed** (with clear message)
+
+Defer detailed playbook updates to next session if needed.
+
+---
+
+### Relationship to Other Documents
+
+**This section (Operating Manual) = Authoritative reference**
+- Complete checklist of what to update
+- Defines required vs. conditional steps
+- Technical contracts (S.H.O. format, log format)
+
+**CURRENT_FOCUS.md = Quick reference**
+- 3-step shutdown: "Update playbooks, update CURRENT_FOCUS if needed, tell human"
+- Points to this section for details
+
+**system_startup_checklist_v01.md Section 7 = Procedural guide**
+- Operationalizes this checklist as "Wrap-Up / Handoff"
+- Should reference this section as canonical source
+
+---
+
+### Common Mistakes to Avoid
+
+❌ **Don't skip the Session Handoff** – Next agent will be blind to recent work
+❌ **Don't leave uncommitted changes** – Work can be lost between sessions
+❌ **Don't update CURRENT_FOCUS for minor priority changes** – Reserve for significant shifts only
+❌ **Don't create handoffs without TTL** – They'll accumulate and create confusion
+❌ **Don't forget to tell the human** – They need to know what state you're leaving things in
+
+---
+
 **Quick Start for Agents**
 1) Read `.contextrc.yaml` to find the portfolio SoT/Prompts/Eval.
 2) Ensure mode (PLANNING/EXECUTION/REVIEW) and select the brief template.
 3) Apply Claude Code Mission Protocol for any code change.
 4) Update logs and, if durable, promote notes per TTL rules.
-5) **For infrastructure work**: Follow SyncBricks pattern + maintain documentation standards above.
+5) **At session end, follow Section 15 (Session Shutdown Protocol)** for complete checklist.
+6) **For infrastructure work**: Follow SyncBricks pattern (Section 13) + maintain documentation standards (Section 14).
