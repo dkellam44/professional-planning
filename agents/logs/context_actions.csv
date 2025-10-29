@@ -1,0 +1,59 @@
+ts,agent,action,entity,path,latency_ms,token_in,token_out,success,notes
+2025-10-17T12:20:00Z,builder_v0.3,validate_sot,schema,/sot/context_schemas_v02.yaml,150,2500,800,true,validated entities against repo_structure
+2025-10-17T12:20:05Z,builder_v0.3,create_directory,playbooks,/context/playbooks/,50,100,50,true,placeholder
+2025-10-17T12:20:06Z,builder_v0.3,create_directory,playbooks,/ventures/reference-venture-example/context/playbooks/,50,100,50,true,placeholder
+2025-10-17T12:20:10Z,builder_v0.3,create_file,portfolio,/README.md,1200,3000,2500,true,template
+2025-10-17T14:00:00Z,claude,analysis,integration,/integrations/notion/ANALYSIS_founderhq_notion_integration_v01.md,7200000,50000,15000,true,comprehensive schema alignment and integration strategy
+2025-10-17T14:05:00Z,claude,create_adr,decision,/decisions/2025-10-17_notion-integration-strategy_v01.md,300000,8000,3000,true,notion hybrid integration strategy
+2025-10-17T14:07:00Z,claude,create_session,session,/context/sessions/2025-10-17_notion-integration-planning.md,120000,5000,2000,true,session summary and learnings
+2025-10-17T15:00:00Z,claude,create_plan,integration,/integrations/notion/NOTION_BUILD_COMPLETION_PLAN_v01.md,1800000,30000,8000,true,comprehensive notion build completion plan with session breakdown
+2025-10-17T15:05:00Z,claude,create_reference,integration,/integrations/notion/database_ids_reference.md,300000,5000,1500,true,notion database IDs reference document
+2025-10-17T15:10:00Z,claude,create_script,integration,/integrations/notion-sync/prefill_ulids.py,600000,8000,2800,true,ulid backfill script for notion records
+2025-10-17T15:12:00Z,claude,create_readme,integration,/integrations/notion-sync/README.md,300000,4000,1200,true,notion-sync scripts documentation
+2025-10-17T22:28:14.689300+00:00,prefill_ulids_v01,ulid_backfill,venture,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,4/4 records updated in ventures
+2025-10-17T22:28:19.597825+00:00,prefill_ulids_v01,ulid_backfill,offer,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,5/5 records updated in offers
+2025-10-17T22:28:35.766251+00:00,prefill_ulids_v01,ulid_backfill,organization,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,8/8 records updated in organizations
+2025-10-17T22:28:41.042818+00:00,prefill_ulids_v01,ulid_backfill,deal,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,2/2 records updated in deals
+2025-10-17T22:28:50.610190+00:00,prefill_ulids_v01,ulid_backfill,project,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,6/6 records updated in projects
+2025-10-17T22:29:39.718740+00:00,prefill_ulids_v01,ulid_backfill,task,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,25/25 records updated in tasks
+2025-10-17T22:29:45.870084+00:00,prefill_ulids_v01,ulid_backfill,sprint,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,3/3 records updated in sprints
+2025-10-17T22:55:03.055395+00:00,prefill_ulids_v01,ulid_backfill,topic,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,76/76 records updated in topics
+2025-10-18T00:28:01.085333+00:00,prefill_ulids_v01,ulid_backfill,person,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,1/1 records updated in people
+2025-10-18T00:28:04.494224+00:00,prefill_ulids_v01,ulid_backfill,service_blueprint,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,1/1 records updated in service_blueprints
+2025-10-18T00:28:10.023391+00:00,prefill_ulids_v01,ulid_backfill,icp_segment,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,4/4 records updated in icp_segments
+2025-10-18T00:28:11.730366+00:00,prefill_ulids_v01,ulid_backfill,process_template,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,3/3 records updated in process_templates
+2025-10-18T00:28:17.397016+00:00,prefill_ulids_v01,ulid_backfill,resource_template,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,1/1 records updated in resource_templates
+2025-10-18T00:28:26.657797+00:00,prefill_ulids_v01,ulid_backfill,touchpoint,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,3/3 records updated in touchpoints
+2025-10-18T00:28:32.291582+00:00,prefill_ulids_v01,ulid_backfill,experiment,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,2/2 records updated in experiments
+2025-10-18T00:28:38.842509+00:00,prefill_ulids_v01,ulid_backfill,decision,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,5/5 records updated in decision_journal
+2025-10-18T00:28:46.888299+00:00,prefill_ulids_v01,ulid_backfill,outcome,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,4/4 records updated in outcomes
+2025-10-18T00:28:59.791106+00:00,prefill_ulids_v01,ulid_backfill,daily_thread,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,6/6 records updated in daily_thread
+2025-10-18T00:29:02.500851+00:00,prefill_ulids_v01,ulid_backfill,okr,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,1/1 records updated in okrs
+2025-10-18T00:29:03.785265+00:00,prefill_ulids_v01,ulid_backfill,payment,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,1/1 records updated in payments
+2025-10-18T00:29:05.906777+00:00,prefill_ulids_v01,ulid_backfill,invoice,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,2/2 records updated in invoices
+2025-10-18T00:29:06.919024+00:00,prefill_ulids_v01,ulid_backfill,expense,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,1/1 records updated in expenses
+2025-10-18T00:29:08.085729+00:00,prefill_ulids_v01,ulid_backfill,finance_snapshot,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,1/1 records updated in finance_snapshot
+2025-10-18T00:29:13.524566+00:00,prefill_ulids_v01,ulid_backfill,prompt,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,4/4 records updated in prompt_library
+2025-10-18T00:29:16.827823+00:00,prefill_ulids_v01,ulid_backfill,kpi,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,1/1 records updated in kpis
+2025-10-18T00:29:24.982329+00:00,prefill_ulids_v01,ulid_backfill,asset,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,2/2 records updated in assets
+2025-10-18T00:29:39.881526+00:00,prefill_ulids_v01,ulid_backfill,idea,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,9/9 records updated in ideas_inbox
+2025-10-18T02:55:25.362909+00:00,prefill_ulids_v01,ulid_backfill,venture,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,1/1 records updated in ventures
+2025-10-18T02:55:26.689453+00:00,prefill_ulids_v01,ulid_backfill,offer,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,1/1 records updated in offers
+2025-10-18T02:55:28.293448+00:00,prefill_ulids_v01,ulid_backfill,topic,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,1/1 records updated in topics
+2025-10-18T02:55:32.345235+00:00,prefill_ulids_v01,ulid_backfill,organization,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,1/1 records updated in organizations
+2025-10-18T02:55:32.781108+00:00,prefill_ulids_v01,ulid_backfill,person,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,1/1 records updated in people
+2025-10-18T02:55:33.965489+00:00,prefill_ulids_v01,ulid_backfill,engagement,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,1/1 records updated in engagements
+2025-10-18T02:55:37.410181+00:00,prefill_ulids_v01,ulid_backfill,task,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,1/1 records updated in tasks
+2025-10-18T02:55:38.179042+00:00,prefill_ulids_v01,ulid_backfill,sprint,/integrations/notion-sync/prefill_ulids.py,0,0,0,True,1/1 records updated in sprints
+2025-10-17T16:00:00Z,claude_sonnet_4.5,strategic_review,review,/integrations/notion/WORK_SYSTEM_COMPREHENSIVE_REVIEW_v01.md,5400000,45000,13000,true,comprehensive work system review and strategic recommendations
+2025-10-17T16:05:00Z,claude_sonnet_4.5,web_research,research,external,900000,3000,500,true,ai-assisted productivity workflows solopreneurs 2025
+2025-10-17T16:06:00Z,claude_sonnet_4.5,web_research,research,external,900000,3000,500,true,notion workspace design patterns operations management
+2025-10-17T16:07:00Z,claude_sonnet_4.5,web_research,research,external,900000,3000,500,true,claude code mcp integration patterns best practices
+2025-10-17T16:08:00Z,claude_sonnet_4.5,portfolio_exploration,analysis,/portfolio/,1200000,10000,3500,true,very thorough exploration of portfolio structure goals workflows
+2025-10-17T16:15:00Z,claude_sonnet_4.5,create_session_handoff,session,/SESSION_HANDOFF_2025-10-17.md,300000,4000,2000,true,session handoff object with context and next actions
+2025-10-26,Gemini,Updated documentation and established MCP deployment policy,portfolio/logs/context_actions.csv
+2025-10-28T02:20:00Z,codex,update_docs,infrastructure,/context/sessions/2025-10-28_n8n-coda-production-notes.md,0,0,0,true,documented n8n/coda tunnel fixes and maintenance steps
+2025-10-28T02:21:00Z,codex,create_session_handoff,session,/SESSION_HANDOFF_2025-10-28_v1.md,0,0,0,true,recorded session outcomes and next MITs
+2025-10-28T02:22:00Z,codex,create_adr,decision,/decisions/2025-10-28_cloudflare-proxy-trust-config_v01.md,0,0,0,true,captured HTTPS handling and MCP binding policy
+2025-10-28T02:40:00Z,codex,create_doc,context,/context/startup/system_startup_checklist_v01.md,0,0,0,true,added stateless agent startup checklist
+2025-10-28T02:45:00Z,codex,create_doc,setup,/context/startup/mcp_setup_codex_cli_v01.md,0,0,0,true,documented Codex CLI MCP configuration template

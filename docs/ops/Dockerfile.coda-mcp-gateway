@@ -1,0 +1,27 @@
+# Use the reaperberri/coda-mcp image as a base
+FROM reaperberri/coda-mcp:latest
+
+# Switch to root user to install packages
+USER root
+
+# Install mcp-proxy dependencies
+# mcp-proxy is a Python package, so we need python and pip
+RUN apk add --no-cache python3 py3-pip
+
+# Install mcp-proxy
+RUN pip install --break-system-packages mcp-proxy
+
+# Add the user's local bin directory to PATH (this might not be needed if installed globally)
+# However, it's safer to keep it in case pip installs to a non-standard global location
+ENV PATH="/usr/local/bin:${PATH}"
+
+# Switch back to the original user (appuser) if it exists, or a default non-root user
+ARG USER=appuser
+RUN id -u $USER >/dev/null 2>&1 || adduser -D -u 1001 $USER
+USER $USER
+
+# Set the entrypoint to run mcp-proxy and wrap the coda-mcp server
+# The coda-mcp server's command is 'node dist/index.js'
+# We need to pass the API_KEY and DOC_ID to the coda-mcp server
+# The mcp-proxy will expose port 8080
+CMD ["mcp-proxy", "--host", "0.0.0.0", "--port", "8080", "--", "node", "dist/index.js"]

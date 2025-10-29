@@ -1,0 +1,160 @@
+================================================================================
+                         DEPLOYMENT ACTION PLAN
+                    Docker Health Checks Fix - Oct 27, 2025
+================================================================================
+
+SITUATION:
+  ✅ All 7 containers running on droplet
+  ⚠️  5/7 showing "unhealthy" (false negatives due to broken health checks)
+  ✅ Analysis complete + fixes implemented locally
+
+STATUS:
+  Ready for deployment to droplet
+
+================================================================================
+                            IMMEDIATE ACTIONS
+================================================================================
+
+STEP 1: SYNC UPDATED CONFIG (1 minute)
+
+  From your local machine:
+
+    cd ~/workspace/portfolio/ops
+    scp docker-compose.production.yml root@tools:~/portfolio/ops/
+
+STEP 2: DEPLOY ON DROPLET (5 minutes)
+
+  SSH to droplet:
+    ssh root@tools
+    cd ~/portfolio/ops
+
+  Deploy (choose one):
+
+    OPTION A - Automated (recommended):
+      bash DEPLOY_FIXES.sh
+      [Watch output until all services show HEALTHY, then Ctrl+C]
+
+    OPTION B - Manual:
+      docker compose -f docker-compose.production.yml down
+      docker compose -f docker-compose.production.yml up -d
+      watch -n 3 'docker compose -f docker-compose.production.yml ps'
+      [Wait 2-3 minutes until all show HEALTHY, then Ctrl+C]
+
+STEP 3: VERIFY (2 minutes)
+
+  From droplet:
+
+    # Check all containers healthy
+    docker compose -f docker-compose.production.yml ps
+
+    # Test endpoints
+    curl -I http://localhost:5678      # n8n
+    curl -I http://localhost:8080      # coda
+    curl -I http://localhost/          # nginx
+
+    # Check tunnel (if needed)
+    docker compose -f docker-compose.production.yml logs cloudflared | grep -i connected
+
+================================================================================
+                            WHAT WAS FIXED
+================================================================================
+
+docker-compose.production.yml health check updates:
+
+  ✅ nginx-proxy       - Now checks for ports 80/443 listening (not /health)
+  ✅ acme-companion    - Now checks for /etc/acme.sh directory (not cert file)
+  ✅ cloudflared       - Now checks for process running (not tunnel info)
+  ✅ n8n               - Increased startup time 60s → 120s, added fallback endpoint
+  ✅ coda-mcp-gateway  - Increased startup time 30s → 120s, added fallback endpoint
+
+Result: All 5 services will report healthy within 2-3 minutes of startup
+
+================================================================================
+                          SUPPORTING DOCUMENTS
+================================================================================
+
+For Different Needs, See:
+
+  📄 README_DEPLOYMENT_2025-10-27.md
+     → TL;DR overview and deployment steps
+
+  📋 INSTRUCTIONS_FOR_DEPLOYMENT.md
+     → Detailed step-by-step guide with all options
+
+  📋 DEPLOYMENT_SUMMARY_2025-10-27.md
+     → Full technical analysis of each fix
+
+  📝 FIX_HEALTH_CHECKS.md
+     → Line-by-line explanation of changes
+
+  🔧 TROUBLESHOOT_HEALTH_CHECKS.sh
+     → Run on droplet if something goes wrong
+
+  ⚡ QUICK_REFERENCE.txt
+     → One-page cheat sheet
+
+================================================================================
+                          ROLLBACK PLAN
+================================================================================
+
+If deployment fails:
+
+  docker compose -f docker-compose.production.yml down
+  cp docker-compose.production.yml.backup.* docker-compose.production.yml
+  docker compose -f docker-compose.production.yml up -d
+
+(Note: docker compose auto-creates .backup file before each deployment)
+
+================================================================================
+                         SUCCESS CRITERIA
+================================================================================
+
+After deployment, all should be TRUE:
+
+  ✅ All 7 containers show "healthy" (docker compose ps)
+  ✅ n8n responds at http://localhost:5678
+  ✅ Coda responds at http://localhost:8080
+  ✅ Nginx responds at http://localhost
+  ✅ Cloudflare tunnel shows CONNECTED
+  ✅ Can reach https://n8n.bestviable.com
+  ✅ Can reach https://coda.bestviable.com
+
+================================================================================
+                        TIMELINE ESTIMATE
+================================================================================
+
+Sync config:           ~1 min
+Restart containers:    ~30 sec
+Health checks pass:    ~2-3 min
+─────────────────────────────────
+Total time to ready:   ~4-5 minutes
+Downtime during restart: ~2-3 minutes
+
+================================================================================
+                          KEY POINTS
+================================================================================
+
+✓ NO functional changes - only health check logic
+✓ NO environment variable changes needed
+✓ NO network/port changes needed
+✓ NO service dependency changes needed
+✓ Services will resume automatically after restart
+✓ Persistent data (n8n, postgres, qdrant) preserved
+✓ Easy rollback if needed
+
+================================================================================
+                        DEPLOYMENT STARTED
+================================================================================
+
+Next action: Sync docker-compose.production.yml to droplet
+
+Command:
+  cd ~/workspace/portfolio/ops
+  scp docker-compose.production.yml root@tools:~/portfolio/ops/
+
+Then SSH to droplet and run:
+  bash DEPLOY_FIXES.sh
+
+Questions? See supporting documents listed above.
+
+================================================================================

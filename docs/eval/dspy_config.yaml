@@ -1,0 +1,45 @@
+
+# DSPy configuration (v0.1)
+# PURPOSE: Configure programmatic optimization of prompts/chains used by the builder and retrieval flows.
+# NOTES:
+# - Default framework: DSPy (Python)
+# - TypeScript alternative: Ax (https://github.com/ax-llm/ax) — keep parity in metrics where practical.
+
+general:
+  project: "context-architecture"
+  seed: 42
+  cache_dir: ".dspy_cache"
+
+models:
+  # Replace with your actual model endpoints/keys in local env (never commit secrets)
+  generator:
+    provider: "openai"
+    model: "gpt-4o"         # example
+  critic:
+    provider: "openai"
+    model: "gpt-4o-mini"    # example reranker/critic usage
+  reranker:
+    provider: "openai"
+    model: "gpt-4o-mini"    # placeholder; replace with cross-encoder if using a hosted reranker
+
+datasets:
+  # Path to evaluation questions and references
+  qna_csv: "./eval/eval_set_example.csv"
+
+metrics:
+  # Keep parity with RAGAS/DeepEval
+  - name: "faithfulness"
+    target: 0.80
+  - name: "answer_relevancy"
+    target: 0.80
+  - name: "contextual_precision"
+    target: 0.80
+
+retrieval:
+  strategy: "hybrid_plus_rerank"
+  k_in: 30
+  k_out: 6
+
+gate:
+  min_average: 0.80
+  strict: true   # if true, fail the CI/Make target when below gate

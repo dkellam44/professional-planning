@@ -1,0 +1,60 @@
+===============================================================================
+QUICK REFERENCE: Deploy Fixed Health Checks
+===============================================================================
+
+SITUATION:
+  7/7 containers running, but 5/7 show "unhealthy" due to broken health checks
+  Services are actually working - just reporting unhealthy
+
+ROOT CAUSE:
+  ✗ nginx-proxy    - Looking for /health endpoint that doesn't exist
+  ✗ acme-companion - Looking for cert file before any traffic received
+  ✗ cloudflared    - Health check command doesn't return 0
+  ✗ n8n            - Start period too short (60s vs 120s needed)
+  ✗ coda-mcp-gateway - Start period too short (30s vs 120s needed)
+
+SOLUTION:
+  Updated docker-compose.production.yml with working health checks
+  - Now in: ~/workspace/portfolio/ops/docker-compose.production.yml
+
+DEPLOY STEPS (3 minutes):
+  1. scp docker-compose.production.yml to droplet
+  2. ssh to droplet, cd ~/portfolio/ops
+  3. bash DEPLOY_FIXES.sh (or manual: docker compose down && up -d)
+  4. Wait 2-3 minutes for health checks to pass
+  5. Verify: docker compose ps (all should be "healthy")
+
+FILES INVOLVED:
+  LOCAL:
+    ~/workspace/portfolio/ops/docker-compose.production.yml (FIXED)
+    ~/workspace/portfolio/ops/DEPLOY_FIXES.sh (helper script)
+    ~/workspace/portfolio/ops/INSTRUCTIONS_FOR_DEPLOYMENT.md (detailed guide)
+    ~/workspace/portfolio/ops/FIX_HEALTH_CHECKS.md (technical details)
+    ~/workspace/portfolio/ops/TROUBLESHOOT_HEALTH_CHECKS.sh (diagnostics)
+
+  DROPLET:
+    ~/portfolio/ops/docker-compose.production.yml (needs sync)
+    ~/portfolio/ops/.env (already correct)
+
+EXPECTED TIMELINE:
+  0-10s:   postgres, qdrant → HEALTHY
+  30-60s:  n8n, coda-mcp-gateway → HEALTHY
+  60-90s:  nginx-proxy → HEALTHY
+  90-180s: acme-companion, cloudflared → HEALTHY
+
+QUICK TEST:
+  curl http://localhost:5678      # n8n
+  curl http://localhost:8080      # coda
+  curl http://localhost/          # nginx-proxy
+  curl https://n8n.bestviable.com # via tunnel
+
+ROLLBACK:
+  docker compose down
+  cp docker-compose.production.yml.backup.* docker-compose.production.yml
+  docker compose up -d
+
+HELP:
+  See INSTRUCTIONS_FOR_DEPLOYMENT.md for detailed steps
+  Run TROUBLESHOOT_HEALTH_CHECKS.sh if still having issues
+
+===============================================================================

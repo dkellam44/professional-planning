@@ -12,3 +12,16 @@ venv/
 # Archives & exports
 archive/*.zip
 *.xlsx
+
+# Repository organization (Phase 0.5)
+# Triage area - untracked, reviewed weekly
+inbox/
+y_collection_box/
+
+# Archive directory - historical reference, not tracked
+z_archive/
+
+# Temp files
+*.swp
+*.tmp
+*~

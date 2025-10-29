@@ -1,0 +1,146 @@
+name: Validate Data
+
+on:
+  push:
+    branches:
+      - main
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+jobs:
+  validate-jsonl:
+    name: Validate JSONL + Notify n8n
+    runs-on: ubuntu-latest
+    env:
+      N8N_WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install jsonschema
+
+      - name: Validate JSONL files
+        id: validate
+        run: |
+          python - <<'PY'
+          import glob, json, sys
+          from jsonschema import Draft7Validator
+
+          schema_path = "sot/schemas/sot_v01.json"
+          try:
+            with open(schema_path, "r", encoding="utf-8") as fh:
+              schema = json.load(fh)
+          except FileNotFoundError:
+            print(f"Schema not found at {schema_path}")
+            sys.exit(1)
+
+          validator = Draft7Validator(schema)
+          errors = []
+          files = glob.glob("data/*.jsonl")
+          if not files:
+            print("No JSONL files found under data/. Nothing to validate.")
+          for path in files:
+            with open(path, "r", encoding="utf-8") as fh:
+              for line_no, raw in enumerate(fh, start=1):
+                raw = raw.strip()
+                if not raw:
+                  continue
+                try:
+                  payload = json.loads(raw)
+                except json.JSONDecodeError as exc:
+                  errors.append(f"{path}:{line_no} invalid JSON ({exc})")
+                  continue
+                for err in validator.iter_errors(payload):
+                  errors.append(f"{path}:{line_no} {err.message}")
+          if errors:
+            print("Validation failed:")
+            for err in errors:
+              print(f" - {err}")
+            sys.exit(1)
+          print("Validation passed for all JSONL files.")
+          PY
+
+      - name: Determine changed files
+        id: changes
+        run: |
+          set -euo pipefail
+          EVENT="${GITHUB_EVENT_NAME}"
+          BASE_SHA=""
+          if [ "$EVENT" = "pull_request" ]; then
+            BASE_REF="${{ github.event.pull_request.base.ref }}"
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            git fetch --no-tags --depth=1 origin "$BASE_REF"
+          else
+            BASE_SHA="${{ github.event.before }}"
+          fi
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA=$(git rev-list --max-parents=0 HEAD)
+          fi
+          echo "Comparing commits: $BASE_SHA -> ${GITHUB_SHA}"
+          CHANGED=$(git diff --name-only "$BASE_SHA" "${GITHUB_SHA}" || true)
+          printf '%s\n' "$CHANGED"
+          {
+            echo "files<<'EOF'"
+            printf '%s\n' "$CHANGED"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Notify n8n
+        if: env.N8N_WEBHOOK_URL != ''
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REPOSITORY: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          REF: ${{ github.ref }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          CHANGED_FILES: ${{ steps.changes.outputs.files }}
+        run: |
+          payload=$(jq -n \
+            --arg event "$EVENT_NAME" \
+            --arg repo "$REPOSITORY" \
+            --arg sha "$SHA" \
+            --arg ref "$REF" \
+            --arg run_id "$RUN_ID" \
+            --arg run_url "$RUN_URL" \
+            --arg status "passed" \
+            --arg changed "$CHANGED_FILES" \
+            '
+            def classify($path):
+              if ($path | test("^templates/")) then "resource_template"
+              elif ($path | test("^architecture/")) then "service_blueprint"
+              elif ($path | test("^ops/runbooks/")) then "process_template"
+              elif ($path | test("^ops/quality_gates/")) then "process_template"
+              elif ($path | test("^ops/workflows/")) then "workflow_template"
+              elif ($path | test("^integrations/coda/")) then "coda_mapping"
+              elif ($path | test("^integrations/n8n/")) then "n8n_flow"
+              elif ($path | test("^diagrams/")) then "asset"
+              elif ($path | test("^docs/")) then "learning_doc"
+              else null end;
+            {event: "validate_data.complete",
+             status: $status,
+             github: {event: $event, repository: $repo, sha: $sha, ref: $ref, run_id: $run_id, run_url: $run_url},
+             documents: ($changed
+               | split("\n")
+               | map(select(length>0))
+               | map({path: ., summary: ., tableHint: classify(.)})
+             )
+            }')
+          echo "Posting validation payload to n8n..."
+          curl -sSf -X POST -H "Content-Type: application/json" -d "$payload" "$N8N_WEBHOOK_URL"
+
+      - name: Missing n8n webhook warning
+        if: env.N8N_WEBHOOK_URL == ''
+        run: |
+          echo "::warning::N8N_WEBHOOK_URL secret is not set. Skipping notification step."

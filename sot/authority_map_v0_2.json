@@ -1,0 +1,11 @@
+{
+  "Pass": {
+    "store": "Coda"
+  },
+  "Decision": {
+    "store": "Coda"
+  },
+  "Asset": {
+    "store": "GitHub"
+  }
+}

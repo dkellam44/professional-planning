@@ -1,0 +1,164 @@
+[
+  {
+    "id": "1",
+    "name": "GitHub → Coda Sync",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "github-to-coda"
+        },
+        "id": "WebhookTrigger",
+        "name": "Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1
+      },
+      {
+        "parameters": {
+          "options": {},
+          "functionCode": "const payload = items[0]?.json || {};\nconst repo = payload.github?.repository || payload.repository || payload.repo || '';\nconst sha = payload.github?.sha || payload.sha || '';\nconst ref = payload.github?.ref || payload.ref || '';\nconst documents = Array.isArray(payload.documents) ? payload.documents : [];\nconst tableMap = {\n  resource_template: 'grid-v4BEeA-eq1',\n  service_blueprint: 'grid-pgL9kxkhKI',\n  process_template: 'grid-6ZlgsRtZO7',\n  workflow_template: 'grid-BccTVdgIEo',\n  asset: 'grid-aprrpKni50'\n};\nif (!documents.length) {\n  return [];\n}\nreturn documents\n  .map(doc => {\n    const tableId = doc.tableId || tableMap[doc.tableHint];\n    if (!tableId) {\n      return null;\n    }\n    return {\n      json: {\n        repo,\n        sha,\n        ref,\n        tableId,\n        tableHint: doc.tableHint || null,\n        rows: doc.rows || [],\n        summary: doc.summary || doc.path || '',\n        sourcePath: doc.path || '',\n        contentUrl: doc.contentUrl || doc.downloadUrl || null\n      }\n    };\n  })\n  .filter(Boolean);"
+        },
+        "id": "ShapePayload",
+        "name": "Shape Payload",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [
+          360,
+          280
+        ]
+      },
+      {
+        "parameters": {
+          "url": "={{`https://api.github.com/repos/${$json.repo}/contents/${$json.sourcePath}?ref=${$json.sha}`}}",
+          "method": "GET",
+          "authentication": "predefinedCredentialType",
+          "responseFormat": "json",
+          "options": {
+            "responsePropertyName": "contentResponse"
+          }
+        },
+        "id": "FetchFile",
+        "name": "Fetch File Content",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 2,
+        "position": [
+          560,
+          280
+        ]
+      },
+      {
+        "parameters": {
+          "options": {},
+          "functionCode": "const columnConfig = {\n  'grid-v4BEeA-eq1': { path: 'Source Path', content: 'Template Markdown' },\n  'grid-pgL9kxkhKI': { path: 'Source Path', content: 'Blueprint Markdown' },\n  'grid-6ZlgsRtZO7': { path: 'Source Path', content: 'Process Markdown' },\n  'grid-BccTVdgIEo': { path: 'Source Path', content: 'Workflow Markdown' },\n  'grid-aprrpKni50': { path: 'Source Path', content: 'Asset Markdown' }\n};\nreturn items.map(item => {\n  const data = item.json || {};\n  const response = data.contentResponse || {};\n  const encoded = response.content || '';\n  const decoded = encoded ? Buffer.from(encoded, 'base64').toString('utf8') : '';\n  const config = columnConfig[data.tableId];\n  const rows = (data.rows && data.rows.length) ? data.rows : (config ? [{\n    cells: [\n      { column: config.path, value: data.sourcePath },\n      { column: config.content, value: decoded }\n    ]\n  }] : []);\n  return {\n    json: {\n      ...data,\n      rows,\n      fileContent: decoded\n    }\n  };\n});"
+        },
+        "id": "PrepareRows",
+        "name": "Prepare Rows",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [
+          720,
+          280
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "resource": "row",
+          "docId": "CxcSmXz318",
+          "tableId": "={{$json[\"tableId\"]}}",
+          "rows": "={{$json[\"rows\"]}}",
+          "options": {
+            "contentType": "json"
+          }
+        },
+        "id": "UpdateCoda",
+        "name": "Update Coda Docs",
+        "type": "n8n-nodes-base.coda",
+        "typeVersion": 2
+      },
+      {
+        "parameters": {
+          "url": "https://hooks.slack.com/services/<<SLACK_WEBHOOK>>",
+          "options": {
+            "bodyContentType": "json"
+          },
+          "payload": "={{ { text: `GitHub → Coda sync for ${$json.summary || $json.sourcePath || 'unknown target'} (${ $json.repo || 'repo' } @ ${ $json.sha || 'sha' })` } }}"
+        },
+        "id": "NotifySlack",
+        "name": "Notify",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 2,
+        "position": [
+          840,
+          280
+        ]
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Shape Payload",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Shape Payload": {
+        "main": [
+          [
+            {
+              "node": "Fetch File Content",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch File Content": {
+        "main": [
+          [
+            {
+              "node": "Prepare Rows",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Rows": {
+        "main": [
+          [
+            {
+              "node": "Update Coda Docs",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Update Coda Docs": {
+        "main": [
+          [
+            {
+              "node": "Notify",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "active": false,
+    "settings": {
+      "timezone": "America/Los_Angeles"
+    },
+    "pinData": {},
+    "versionId": "1",
+    "meta": {
+      "templateCredsSetupCompleted": true
+    }
+  }
+]

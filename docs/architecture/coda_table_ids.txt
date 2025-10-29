@@ -1,0 +1,147 @@
+DK Enterprise OS (Doc ID: CxcSmXz318)- Table IDs
+============================================================
+Generated from coda_list_tables (coda-enhanced MCP)
+============================================================
+
+Table: Outcome Types
+Table ID: grid-wVuFB2odV8
+Parent Page: DB Outcomes
+------------------------------------------------------------
+Table: Ventures
+Table ID: grid-7nQc5Vde63
+Parent Page: DB Ventures
+------------------------------------------------------------
+Table: Functional Areas
+Table ID: grid-ssVNmhrIKs
+Parent Page: DB Functional Areas
+------------------------------------------------------------
+Table: OKRs
+Table ID: grid-VzFgkj2Fxq
+Parent Page: DB OKRs
+------------------------------------------------------------
+Table: Projects
+Table ID: grid-4xp4uJfrCX
+Parent Page: DB Projects
+------------------------------------------------------------
+Table: Sprints
+Table ID: grid-Dssve7Rjvt
+Parent Page: DB Sprints
+------------------------------------------------------------
+Table: Tasks
+Table ID: grid-YYWnWyA2ek
+Parent Page: DB Tasks
+------------------------------------------------------------
+Table: Ideas Inbox
+Table ID: grid-ETK5XRNhSf
+Parent Page: DB Ideas
+------------------------------------------------------------
+Table: Assets
+Table ID: grid-aprrpKni50
+Parent Page: DB Assets
+------------------------------------------------------------
+Table: Resource Templates
+Table ID: grid-v4BEeA-eq1
+Parent Page: DB Resource Templates (fka 'Templates')
+------------------------------------------------------------
+Table: People
+Table ID: grid-lXbBizx_qG
+Parent Page: DB People
+------------------------------------------------------------
+Table: Prompt Library
+Table ID: grid-DrVH4Xzndu
+Parent Page: Prompt Library
+------------------------------------------------------------
+Table: Notebook
+Table ID: grid-EI7q6Ly4c7
+Parent Page: Daily Thread
+------------------------------------------------------------
+
+------------------------------------------------------------
+Table: Organizations
+Table ID: grid-IEkBj5Nwnp
+Parent Page: DB Organizations
+------------------------------------------------------------
+Table: Deals
+Table ID: grid-J7LlLCm16p
+Parent Page: DB Deals
+------------------------------------------------------------
+Table: Expenses
+Table ID: grid-AqoPAWoCXA
+Parent Page: DB Expenses
+------------------------------------------------------------
+Table: KPIs (Dashboard Driver)
+Table ID: grid-ceolH5J2c7
+Parent Page: DB KPIs
+------------------------------------------------------------
+Table: Finance Snapshot
+Table ID: grid-Tu0UbYGGZM
+Parent Page: DB Finance Snapshot
+------------------------------------------------------------
+Table: Topics
+Table ID: grid-nIighffAjV
+Parent Page: DB Topics
+------------------------------------------------------------
+Table: Daily Thread
+Table ID: grid-33magJT7Om
+Parent Page: DB Daily Thread
+------------------------------------------------------------
+Table: Decision Journal
+Table ID: grid-fcSRcR12d8
+Parent Page: DB Decision Journal
+------------------------------------------------------------
+Table: Experiments
+Table ID: grid-mIz62q1JqD
+Parent Page: DB Experiments
+------------------------------------------------------------
+Table: Offers
+Table ID: grid-TcKoLLI4Of
+Parent Page: DB Offers
+------------------------------------------------------------
+Table: Service Blueprints
+Table ID: grid-pgL9kxkhKI
+Parent Page: DB Service Blueprints
+------------------------------------------------------------
+Table: Process Templates
+Table ID: grid-6ZlgsRtZO7
+Parent Page: DB Process Templates
+------------------------------------------------------------
+Table: ICP Scoring
+Table ID: grid-RG2RCvIEOv
+Parent Page: DB ICP Scoring
+------------------------------------------------------------
+Table: Template Performance
+Table ID: grid-LMZfkAk4AE
+Parent Page: DB Template Performance
+------------------------------------------------------------
+Table: Touchpoints
+Table ID: grid-qOH6nJMZEW
+Parent Page: DB Touchpoints (fka Outreach Log)
+------------------------------------------------------------
+Table: ICP Segments
+Table ID: grid-CLQRLZModD
+Parent Page: DB ICP Segments
+------------------------------------------------------------
+Table: Engagements
+Table ID: grid-9kDjcu0gpy
+Parent Page: DB Engagements
+------------------------------------------------------------
+Table: Deliverables
+Table ID: grid-feAP4JK8EJ
+Parent Page: DB Deliverables
+------------------------------------------------------------
+Table: Results
+Table ID: grid-NXB5mCFBj2
+Parent Page: DB Results
+------------------------------------------------------------
+Table: Workflows
+Table ID: grid-BccTVdgIEo
+Parent Page: DB Workflows
+------------------------------------------------------------
+Table: Invoices
+Table ID: grid-Fqlzvh-KOi
+Parent Page: DB Invoices
+------------------------------------------------------------
+Table: Payments
+Table ID: grid-sB8w3ynJMF
+Parent Page: DB Payments
+------------------------------------------------------------

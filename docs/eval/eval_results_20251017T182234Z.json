@@ -1,0 +1,61 @@
+{
+  "timestamp": "2025-10-17T18:22:34.960710Z",
+  "engine": "heuristic",
+  "gate": 0.8,
+  "metric_avgs": {
+    "faithfulness": 0.0,
+    "answer_relevancy": 0.0,
+    "contextual_precision": 0.0
+  },
+  "average": 0.0,
+  "results": [
+    {
+      "id": "E001",
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "contextual_precision": 0.0,
+        "_engine": "heuristic"
+      },
+      "question": "What are the required metadata fields for a context chunk?",
+      "answer": "",
+      "expected": ""
+    },
+    {
+      "id": "E002",
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "contextual_precision": 0.0,
+        "_engine": "heuristic"
+      },
+      "question": "How many tokens should a chunk target?",
+      "answer": "",
+      "expected": ""
+    },
+    {
+      "id": "E003",
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "contextual_precision": 0.0,
+        "_engine": "heuristic"
+      },
+      "question": "What is the default optimization framework and TS alternative?",
+      "answer": "",
+      "expected": ""
+    },
+    {
+      "id": "E004",
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "contextual_precision": 0.0,
+        "_engine": "heuristic"
+      },
+      "question": "What is k_in and k_out in retrieval?",
+      "answer": "",
+      "expected": ""
+    }
+  ]
+}

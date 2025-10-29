@@ -1,0 +1,13 @@
+version: "3.9"
+services:
+  coda-mcp:
+    image: ghcr.io/dustinrgood/coda-mcp:latest
+    environment:
+      - API_KEY=${CODA_API_KEY}
+  mcp-gateway:
+    image: ghcr.io/sparfenyuk/mcp-proxy:latest
+    depends_on: [coda-mcp]
+  n8n:
+    image: n8nio/n8n:latest
+  caddy:
+    image: caddy:latest

@@ -1,0 +1,126 @@
+[
+  {
+    "id": "2",
+    "name": "Coda → GitHub Sync",
+    "nodes": [
+      {
+        "id": "WebhookTrigger",
+        "name": "Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "coda-to-github"
+        }
+      },
+      {
+        "id": "RenderMarkdown",
+        "name": "Render Markdown",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "parameters": {
+          "functionCode": "const row = items[0].json || {};\nconst header = `# ${row.title || 'Untitled'}\\n`;\nconst body = row.body || '';\nconst metadata = row.metadata ? { ...row.metadata } : {};\nif (!metadata.repo) metadata.repo = 'davidkellam/professional-planning';\nif (!metadata.baseBranch) metadata.baseBranch = 'main';\nreturn [{ json: { markdown: `${header}\\n${body}`, metadata } }];"
+        },
+        "position": [
+          320,
+          280
+        ]
+      },
+      {
+        "id": "CreateBranch",
+        "name": "Create Branch",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 2,
+        "parameters": {
+          "url": "={{`https://api.github.com/repos/${$json.metadata.repo || 'davidkellam/professional-planning'}/git/refs`}}",
+          "method": "POST",
+          "authentication": "predefinedCredentialType",
+          "jsonParameters": true,
+          "options": {},
+          "body": "={{ { ref: `refs/heads/chore/sot-auto-sync/${$json.metadata.entityId}`, sha: $json.metadata.baseSha } }}"
+        }
+      },
+      {
+        "id": "CreateCommit",
+        "name": "Create Commit",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 2,
+        "parameters": {
+          "url": "={{`https://api.github.com/repos/${$json.metadata.repo || 'davidkellam/professional-planning'}/contents/${$json.metadata.path}`}}",
+          "method": "PUT",
+          "authentication": "predefinedCredentialType",
+          "jsonParameters": true,
+          "body": "={{ { message: `chore: sync ${$json.metadata.entityId} from Coda`, content: Buffer.from($json.markdown).toString('base64'), branch: `chore/sot-auto-sync/${$json.metadata.entityId}` } }}"
+        }
+      },
+      {
+        "id": "CreatePR",
+        "name": "Create PR",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 2,
+        "parameters": {
+          "url": "={{`https://api.github.com/repos/${$json.metadata.repo || 'davidkellam/professional-planning'}/pulls`}}",
+          "method": "POST",
+          "authentication": "predefinedCredentialType",
+          "jsonParameters": true,
+          "body": "={{ { title: `Sync ${$json.metadata.entityId} from Coda`, head: `chore/sot-auto-sync/${$json.metadata.entityId}`, base: `${$json.metadata.baseBranch || 'main'}`, body: `Automated sync triggered from Coda at ${new Date().toISOString()}.` } }}"
+        }
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Render Markdown",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Render Markdown": {
+        "main": [
+          [
+            {
+              "node": "Create Branch",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create Branch": {
+        "main": [
+          [
+            {
+              "node": "Create Commit",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create Commit": {
+        "main": [
+          [
+            {
+              "node": "Create PR",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "active": false,
+    "settings": {
+      "timezone": "America/Los_Angeles"
+    },
+    "pinData": {},
+    "versionId": "1",
+    "meta": {
+      "templateCredsSetupCompleted": false
+    }
+  }
+]
