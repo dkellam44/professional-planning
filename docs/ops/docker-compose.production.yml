@@ -251,8 +251,8 @@ services:
 
   coda-mcp-gateway:
     build:
-      context: ./coda-mcp-gateway
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docs/ops/Dockerfile.coda-mcp-gateway
     image: coda-mcp-gateway:latest
     container_name: coda-mcp-gateway
     restart: always
@@ -283,6 +283,7 @@ services:
       # SSL/TLS via nginx-proxy (not needed in container)
       NODE_ENV: production
       HTTPS_METHOD: noredirect
+      TRUST_DOWNSTREAM_PROXY: "true"
 
     volumes:
       - ./data/coda-mcp:/app/data
