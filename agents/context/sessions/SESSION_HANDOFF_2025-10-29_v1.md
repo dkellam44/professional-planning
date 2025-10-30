@@ -1,163 +1,167 @@
 ---
-- entity: session-handoff
-- level: internal
+- entity: session
+- level: handoff
 - zone: internal
-- version: v1
-- tags: [session, agent-documentation, operations-studio, complete]
+- version: v01
+- tags: [mcp, coda, infrastructure, deployment, phase-1]
 - source_path: /agents/context/sessions/SESSION_HANDOFF_2025-10-29_v1.md
 - date: 2025-10-29
 ---
 
-# Session Handoff — 2025-10-29
+# Session Handoff — MCP Architecture & Coda MCP Upgrade Plan
 
-## Status: 🟢 GREEN
+**Status**: 🟡 In Progress - Phase 1A Complete, Phase 1B Ready to Start
 
-All planned work completed. System documentation enhanced. Agent startup/shutdown procedures now canonical.
-
----
-
-## What We Did Today
-
-### 1. Analyzed Agent Session Flow (Research)
-- Mapped all 6 agent orientation documents
-- Clarified document hierarchy and authority domains
-- Found CURRENT_FOCUS is primary entry point (all docs agree)
-- Identified 3-tier system: CURRENT_FOCUS (quick) → checklist (detailed) → overview (deep)
-
-### 2. Identified Documentation Gap
-- Discovered: AGENT_OPERATING_MANUAL had startup but NO shutdown guidance
-- Consolidated scattered shutdown guidance from 3 documents
-- Identified what should be updated at session end (playbooks, SESSION_HANDOFF, CURRENT_FOCUS, logs, human comms)
-
-### 3. Implemented Solution: Section 15 Session Shutdown Protocol
-- Added Section 15 to AGENT_OPERATING_MANUAL_v0.1.md (122 lines)
-- Established 5-step required checklist:
-  1. Update active playbooks
-  2. Create/update SESSION_HANDOFF file
-  3. Update CURRENT_FOCUS.md if priorities shifted
-  4. Log context actions in /logs/context_actions.csv
-  5. Communicate next steps to human
-- Included conditional updates (venture docs, promotions, ADRs)
-- Provided "quick shutdown" minimal path (3 steps)
-- Documented common mistakes to avoid
-- Cross-referenced to CURRENT_FOCUS and system_startup_checklist
-
-### 4. Maintained Document Relationships
-- Operating Manual = Authoritative technical reference for shutdown
-- CURRENT_FOCUS = Quick reference (3-step version)
-- system_startup_checklist = Procedural operationalization
-- No conflicts found; all documents defer appropriately
+**Infrastructure**: 🟢 All systems operational (coda.bestviable.com verified)
 
 ---
 
-## Current System State
+## What We Did This Session
 
-### Agent Documentation Complete ✅
-- CURRENT_FOCUS.md (primary entry point)
-- system_startup_checklist_v01.md (detailed process)
-- AGENT_OPERATING_MANUAL_v0.1.md (technical reference, now with shutdown)
-- system_overview_v01.md (architecture)
-- agents.md (role definitions)
-- Session handoffs (ephemeral context)
+### 1. MCP Architecture Documentation (COMPLETE)
+Created comprehensive 9-file documentation suite:
 
-### Operations Studio Venture Complete ✅
-- Structure: context/, offers/, pipeline/, engagements/, decisions/, logs/, archive/
-- Documentation: venture_brief_v01.md, DAILY_WORKFLOW.md, RECOVERY_CHECKLIST.md, CODA_GITHUB_GUIDE.md
-- Business state: Pre-revenue (zero clients), need offers + pipeline
+**Governance**: ADR for three-tier architecture (/agents/decisions/2025-10-29_mcp-tier-architecture_v01.md)
 
-### Infrastructure Verified ✅
-- n8n: https://n8n.bestviable.com (HTTP 200)
-- Coda MCP: https://coda.bestviable.com/sse (HTTP 200)
-- All services operational
+**Implementation**:
+- Main playbook: 4-phase execution plan (17 hours total)
+- Onboarding template: Reusable process for new MCPs
+
+**Technical**:
+- Updated navigation hub
+- Living server catalog (14+ MCPs documented)
+
+**Operations**:
+- Troubleshooting runbook with all tier-specific diagnostics
+
+**Commit**: `5cab9ca` - Complete MCP documentation
+
+### 2. Coda MCP Examination & Migration (PHASE 1A COMPLETE)
+
+**Source**: /Users/davidkellam/workspace/coda-enhanced-mcp (dustingood fork)
+
+**Status**: ✅ Production-ready
+
+**Tools Available**: 34 across 8 categories
+- Documents (5): list, get, create, update, stats
+- Pages (10): comprehensive CRUD + search
+- Tables (4): list, get, summary, search
+- Columns (2): list, get
+- Rows (7): full CRUD with bulk operations
+- Formulas (2): list, get
+- Controls (3): list, get, push_button
+- Users (1): whoami
+
+**Migration Complete**:
+- Copied to: /integrations/mcp/servers/coda/src/
+- Build verified: TypeScript → dist/index.js
+- All dependencies present
+- No blockers identified
+
+---
+
+## Current Architecture
+
+**Three-Tier Model** (ADR: 2025-10-29_mcp-tier-architecture_v01.md)
+
+**Tier 1 (Remote)**:
+- Coda: ✅ Deployed (https://coda.bestviable.com/sse)
+- GitHub: 🚧 Planned (Phase 2)
+- Memory: 🚧 Planned (Phase 2)
+- Firecrawl: 🚧 Planned (Phase 2)
+
+**Tier 2 (User-scope)**:
+- 13 servers active (calculator, time, brave-search, etc.)
+
+**Tier 3 (Project-scope)**:
+- 0 deployed (filesystem planned Phase 4)
+
+---
+
+## Phase 1: Foundation & Coda Upgrade (4 hours)
+
+### Phase 1A: Source Preparation ✅ COMPLETE
+- [x] Examined dustingood fork
+- [x] Verified 34 tools available
+- [x] Copied to /integrations/mcp/servers/coda/src/
+- [x] Confirmed build works
+
+### Phase 1B: Droplet Deployment 🔄 READY TO START
+**Estimated**: 1 hour
+
+**Steps**:
+1. Create Dockerfile.coda-mcp-gateway with mcp-proxy wrapper
+2. Update docker-compose.production.yml (add coda-mcp-gateway service)
+3. Copy to droplet via scp
+4. Build: docker compose build coda-mcp-gateway
+5. Deploy: docker compose up -d coda-mcp-gateway
+6. Verify: curl -I https://coda.bestviable.com/sse
+
+**Expected**: HTTP 200 response with MCP tools available
+
+### Phase 1C: Documentation 📋 PENDING
+- [ ] Create /integrations/mcp/servers/coda/README.md
+- [ ] Create /integrations/mcp/servers/coda/DEPLOYMENT.md
+- [ ] Create /integrations/mcp/servers/coda/CHANGELOG.md
+- [ ] Update server_catalog_v01.md
+
+---
+
+## Key Files & References
+
+**ADRs** (Governance):
+- /agents/decisions/2025-10-29_mcp-tier-architecture_v01.md
+
+**Playbooks** (Implementation):
+- /agents/context/playbooks/mcp_architecture_implementation_playbook_v01.md (4-phase plan)
+- /agents/context/playbooks/mcp_server_onboarding_template_v01.md (template)
+
+**Technical Docs**:
+- /docs/architecture/integrations/mcp/README.md (navigation)
+- /docs/architecture/integrations/mcp/server_catalog_v01.md (inventory)
+- /integrations/mcp/README.md (code repo overview)
+
+**Operations**:
+- /docs/ops/runbooks/mcp_troubleshooting_v01.md (troubleshooting)
+
+**Infrastructure**:
+- Droplet: tools.bestviable.com (159.65.97.146)
+- Pattern: SyncBricks (nginx-proxy + acme-companion + Cloudflare)
 
 ---
 
 ## Next 3 MITs
 
-1. **Create First Service Offer** (HIGH)
-   - File: `/ventures/ops-studio/offers/diagnostic-sprint/offer_brief.md`
-   - Suggested: "Diagnostic Sprint" ($2-5K, systems audit)
-   - Why: Can't sell without clear offer definition
-   - Time: 2-3 hours
+1. **Create Dockerfile.coda-mcp-gateway** (15 min)
+   - Alpine node image
+   - mcp-proxy wrapper
+   - Entry: mcp-proxy --host 0.0.0.0 --port 8080 -- node dist/index.js
 
-2. **Build Prospect Pipeline** (HIGH)
-   - File: `/ventures/ops-studio/pipeline/outreach_tracker.md`
-   - Target: 5-10 qualified prospects
-   - Start with: Identify ideal customer profile (ICP) from past experience
-   - Time: 4-6 hours
+2. **Update docker-compose.production.yml** (15 min)
+   - Add coda-mcp-gateway service
+   - Port 8080, VIRTUAL_HOST: coda.bestviable.com
+   - Health checks + env vars
 
-3. **Use Daily Workflow** (MEDIUM)
-   - File: `/ventures/ops-studio/DAILY_WORKFLOW.md`
-   - Each morning: Read CURRENT_FOCUS → Check for prospect responses → Pick option A/B/C
-   - Refine based on actual usage
+3. **Deploy to droplet** (30 min)
+   - scp files
+   - docker compose build
+   - docker compose up -d
+   - Verify endpoint
 
----
-
-## Decisions Made
-
-1. **Added Section 15 to Operating Manual** - Shutdown procedures are now canonical technical reference
-2. **Confirmed CURRENT_FOCUS as primary entry point** - All agent orientation flows through here
-3. **Maintained 3-tier document hierarchy** - Quick (CURRENT_FOCUS) → Detailed (checklist) → Deep (overview/manual)
+**Total**: ~1 hour to Phase 1B completion
 
 ---
 
-## Open Questions / Blockers
+## Recommendations
 
-None blocking immediate next steps. However:
+**If Continuing**: Use mcp_architecture_implementation_playbook_v01.md Section 7 (Phase Breakdown)
 
-- **Optional enhancement**: Add "Document Map" section to CURRENT_FOCUS showing when to read each doc (would add clarity for new agents)
-- **Optional consolidation**: Consider whether agents.md duplicates startup guidance unnecessarily
-- **Future**: Implement automated SESSION_HANDOFF → Coda sync workflow (currently manual)
+**If Deferring**: Phase 1B is self-contained, return anytime with full docs available
 
----
-
-## Commits This Session
-
-```
-54be9f9 Add: Section 15 Session Shutdown Protocol to Agent Operating Manual
-529173f Update: System documentation with CURRENT_FOCUS.md as primary entry point
-73d90aa Add: Operations Studio venture scaffold for pre-revenue pipeline building
-d479fc7 Repository: Stage new directory structure and organization framework
-3480bb6 Reorganization: Move portfolio-level files to structured directories
-```
-
-**Status**: 5 commits, 4 ahead of origin/main. Ready to push.
+**Business Context**: MCP is "Operational Stability" priority - can defer if focusing on revenue (offers + pipeline)
 
 ---
 
-## Git State
-
-```
-Branch: main
-Commits ahead: 4 (ready to push)
-Uncommitted changes: None
-Untracked files: 1 (repo_update_plan_so_t_v0.md - not needed)
-```
-
-**Ready to push to origin/main? YES**
-
----
-
-## For Next Agent Session
-
-1. Read CURRENT_FOCUS.md (5 min)
-2. Read this SESSION_HANDOFF (5 min)
-3. Choose one of the 3 MITs above
-4. Use DAILY_WORKFLOW.md as operational guide
-5. Reference RECOVERY_CHECKLIST.md if anything breaks
-
-**Total onboarding time**: 10 minutes
-
-**Expected productivity**: Start work immediately on offer definition or prospect research
-
----
-
-## TTL
-
-This handoff expires **2025-11-05** (7 days). By then:
-- Should have first offer defined
-- Should have initial prospect list
-- Should have 1-2 outreach conversations started
-- If not promoted to playbook, promote learnings here to venture_brief or DAILY_WORKFLOW updates
-
----
+**Session Date**: 2025-10-29
+**Commit**: 5cab9ca
+**Next Review**: After Phase 1B completion or context resumption
