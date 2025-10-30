@@ -251,8 +251,8 @@ services:
 
   coda-mcp-gateway:
     build:
-      context: .
-      dockerfile: docs/ops/Dockerfile.coda-mcp-gateway
+      context: ..
+      dockerfile: ops/Dockerfile.coda-mcp-gateway
     image: coda-mcp-gateway:latest
     container_name: coda-mcp-gateway
     restart: always
@@ -304,6 +304,90 @@ services:
       # Let's Encrypt certificate auto-generation
       - "com.github.jrcs.letsencrypt_nginx_proxy_companion.main=coda.${DOMAIN}"
       - "letsencrypt.host=coda.${DOMAIN}"
+      - "letsencrypt.email=${LETSENCRYPT_EMAIL:-admin@bestviable.com}"
+    security_opt:
+      - no-new-privileges:true
+
+  # ============================================================================
+  # DIGITALOCEAN MCP GATEWAY (REMOTE TRANSPORT)
+  # ============================================================================
+
+  digitalocean-mcp-gateway:
+    build:
+      context: ..
+      dockerfile: ops/Dockerfile.digitalocean-mcp-gateway
+    image: digitalocean-mcp-gateway:latest
+    container_name: digitalocean-mcp-gateway
+    restart: always
+    environment:
+      MCP_PROXY_PORT: 8082
+      DIGITALOCEAN_API_TOKEN: ${DIGITALOCEAN_API_TOKEN}
+      DIGITALOCEAN_SERVICES: ${DIGITALOCEAN_SERVICES:-}
+      DIGITALOCEAN_API_ENDPOINT: ${DIGITALOCEAN_API_ENDPOINT:-https://api.digitalocean.com}
+      DIGITALOCEAN_LOG_LEVEL: ${DIGITALOCEAN_LOG_LEVEL:-info}
+      VIRTUAL_HOST: digitalocean.${DOMAIN}
+      VIRTUAL_PORT: 8082
+      LETSENCRYPT_HOST: digitalocean.${DOMAIN}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:-admin@bestviable.com}
+      HTTPS_METHOD: noredirect
+    networks:
+      - proxy
+    ports:
+      - "127.0.0.1:8082:8082"
+    depends_on:
+      - nginx-proxy
+    healthcheck:
+      test: ["CMD-SHELL", "if pgrep -f 'mcp-digitalocean' > /dev/null; then exit 0; else exit 1; fi"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    labels:
+      - "com.github.jrcs.letsencrypt_nginx_proxy_companion.main=digitalocean.${DOMAIN}"
+      - "letsencrypt.host=digitalocean.${DOMAIN}"
+      - "letsencrypt.email=${LETSENCRYPT_EMAIL:-admin@bestviable.com}"
+    security_opt:
+      - no-new-privileges:true
+
+  # ============================================================================
+  # CLOUDFLARE MCP GATEWAY (REMOTE TRANSPORT WRAPPER)
+  # ============================================================================
+
+  cloudflare-mcp-gateway:
+    build:
+      context: ..
+      dockerfile: ops/Dockerfile.cloudflare-mcp-gateway
+    image: cloudflare-mcp-gateway:latest
+    container_name: cloudflare-mcp-gateway
+    restart: always
+    environment:
+      MCP_PROXY_PORT: 8083
+      CLOUDFLARE_REMOTE_URL: ${CLOUDFLARE_REMOTE_URL}
+      CLOUDFLARE_TRANSPORT_STRATEGY: ${CLOUDFLARE_TRANSPORT_STRATEGY:-http-first}
+      CLOUDFLARE_CALLBACK_PORT: ${CLOUDFLARE_CALLBACK_PORT:-}
+      CLOUDFLARE_HEADERS: ${CLOUDFLARE_HEADERS:-}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+      CLOUDFLARE_IGNORE_TOOLS: ${CLOUDFLARE_IGNORE_TOOLS:-}
+      VIRTUAL_HOST: cloudflare.${DOMAIN}
+      VIRTUAL_PORT: 8083
+      LETSENCRYPT_HOST: cloudflare.${DOMAIN}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:-admin@bestviable.com}
+      HTTPS_METHOD: noredirect
+    networks:
+      - proxy
+    ports:
+      - "127.0.0.1:8083:8083"
+    depends_on:
+      - nginx-proxy
+    healthcheck:
+      test: ["CMD-SHELL", "if pgrep -f 'mcp-remote' > /dev/null; then exit 0; else exit 1; fi"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    labels:
+      - "com.github.jrcs.letsencrypt_nginx_proxy_companion.main=cloudflare.${DOMAIN}"
+      - "letsencrypt.host=cloudflare.${DOMAIN}"
       - "letsencrypt.email=${LETSENCRYPT_EMAIL:-admin@bestviable.com}"
     security_opt:
       - no-new-privileges:true
