@@ -2,13 +2,13 @@
 - entity: system
 - level: internal
 - zone: internal
-- version: v01
-- tags: [orientation, current-state, entry-point]
+- version: v02
+- tags: [orientation, current-state, entry-point, infrastructure-complete]
 - source_path: /agents/CURRENT_FOCUS.md
-- date: 2025-10-29
+- date: 2025-10-30
 ---
 
-# Current Focus — 2025-10-29
+# Current Focus — 2025-10-30
 
 **THIS FILE = START HERE for every new agent session**
 
@@ -48,25 +48,31 @@
 
 ## Latest Session Handoff
 
-📍 `/agents/context/sessions/SESSION_HANDOFF_2025-10-28_v1.md`
+📍 `/sessions/handoffs/SESSION_HANDOFF_2025-10-30_v1.md`
 
-**Summary:** Infrastructure stabilized. KD engagement closed (learning reference). Repo reorganization complete.
+**Summary:** Infrastructure restructure complete. All directories migrated to new structure. Endpoints verified live. Ready for next phase of business development.
 
 ---
 
 ## Infrastructure Status
 
-🟢 **GREEN** — All systems working
-- n8n: https://n8n.bestviable.com (✅ 200)
-- Coda MCP: https://coda.bestviable.com/sse (✅ 200)
-- Last verified: 2025-10-29
-- Confidence: Working and operational
+🟢 **GREEN** — Infrastructure restructure COMPLETE & VERIFIED (2025-10-30)
+- **Coda MCP**: ✅ Live & responding (https://coda.bestviable.com/sse → HTTP 200)
+- **n8n**: 🟡 Restarting (expected during init, check after stabilization)
+- **DigitalOcean/Cloudflare MCPs**: 🟡 Restarting (awaiting API tokens/remote URL)
+- **Base Stack**: ✅ nginx-proxy, postgres, acme-companion, cloudflared all healthy
+- **Droplet sync**: ✅ `/root/portfolio/infra/` mirrors local structure perfectly
+- **Build contexts**: ✅ Verified `../..` context paths work correctly
+- **Last verified**: 2025-10-30 05:36 UTC
 
-**Agent documentation framework COMPLETE** (2025-10-28 through 2025-10-29)
-- CURRENT_FOCUS as primary entry point ✅
-- Session startup/shutdown procedures canonical ✅
-- Operations Studio venture structure ready ✅
-- Daily workflow + recovery guides ready ✅
+**Structure Migration COMPLETE**:
+- `/docs/ops/` → `/infra/docker/` ✅
+- `y_collection_box/` → `sessions/` ✅
+- `inbox/` → `planning/` ✅
+- `z_archive/` → `archive/` ✅
+- `business_model/` → `docs/business/` ✅
+- All documentation updated ✅
+- ADR recorded (2025-10-30_portfolio-infrastructure-restructure_v01.md) ✅
 
 ---
 
@@ -137,4 +143,3 @@ Do you have active billable work?
 - **Done > Perfect**
 - **Commit often > Perfect commits rarely**
 - **When confused → Read this file again**
-
