@@ -19,7 +19,7 @@
 - An MCP is deprecated or retired
 - Endpoint URLs or configuration change
 
-**Last Updated**: 2025-10-29
+**Last Updated**: 2025-10-30
 
 ---
 
@@ -29,7 +29,9 @@ Remote MCPs accessible to all AI clients via SSE over HTTPS. Hosted on DigitalOc
 
 | Name | Endpoint | Status | Tools | Source | Docs | Updated |
 |------|----------|--------|-------|--------|------|---------|
-| **coda** | `https://coda.bestviable.com/sse` | ✅ Production | 8 tools | Fork of dustinrgood/coda-mcp | [Docs](../../../../integrations/mcp/servers/coda/) | 2025-10-28 |
+| **coda** | `https://coda.bestviable.com/sse` | ✅ Production | 34 tools | dustingood/coda-mcp fork | [Docs](../../../../integrations/mcp/servers/coda/) | 2025-10-30 |
+| **digitalocean** | `https://digitalocean.bestviable.com/sse` | 🧪 Built — awaiting token | 50+ tools (Droplets, Apps, DBaaS, Networking) | digitalocean-labs/mcp-digitalocean | [Docs](../../../../integrations/mcp/servers/digitalocean/) | 2025-10-29 |
+| **cloudflare** | `https://cloudflare.bestviable.com/sse` | 🧪 Built — configure remote | Proxy to selected Cloudflare MCP | cloudflare/mcp-server-cloudflare | [Docs](../../../../integrations/mcp/servers/cloudflare/) | 2025-10-29 |
 | **github** | `https://github.bestviable.com/sse` | 🚧 Planned | ~15 tools | @modelcontextprotocol/server-github | [Docs](../../../../integrations/mcp/servers/github/) | - |
 | **memory** | `https://memory.bestviable.com/sse` | 🚧 Planned | 5 tools | @modelcontextprotocol/server-memory | [Docs](../../../../integrations/mcp/servers/memory/) | - |
 | **firecrawl** | `https://firecrawl.bestviable.com/sse` | 🚧 Planned | 6 tools | firecrawl-mcp | [Docs](../../../../integrations/mcp/servers/firecrawl/) | - |
@@ -37,27 +39,29 @@ Remote MCPs accessible to all AI clients via SSE over HTTPS. Hosted on DigitalOc
 
 ### Coda MCP Gateway
 
-**Status**: ✅ Production (deployed 2025-10-28)
+**Status**: ✅ Production (deployed 2025-10-30)
 **Endpoint**: https://coda.bestviable.com/sse
 **Transport**: SSE over HTTPS
 **Container**: `coda-mcp-gateway` (port 8080)
 
-**Tools Provided** (8 total):
-1. `list_docs` - List available Coda documents
-2. `list_tables` - List tables in a document
-3. `get_table` - Get table schema and metadata
-4. `query_rows` - Query rows from a table with filters
-5. `create_row` - Create a new row in a table
-6. `update_row` - Update an existing row
-7. `delete_row` - Delete a row
-8. `search` - Full-text search across documents
+**Tools Provided** (34 total):
+- Documents (5): list, get, create, update, stats
+- Pages (10): list, get, create, delete, rename, duplicate, replace, append, peek, search
+- Tables (4): list, get, summary, search
+- Columns (2): list, get
+- Rows (7): list, get, create, update, delete, bulk operations
+- Formulas (2): list, get
+- Controls (3): list, get, push_button
+- Users (1): whoami
 
 **Authentication**: Bearer token via `CODA_API_TOKEN` environment variable
 
-**Source**: Custom fork of `orellazri/coda-mcp` with enhancements from `dustinrgood/coda-mcp`
-- Forked repository: [TBD - add after Phase 1]
+**Source**: dustingood/coda-mcp fork (4x more tools than original)
+- Original: https://github.com/orellazri/coda-mcp
+- Upstream: https://github.com/dustingood/coda-mcp
 - Local source: `/integrations/mcp/servers/coda/src/`
 - Deployment: Docker container built from local source
+- Documentation: README.md, DEPLOYMENT.md, CHANGELOG.md
 
 **Configuration**:
 ```yaml
@@ -77,9 +81,50 @@ command: ["mcp-proxy", "--host", "0.0.0.0", "--port", "8080", "--", "node", "dis
 - Droplet state: `/docs/infrastructure/droplet_state_2025-10-28.md`
 
 **Recent Changes**:
+- 2025-10-30: Upgraded from 8 to 34 tools (dustingood fork)
+- 2025-10-30: Deployed to droplet with full documentation (README, DEPLOYMENT, CHANGELOG)
+- 2025-10-30: Verified endpoint operational (HTTP 200 OK)
 - 2025-10-28: Migrated from `reaperberri/coda-mcp:latest` base image to local source build
 - 2025-10-28: Fixed binding to `0.0.0.0` for nginx-proxy reachability
 - 2025-10-28: Added proxy trust config (`TRUST_DOWNSTREAM_PROXY=true`)
+
+---
+
+### DigitalOcean MCP Gateway
+
+**Status**: 🧪 Built — awaiting API token  
+**Endpoint**: https://digitalocean.bestviable.com/sse  
+**Transport**: SSE (mcp-proxy wrapping stdio server)  
+**Container**: `digitalocean-mcp-gateway` (port 8082)
+
+**Tools Provided** (subset):
+- Droplets: list/create/delete, snapshots, sizes, images
+- Networking: domains, DNS records, certificates, load balancers, VPCs
+- App Platform: deployments, logs, components
+- Databases: cluster management, users, firewall rules
+- Spaces, Marketplace, Insights (uptime), Kubernetes (DOKS), Accounts
+
+**Authentication**: `DIGITALOCEAN_API_TOKEN` (PAT with read/write scopes)  
+Optional filters via `DIGITALOCEAN_SERVICES` env var.
+
+**Deployment Docs**: `/integrations/mcp/servers/digitalocean/`  
+**Next Step**: Populate PAT in droplet `.env` and `docker compose up -d digitalocean-mcp-gateway`.
+
+---
+
+### Cloudflare MCP Gateway Wrapper
+
+**Status**: 🧪 Built — configure remote URL  
+**Endpoint**: https://cloudflare.bestviable.com/sse  
+**Transport**: SSE proxy via `mcp-remote`  
+**Container**: `cloudflare-mcp-gateway` (port 8083)
+
+**Function**: Wraps any Cloudflare-hosted MCP server (docs, observability, Workers bindings, Logpush, etc.) by setting `CLOUDFLARE_REMOTE_URL`.
+
+**Authentication**: Add `CLOUDFLARE_API_TOKEN` if the remote requires it (e.g., DNS analytics). Additional headers supported via `CLOUDFLARE_HEADERS`.
+
+**Deployment Docs**: `/integrations/mcp/servers/cloudflare/`  
+**Next Step**: Choose target remote (e.g., `https://docs.mcp.cloudflare.com/mcp`), update `.env`, run `docker compose up -d cloudflare-mcp-gateway`.
 
 ---
 
