@@ -6,7 +6,7 @@
 - tags: [mcp, servers, inventory, catalog]
 - source_path: /docs/architecture/integrations/mcp/server_catalog_v01.md
 - date: 2025-10-29
-- last_updated: 2025-10-29
+- last_updated: 2025-10-30
 ---
 
 # MCP Server Catalog
@@ -30,8 +30,8 @@ Remote MCPs accessible to all AI clients via SSE over HTTPS. Hosted on DigitalOc
 | Name | Endpoint | Status | Tools | Source | Docs | Updated |
 |------|----------|--------|-------|--------|------|---------|
 | **coda** | `https://coda.bestviable.com/sse` | ✅ Production | 34 tools | dustingood/coda-mcp fork | [Docs](../../../../integrations/mcp/servers/coda/) | 2025-10-30 |
-| **digitalocean** | `https://digitalocean.bestviable.com/sse` | 🧪 Built — awaiting token | 50+ tools (Droplets, Apps, DBaaS, Networking) | digitalocean-labs/mcp-digitalocean | [Docs](../../../../integrations/mcp/servers/digitalocean/) | 2025-10-29 |
-| **cloudflare** | `https://cloudflare.bestviable.com/sse` | 🧪 Built — configure remote | Proxy to selected Cloudflare MCP | cloudflare/mcp-server-cloudflare | [Docs](../../../../integrations/mcp/servers/cloudflare/) | 2025-10-29 |
+| **digitalocean** | `https://digitalocean.bestviable.com/sse` | 🟡 Ready to Deploy | 50+ tools (Droplets, Apps, DBaaS, Networking) | digitalocean-labs/mcp-digitalocean | [Docs](../../../../integrations/mcp/servers/digitalocean/) | 2025-10-30 |
+| **cloudflare** | `https://cloudflare.bestviable.com/sse` | 🟡 Ready to Deploy | Proxy to selected Cloudflare MCP | cloudflare/mcp-server-cloudflare | [Docs](../../../../integrations/mcp/servers/cloudflare/) | 2025-10-30 |
 | **github** | `https://github.bestviable.com/sse` | 🚧 Planned | ~15 tools | @modelcontextprotocol/server-github | [Docs](../../../../integrations/mcp/servers/github/) | - |
 | **memory** | `https://memory.bestviable.com/sse` | 🚧 Planned | 5 tools | @modelcontextprotocol/server-memory | [Docs](../../../../integrations/mcp/servers/memory/) | - |
 | **firecrawl** | `https://firecrawl.bestviable.com/sse` | 🚧 Planned | 6 tools | firecrawl-mcp | [Docs](../../../../integrations/mcp/servers/firecrawl/) | - |
@@ -92,39 +92,62 @@ command: ["mcp-proxy", "--host", "0.0.0.0", "--port", "8080", "--", "node", "dis
 
 ### DigitalOcean MCP Gateway
 
-**Status**: 🧪 Built — awaiting API token  
-**Endpoint**: https://digitalocean.bestviable.com/sse  
-**Transport**: SSE (mcp-proxy wrapping stdio server)  
+**Status**: 🟡 Ready to Deploy (2025-10-30)
+**Endpoint**: https://digitalocean.bestviable.com/sse
+**Transport**: SSE (mcp-proxy wrapping Go server)
 **Container**: `digitalocean-mcp-gateway` (port 8082)
+**Source**: `/integrations/mcp/servers/digitalocean/src/` (Go binary)
+**Dockerfile**: `/infra/docker/services/digitalocean-mcp-gateway`
 
-**Tools Provided** (subset):
+**Infrastructure**: ✅ All files present on droplet, docker-compose configured, awaiting secrets
+
+**Tools Provided** (50+):
 - Droplets: list/create/delete, snapshots, sizes, images
 - Networking: domains, DNS records, certificates, load balancers, VPCs
 - App Platform: deployments, logs, components
 - Databases: cluster management, users, firewall rules
 - Spaces, Marketplace, Insights (uptime), Kubernetes (DOKS), Accounts
 
-**Authentication**: `DIGITALOCEAN_API_TOKEN` (PAT with read/write scopes)  
-Optional filters via `DIGITALOCEAN_SERVICES` env var.
+**Authentication**: `DIGITALOCEAN_API_TOKEN` (PAT with read/write scopes)
+Optional: `DIGITALOCEAN_SERVICES` (filter services), `DIGITALOCEAN_API_ENDPOINT`, `DIGITALOCEAN_LOG_LEVEL`
 
-**Deployment Docs**: `/integrations/mcp/servers/digitalocean/`  
-**Next Step**: Populate PAT in droplet `.env` and `docker compose up -d digitalocean-mcp-gateway`.
+**Deployment Docs**: `/integrations/mcp/servers/digitalocean/`
+**Next Step**:
+1. Add `DIGITALOCEAN_API_TOKEN` to `/root/portfolio/ops/.env`
+2. Run: `docker compose up -d digitalocean-mcp-gateway`
+3. Verify: `curl -I https://digitalocean.bestviable.com/sse`
 
 ---
 
 ### Cloudflare MCP Gateway Wrapper
 
-**Status**: 🧪 Built — configure remote URL  
-**Endpoint**: https://cloudflare.bestviable.com/sse  
-**Transport**: SSE proxy via `mcp-remote`  
+**Status**: 🟡 Ready to Deploy (2025-10-30)
+**Endpoint**: https://cloudflare.bestviable.com/sse
+**Transport**: SSE proxy via `mcp-remote` npm package
 **Container**: `cloudflare-mcp-gateway` (port 8083)
+**Dockerfile**: `/infra/docker/services/cloudflare-mcp-gateway`
 
-**Function**: Wraps any Cloudflare-hosted MCP server (docs, observability, Workers bindings, Logpush, etc.) by setting `CLOUDFLARE_REMOTE_URL`.
+**Infrastructure**: ✅ All files present on droplet, docker-compose configured, awaiting remote URL
 
-**Authentication**: Add `CLOUDFLARE_API_TOKEN` if the remote requires it (e.g., DNS analytics). Additional headers supported via `CLOUDFLARE_HEADERS`.
+**Function**: Wraps any Cloudflare-hosted or remote MCP server by proxying requests via `CLOUDFLARE_REMOTE_URL`
 
-**Deployment Docs**: `/integrations/mcp/servers/cloudflare/`  
-**Next Step**: Choose target remote (e.g., `https://docs.mcp.cloudflare.com/mcp`), update `.env`, run `docker compose up -d cloudflare-mcp-gateway`.
+**Required Configuration**:
+- `CLOUDFLARE_REMOTE_URL`: URL of target MCP server (e.g., `https://docs.mcp.cloudflare.com/mcp`)
+
+**Optional Configuration**:
+- `CLOUDFLARE_API_TOKEN`: Cloudflare API token if remote requires auth
+- `CLOUDFLARE_TRANSPORT_STRATEGY`: Transport mode (default: `http-first`)
+- `CLOUDFLARE_CALLBACK_PORT`: Callback port for bidirectional communication
+- `CLOUDFLARE_HEADERS`: Additional headers to send
+- `CLOUDFLARE_IGNORE_TOOLS`: Tools to exclude
+
+**Deployment Docs**: `/integrations/mcp/servers/cloudflare/`
+**Next Step**:
+1. Choose target remote MCP URL
+2. Add `CLOUDFLARE_REMOTE_URL` to `/root/portfolio/ops/.env`
+3. Add optional `CLOUDFLARE_API_TOKEN` if needed
+4. Run: `docker compose up -d cloudflare-mcp-gateway`
+5. Verify: `curl -I https://cloudflare.bestviable.com/sse`
 
 ---
 
@@ -399,7 +422,7 @@ curl -I https://github.bestviable.com/sse
 curl -I https://memory.bestviable.com/sse
 
 # Check droplet services
-ssh root@tools
+ssh tools-droplet-agents
 docker compose -f docker-compose.production.yml ps | grep mcp-gateway
 
 # View logs
@@ -424,7 +447,7 @@ docker logs coda-mcp-gateway --tail 50
 - Client Setup Guides: `/integrations/mcp/clients/`
 
 **Operational**:
-- Troubleshooting: `/docs/ops/runbooks/mcp_troubleshooting_v01.md`
+- Troubleshooting: `/docs/runbooks/mcp_troubleshooting_v01.md`
 - Infrastructure: `/docs/infrastructure/droplet_state_2025-10-28.md`
 
 ---

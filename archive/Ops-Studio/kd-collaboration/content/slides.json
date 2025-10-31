@@ -1,0 +1,95 @@
+{
+  "title": {
+    "deckTitle": "Creating Spaciousness Through Structure",
+    "subtitle": "Operations Support for KamalaDevi McClure",
+    "quote": "\u201cThe value isn\u2019t how much I do \u2014 it\u2019s how much creative time we free up.\u201d",
+    "image": "/images/kd_hero_4x5.jpg"
+  },
+  "alignment": {
+    "h1": "Alignment & Intention",
+    "bodyMdx": "I bring dependable structure that expands creative freedom and reduces operational strain. This deck frames how we can protect KD\u2019s creative energy while tending the rhythms of calendar, communications, and publishing."
+  },
+  "help": {
+    "h1": "How I Might Help",
+    "blurb": "Samples of 'jobs to be done' and how systems of leverage support them.",
+    "rows": [
+      {
+        "job": "Calendar & inbox calm",
+        "solution": "Scheduling rules, triage lanes, templates",
+        "tools": "Google Calendar, Gmail, SOPs"
+      },
+      {
+        "job": "Publishing rhythm",
+        "solution": "Weekly cadence with asset prep & approvals",
+        "tools": "Notion/Coda, Mailchimp, Zapier"
+      },
+      {
+        "job": "Systems memory",
+        "solution": "Single source of truth for agendas & decisions",
+        "tools": "Drive, Coda/Notion"
+      },
+      {
+        "job": "Community follow\u2011through",
+        "solution": "Reply templates & gentle automations",
+        "tools": "CRM basics, SOPs, Make/Zapier"
+      },
+      {
+        "job": "Author support",
+        "solution": "Manuscript/publishing workflow scaffolding",
+        "tools": "KDP/Amazon, Docs, lightweight checklists"
+      }
+    ]
+  },
+  "regenerative": {
+    "h1": "Systems that Learn",
+    "metrics": [
+      "90% of appointments confirmed \u226548h",
+      "Inbox < 20 unprocessed items/day",
+      "Weekly publishing cadence automated",
+      "Shared tracker for goals & decisions"
+    ]
+  },
+  "fit": {
+    "h1": "Why I Fit",
+    "bullets": [
+      "Bridges creative and operational worlds",
+      "Systems with soul \u2014 structure that breathes",
+      "Fluent in sacred & sex\u2011positive spaces",
+      "Feedback\u2011driven, learning\u2011oriented ops"
+    ],
+    "profileLinkText": "View my full profile \u2192",
+    "profileLinkHref": "/appendix#appendix-profile",
+    "portrait": "/images/david_headshot.jpg",
+    "portraitMode": "optional"
+  },
+  "engagement": {
+    "h1": "Engagement Path",
+    "cards": [
+      {
+        "icon": "\u26a1",
+        "title": "Starter Sprint",
+        "desc": "2 weeks, quick relief and setup",
+        "price": "$1,200\u2013$1,500"
+      },
+      {
+        "icon": "\ud83c\udf3f",
+        "title": "Ongoing Partnership",
+        "desc": "10\u201315 hrs/week, steady rhythm",
+        "price": "$1,800\u2013$2,200/mo"
+      },
+      {
+        "icon": "\ud83c\udf08",
+        "title": "Fractional COO",
+        "desc": "Strategic growth & systems",
+        "price": "Custom"
+      }
+    ],
+    "note": "All engagements begin with a short discovery call."
+  },
+  "cta": {
+    "h1": "Gratitude & Next Steps",
+    "body": "I\u2019d love to explore current priorities and co\u2011design what would serve best.",
+    "email": "dkellam44@gmail.com",
+    "calendarUrl": "https://cal.com/your-handle"
+  }
+}

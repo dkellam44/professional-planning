@@ -177,7 +177,7 @@ If upgrading from previous Coda gateway:
 **Documentation**:
 - README.md: Tool catalog and quick start
 - DEPLOYMENT.md: Architecture and procedures
-- /docs/ops/runbooks/mcp_troubleshooting_v01.md: Deep diagnostics
+- /docs/runbooks/mcp_troubleshooting_v01.md: Deep diagnostics
 
 **Contact**: Refer to portfolio team
 

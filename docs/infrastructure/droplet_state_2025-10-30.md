@@ -20,7 +20,7 @@
 
 ```bash
 # SSH to droplet
-ssh root@159.65.97.146
+ssh tools-droplet-agents
 
 # Check containers
 cd /root/portfolio/infra/docker

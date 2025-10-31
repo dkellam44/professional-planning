@@ -336,7 +336,7 @@ docker logs nginx-proxy | grep coda | tail -10
 - **Troubleshooting Guide**: TROUBLESHOOTING.md
 - **Architecture**: /agents/decisions/2025-10-29_mcp-tier-architecture_v01.md
 - **Infrastructure**: /docs/infrastructure/droplet_state_2025-10-28.md
-- **Compose File**: /docs/ops/docker-compose.production.yml
+- **Compose File**: /infra/docker/docker-compose.production.yml
 
 ---
 

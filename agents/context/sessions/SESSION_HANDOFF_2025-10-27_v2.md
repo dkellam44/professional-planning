@@ -130,7 +130,7 @@ docker compose -f docker-compose.production.yml up -d
 ### Step 1: Wait for Health Checks to Pass
 
 ```bash
-ssh root@tools
+ssh tools-droplet-agents
 cd ~/portfolio/ops
 
 # Monitor health status (wait 2-3 minutes for all to show "healthy")
@@ -257,7 +257,7 @@ All critical issues are resolved. Remaining "unhealthy" statuses are normal for 
 If deployment fails catastrophically:
 
 ```bash
-ssh root@tools
+ssh tools-droplet-agents
 cd ~/portfolio/ops
 docker compose -f docker-compose.production.yml down -v  # Remove volumes
 rm -rf ./data/certs/  # Clean cert directory

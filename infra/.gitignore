@@ -1,0 +1,15 @@
+# Secrets
+config/.env
+config/.env.local
+config/.env.*.local
+
+# Docker runtime volumes (created on droplet/local)
+docker/certs/
+docker/acme/
+docker/html/
+docker/logs/
+docker/import/
+docker/data/
+
+# Misc
+*.DS_Store

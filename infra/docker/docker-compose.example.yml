@@ -1,0 +1,17 @@
+services:
+  coda-mcp-gateway:
+    build:
+      context: ../..
+      dockerfile: services/coda-mcp.Dockerfile
+    image: coda-mcp-gateway:latest
+    env_file:
+      - .env
+    environment:
+      - API_KEY=${CODA_API_KEY}
+      - DOC_ID=${DOC_ID}
+    ports:
+      - "8080:8080"
+  n8n:
+    image: n8nio/n8n:latest
+  caddy:
+    image: caddy:latest

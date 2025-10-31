@@ -11,3 +11,11 @@ date,actor,action,entity,notes
 2025-10-29,Claude Code (Haiku),research-and-analyze,agent-documentation,Analyzed agent session flow; clarified document hierarchy and authority
 2025-10-29,Claude Code (Haiku),create-documentation,agents/context/sessions/SESSION_HANDOFF_2025-10-29_v1.md,End-of-session handoff documenting completion of agent infrastructure
 2025-10-29,Claude Code (Haiku),update-documentation,agents/CURRENT_FOCUS.md,Updated date to 2025-10-29; added infrastructure completion note
+2025-10-29,Claude Code (Haiku),create-playbook,agents/context/playbooks/mcp_digitalocean_cloudflare_deploy_v01.md,Drafted Tier 1 deployment playbook for DigitalOcean & Cloudflare MCP servers
+2025-10-29,Claude Code (Haiku),update-infra-docs,docs/ops/docker-compose.production.yml,Added digitalocean/cloudflare MCP services with build contexts and proxy metadata
+2025-10-29,Claude Code (Haiku),create-documentation,integrations/mcp/servers/digitalocean/README.md,Added Tier1 DigitalOcean MCP server docs (build + troubleshooting suite)
+2025-10-29,Claude Code (Haiku),create-documentation,integrations/mcp/servers/cloudflare/README.md,Documented Cloudflare MCP wrapper configuration and troubleshooting
+2025-10-30,Claude Code (Haiku),restructure-infra,infra/docker/docker-compose.production.yml,Migrated operational assets into /infra and updated compose contexts
+2025-10-30,Claude Code (Haiku),rename-directories,sessions/,Renamed y_collection_box→sessions, inbox→planning, z_archive→archive
+2025-10-30,Claude Code (Haiku),update-docs,README.md,Refreshed directory structure + infrastructure sections
+2025-10-30,Claude Code (Haiku),deploy-droplet,/root/portfolio/infra/docker (via sync),Synced new infra layout to droplet and restarted stack with docker compose

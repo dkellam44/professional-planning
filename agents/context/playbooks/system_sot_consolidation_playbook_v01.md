@@ -87,7 +87,7 @@ Definition of done in §7.
    - Future plan (set up Git remote on droplet, or automation via n8n/GitHub Actions).
 2. Append the policy to `context/system_overview_v01.md`.
 3. If choosing to keep droplet repo independent for now, record manual steps in `/docs/infrastructure/droplet_state_2025-10-28.md`.
-4. Optional: create a TODO entry in `inbox/` for “Automate repo sync (Git pull on droplet or rsync pipeline)”.
+4. Optional: create a TODO entry in `planning/` for “Automate repo sync (Git pull on droplet or rsync pipeline)”.
 
 ---
 

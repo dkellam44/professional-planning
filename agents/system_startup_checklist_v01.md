@@ -19,10 +19,10 @@ Use this checklist at the start of any new agent session (human or AI) so work b
    - `agents/CURRENT_FOCUS.md` (5-minute read for all new sessions).
    - Gets you oriented immediately: current priorities, business stage, infrastructure status, links to everything.
 2. **Scan the latest Session Handoff**
-   - `SESSION_HANDOFF_2025-10-28_v1.md` (or newest).
+   - `sessions/handoffs/SESSION_HANDOFF_2025-10-30_v1.md` (or newest).
    - Confirm `next_3_MITs`, open questions, blockers, TTL.
 3. **Check the Work Queue**
-   - `inbox/` and relevant `context/playbooks/*.md` (e.g., `system_sot_consolidation_playbook_v01.md`, `coda_mcp_gateway_upgrade_plan_v01.md`).
+   - `planning/` and relevant `context/playbooks/*.md` (e.g., `system_sot_consolidation_playbook_v01.md`, `coda_mcp_gateway_upgrade_plan_v01.md`).
    - Note current phase and human checkpoints.
 
 ---
@@ -44,7 +44,7 @@ Use this checklist at the start of any new agent session (human or AI) so work b
    - `docs/infrastructure/droplet_state_2025-10-28.md` (or newest).
    - Note service versions, sync method (manual `scp`, etc.).
 2. **Verify remote status (if needed)**
-   - Optional quick check: `ssh root@tools` → `docker compose -f docker-compose.production.yml ps`.
+   - Optional quick check: `ssh tools-droplet-agents` → `cd /root/portfolio/infra/docker && docker compose -f docker-compose.production.yml ps`.
    - Ensure `https://n8n.bestviable.com` and `https://coda.bestviable.com/sse` responded recently (see Session Notes).
 
 ---

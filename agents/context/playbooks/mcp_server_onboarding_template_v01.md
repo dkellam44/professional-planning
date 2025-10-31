@@ -110,11 +110,11 @@ Before starting, answer these questions:
    # Run via mcp-proxy
    CMD ["mcp-proxy", "--host", "0.0.0.0", "--port", "[808X]", "--", "[start-command]"]
    ```
-   Save to: `/docs/ops/Dockerfile.[mcp-name]-mcp-gateway`
+   Save to: `/infra/docker/services/[mcp-name]-mcp.Dockerfile`
 
 4. **Test local build**:
    ```bash
-   docker build -t [mcp-name]-mcp-gateway:local -f docs/ops/Dockerfile.[mcp-name]-mcp-gateway .
+   docker build -t [mcp-name]-mcp-gateway:local -f infra/docker/services/[mcp-name]-mcp.Dockerfile .
    docker run --rm -p [808X]:[808X] -e [API_KEY_VAR]="test-key" [mcp-name]-mcp-gateway:local
    ```
 
@@ -190,7 +190,7 @@ Before starting, answer these questions:
    [mcp-name]-mcp-gateway:
      build:
        context: .
-       dockerfile: docs/ops/Dockerfile.[mcp-name]-mcp-gateway
+       dockerfile: infra/docker/services/[mcp-name]-mcp.Dockerfile
      container_name: [mcp-name]-mcp-gateway
      restart: always
      environment:
@@ -230,21 +230,21 @@ Before starting, answer these questions:
 
 2. **Add environment variable to droplet `.env`**:
    ```bash
-   ssh root@tools
+   ssh tools-droplet-agents
    echo '[API_KEY_VAR]="[actual-key]"' >> .env
    ```
 
 3. **Copy files to droplet**:
    ```bash
-   scp docs/ops/docker-compose.production.yml root@tools:~/
-   scp docs/ops/Dockerfile.[mcp-name]-mcp-gateway root@tools:~/
+   scp infra/docker/docker-compose.production.yml tools-droplet-agents:~/
+   scp infra/docker/services/[mcp-name]-mcp.Dockerfile tools-droplet-agents:~/
    # If custom source:
-   scp -r integrations/mcp/servers/[mcp-name]/ root@tools:~/integrations/mcp/servers/
+   scp -r integrations/mcp/servers/[mcp-name]/ tools-droplet-agents:~/integrations/mcp/servers/
    ```
 
 4. **Build and deploy**:
    ```bash
-   ssh root@tools
+   ssh tools-droplet-agents
    docker compose -f docker-compose.production.yml build [mcp-name]-mcp-gateway
    docker compose -f docker-compose.production.yml up -d [mcp-name]-mcp-gateway
    ```
@@ -463,8 +463,8 @@ Before starting, answer these questions:
 - [x] `/integrations/mcp/servers/[mcp-name]/CHANGELOG.md`
 - [x] `/integrations/mcp/servers/[mcp-name]/TROUBLESHOOTING.md`
 - [x] `/docs/architecture/integrations/mcp/server_catalog_v01.md` (update)
-- [x] `/docs/ops/docker-compose.production.yml` (if Tier 1)
-- [x] `/docs/ops/Dockerfile.[mcp-name]-mcp-gateway` (if Tier 1)
+- [x] `/infra/docker/docker-compose.production.yml` (if Tier 1)
+- [x] `/infra/docker/services/[mcp-name]-mcp.Dockerfile` (if Tier 1)
 - [x] Client setup guides (if Tier 1)
 
 **Log entry**:

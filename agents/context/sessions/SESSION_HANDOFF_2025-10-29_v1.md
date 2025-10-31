@@ -125,7 +125,7 @@ Created comprehensive 9-file documentation suite:
 - /integrations/mcp/README.md (code repo overview)
 
 **Operations**:
-- /docs/ops/runbooks/mcp_troubleshooting_v01.md (troubleshooting)
+- /docs/runbooks/mcp_troubleshooting_v01.md (troubleshooting)
 
 **Infrastructure**:
 - Droplet: tools.bestviable.com (159.65.97.146)

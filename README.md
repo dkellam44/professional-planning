@@ -32,69 +32,32 @@ This is an **AI-ready context architecture** for a solo operator, designed for p
 
 ```
 portfolio/
-├── architecture-spec_v0.3.md       # Canonical human spec
-├── SCHEMA_GUIDE_v0.2.md            # Human-readable schema docs
-├── builder_prompt_v0.3.md          # Builder/agent instructions
-├── sot/                            # Source of Truth (schemas, structured data)
-│   └── context_schemas_v02.yaml
-├── prompts/                        # Prompt templates (JSONL)
-├── eval/                           # Eval harness (DSPy, RAGAS, DeepEval)
-├── decisions/                      # ADRs (Architecture Decision Records)
-│   ├── 2025-10-17_path-resolution-strategy_v01.md
-│   ├── 2025-10-17_template-instantiation-approach_v01.md
-│   ├── 2025-10-17_zone-inheritance-policy_v01.md
-│   ├── 2025-10-17_retrieval-scope-policy_v01.md
-│   └── 2025-10-17_context-ttl-policy_v01.md
-├── templates/                      # File templates for all entity types
-│   ├── offer_brief_v01.md
-│   ├── engagement_brief_v01.md
-│   ├── planning_brief_v01.md       # Mode-aware project briefs
-│   ├── execution_brief_v01.md
-│   ├── review_brief_v01.md
-│   ├── SHO_template.json           # Session Handoff Object
-│   └── placeholder_scaffold.md     # Fallback for missing templates
-├── context/                        # Portfolio-level context docs
-│   └── playbooks/                  # Reusable patterns promoted from projects
-├── logs/                           # Action logs (CSV)
-│   └── context_actions.csv
-├── diagrams/                       # Visual architecture (.mmd, React Flow JSON)
-├── integrations/                   # Tool integrations (MCP servers, etc.)
-├── ops/                            # Operational infrastructure & deployment configs
-│   ├── docker-compose.production.yml     # Production-ready 7-service stack (SyncBricks pattern)
-│   ├── PRODUCTION_DEPLOYMENT_QUICKSTART.md # One-page rapid deployment reference
-│   ├── docker-compose.example.yml        # Legacy example (reference only)
-│   ├── cloudflare_tunnel.example.yaml    # Legacy example (reference only)
-│   ├── Dockerfile.coda-mcp-gateway       # Custom HTTP wrapper for Coda MCP
-│   └── coda-mcp-gateway/                 # Coda MCP Gateway build context
-└── ventures/                       # Business ventures (one per venture)
-    └── reference-venture-example/  # Example venture structure
-        ├── .contextrc.yaml
-        ├── context/
-        │   ├── venture_brief.md
-        │   └── playbooks/
-        ├── offers/
-        │   └── {offer-slug}/
-        │       └── context/
-        │           └── offer_brief_v01.md
-        ├── engagements/
-        │   └── {engagement-slug}/
-        │       ├── context/
-        │       │   └── engagement_brief_v01.md
-        │       ├── decisions/
-        │       └── projects/
-        │           └── {project-slug}/
-        │               ├── .contextrc.yaml
-        │               ├── context/
-        │               │   ├── planning_brief_v01.md
-        │               │   ├── execution_brief_v01.md
-        │               │   ├── review_brief_v01.md
-        │               │   └── SHO.json
-        │               ├── deliverables/
-        │               ├── sprints/
-        │               ├── decisions/
-        │               └── logs/
-        ├── programs/
-        └── decisions/
+├── README.md                      # You are here
+├── agents/                        # Agent workflows, playbooks, handoffs
+├── archive/                       # Historical artifacts (formerly z_archive)
+├── docs/
+│   ├── architecture/              # Specs, diagrams, ADRs
+│   ├── business/                  # Business model/context references
+│   ├── infrastructure/            # Infrastructure documentation + deployment notes
+│   ├── quality_gates/             # Definitions of done, QA policies
+│   └── runbooks/                  # Operational runbooks + troubleshooting guides
+├── infra/                         # Operational infrastructure (mirrors droplet)
+│   ├── docker/                    # Compose files, Dockerfiles, volumes
+│   │   ├── docker-compose.production.yml
+│   │   ├── docker-compose.example.yml
+│   │   └── services/
+│   ├── scripts/                   # Deployment/validation helpers
+│   └── config/                    # Environment templates and local secrets
+├── integrations/                  # MCP servers, client templates, integrations
+├── logs/                          # Action logs (CSV)
+├── planning/                      # Active plans, specs, research (formerly inbox)
+├── prompts/                       # Prompt templates (JSONL)
+├── sessions/                      # Session assets and handoffs (formerly y_collection_box)
+│   └── handoffs/
+├── sot/                           # Source-of-truth schemas and authority maps
+├── templates/                     # Scaffolds for offers, engagements, etc.
+├── ventures/                      # Venture/project-specific workspaces
+└── REPO_TRIAGE_CHECKLIST.md       # Intake checklist for new collaborators
 ```
 
 ## Source of Truth (SoT) v0.2
@@ -109,6 +72,26 @@ portfolio/
 
 **Status**: ✅ Production-ready configuration deployed (2025-10-26)
 
+Operational assets now live in `/infra/` so local and droplet layouts are symmetrical:
+
+```
+infra/
+├── docker/
+│   ├── docker-compose.production.yml
+│   ├── docker-compose.example.yml
+│   ├── services/ (Dockerfiles for MCP gateways)
+│   └── certs/, html/, vhost.d/, data/, logs/, import/ (volume mounts)
+├── config/
+│   └── .env.example           # Template copied to infra/config/.env
+└── scripts/
+    ├── cleanup-droplet.sh
+    ├── CHECK_REMAINING_ISSUES.sh
+    ├── DEPLOY_FIXES.sh
+    ├── DIAGNOSE_REMAINING.sh
+    ├── TROUBLESHOOT_HEALTH_CHECKS.sh
+    └── (new) sync / validation helpers
+```
+
 The portfolio uses the **SyncBricks pattern** for Docker-based infrastructure:
 - **nginx-proxy** — Auto-discovery reverse proxy (no manual config files)
 - **acme-companion** — Automatic SSL certificate management via Let's Encrypt
@@ -116,7 +99,7 @@ The portfolio uses the **SyncBricks pattern** for Docker-based infrastructure:
 - **Two-network design** — Proxy network (public) + syncbricks network (private database isolation)
 
 ### Infrastructure Documentation
-All documentation in `/portfolio/docs/infrastructure/`:
+All documentation lives in `/docs/infrastructure/`:
 1. **syncbricks_n8n_full_analysis_v1.md** — Complete analysis with decision process
 2. **syncbricks_solution_breakdown_v1.md** — Technical pattern explanations
 3. **droplet_migration_procedure_v1.md** — 7-phase deployment guide
@@ -124,12 +107,12 @@ All documentation in `/portfolio/docs/infrastructure/`:
 5. **cloudflare_tunnel_token_guide_v1.md** — Token setup & operations
 
 ### Deployment Quick Start
-See `ops/PRODUCTION_DEPLOYMENT_QUICKSTART.md` for rapid deployment (15-30 min).
+See `docs/infrastructure/deployment/PRODUCTION_DEPLOYMENT_QUICKSTART.md` for rapid deployment (15-30 min).
 
 Key steps:
 1. Obtain Cloudflare Tunnel token (Zero Trust dashboard)
-2. Create `.env` file with credentials
-3. Run: `docker-compose -f docker-compose.production.yml up -d`
+2. Copy `infra/config/.env.example` → `infra/config/.env` and populate credentials
+3. Run: `docker compose --env-file infra/config/.env -f infra/docker/docker-compose.production.yml up -d`
 4. Verify: Tunnel shows HEALTHY, services accessible via HTTPS
 
 ### Architecture Decision

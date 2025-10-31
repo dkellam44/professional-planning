@@ -27,8 +27,8 @@
 
 ### ⚠️ KEEP but DON'T TRACK (Review Regularly)
 
-- [x] `inbox/` — Unsorted content awaiting triage (review weekly)
-- [x] `y_collection_box/` — Temporary working files (review per session)
+- [x] `planning/` — Unsorted content awaiting triage (review weekly)
+- [x] `sessions/` — Temporary working files (review per session)
 - [x] `z_archive/` — Historical reference (don't track changes)
 
 ### 🚫 IGNORE (Added to .gitignore)

@@ -21,7 +21,8 @@
 **Timeline**:
 - Initial deployment: 2025-10-26
 - Configuration refinements: 2025-10-27 to 2025-10-28
-- Status verification: 2025-10-28 (session handoff)
+- Repo/droplet restructure to `/infra/`: 2025-10-30
+- Status verification: 2025-10-30 (post-restructure)
 
 **Deployment Method**:
 - Manual `scp` of `docker-compose.production.yml` to droplet
@@ -360,7 +361,7 @@ This is a brief operational snapshot. For detailed explanations:
    Complete analysis of why SyncBricks pattern was chosen
 
 6. **Quick Start** (1-page)
-   `/docs/ops/PRODUCTION_DEPLOYMENT_QUICKSTART.md`
+   `/docs/infrastructure/deployment/PRODUCTION_DEPLOYMENT_QUICKSTART.md`
    Rapid deployment reference for experienced operators
 
 ### Architecture Decisions
@@ -372,7 +373,7 @@ This is a brief operational snapshot. For detailed explanations:
 - `2025-10-26_mcp_deployment_strategy_v01.md` - MCP Gateway deployment approach
 
 ### Deployment Configuration
-📍 **Docker Compose**: `/docs/ops/docker-compose.production.yml`
+📍 **Docker Compose**: `/infra/docker/docker-compose.production.yml`
 Complete service definitions, networks, volumes, and environment variables
 
 ---
@@ -384,6 +385,7 @@ Complete service definitions, networks, volumes, and environment variables
 2. ✅ External endpoints accessible
 3. ⏳ Configure backup strategy (postgres, qdrant, n8n, .env)
 4. ⏳ Set up monitoring/alerts (optional: Uptime Robot, Healthchecks.io)
+5. ⏳ Provide API tokens/remote URL for new DigitalOcean & Cloudflare MCP gateways
 
 ### Short-Term (Integration)
 1. ⏳ Build first n8n workflow (GitHub PR → Coda update)

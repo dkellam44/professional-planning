@@ -30,3 +30,10 @@ z_archive/
 .mcp/.env
 .mcp/data/
 /workspace/mcp-configs/user-scope/.env
+
+# Infrastructure & Deployment Secrets (never commit .env files with credentials)
+infra/config/.env
+infra/config/.env.local
+infra/config/.env.*
+docs/ops/.env
+docs/ops/.env.*

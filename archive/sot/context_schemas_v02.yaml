@@ -1,0 +1,184 @@
+
+version: 0.2
+ids: ulid
+zones: [public, internal, private, restricted]
+
+entities:
+  # --- Core portfolio/venture/project ---
+  - name: project
+    pk: project_id
+    fields:
+      - {key: name, type: text, required: true}
+      - {key: engagement_id, type: fk, ref: engagement.engagement_id, required: false}
+      - {key: program_id, type: fk, ref: program.program_id, required: false}
+      - {key: type, type: enum, options: [Client Delivery, Internal, Learning, Operations]}
+      - {key: status, type: enum, options: [Backlog, Active, Done, Blocked]}
+      - {key: deadline, type: date}
+      - {key: repo_path, type: filepath}
+      - {key: tags, type: array[text]}
+      - {key: zone, type: enum, options: [public, internal, private, restricted], default: internal}
+
+  - name: workflow
+    pk: workflow_id
+    fields:
+      - {key: name, type: text, required: true}
+      - {key: blueprint_id, type: fk, ref: service_blueprint.blueprint_id}
+      - {key: steps_md, type: markdown}
+      - {key: est_hours, type: number}
+      - {key: automation_status, type: enum, options: [Manual, Semi-automated, Automated]}
+
+  - name: resource_template
+    pk: template_id
+    fields:
+      - {key: name, type: text, required: true}
+      - {key: category, type: enum, options: [Email, Report, Proposal, Contract, SOP]}
+      - {key: path, type: filepath}
+      - {key: zone, type: enum, options: [public, internal, private, restricted]}
+
+  # --- Added: Venture & related ---
+  - name: venture
+    pk: venture_id
+    fields:
+      - {key: name, type: text, required: true}
+      - {key: positioning, type: markdown}
+      - {key: icp, type: markdown}
+      - {key: okrs, type: markdown}
+      - {key: repo_path, type: filepath}
+
+  - name: offer
+    pk: offer_id
+    fields:
+      - {key: venture_id, type: fk, ref: venture.venture_id}
+      - {key: name, type: text, required: true}
+      - {key: tiers, type: array[text]}
+      - {key: scope_in, type: array[text]}
+      - {key: scope_out, type: array[text]}
+      - {key: sla, type: markdown}
+      - {key: pricing_notes, type: markdown}
+      - {key: repo_path, type: filepath}
+
+  - name: engagement
+    pk: engagement_id
+    fields:
+      - {key: venture_id, type: fk, ref: venture.venture_id}
+      - {key: client_name, type: text, required: true}
+      - {key: start_date, type: date}
+      - {key: end_date, type: date}
+      - {key: fee, type: number}
+      - {key: acceptance_criteria, type: markdown}
+      - {key: repo_path, type: filepath}
+
+  - name: program
+    pk: program_id
+    fields:
+      - {key: venture_id, type: fk, ref: venture.venture_id}
+      - {key: name, type: text, required: true}
+      - {key: milestones, type: array[text]}
+      - {key: dependencies, type: array[text]}
+      - {key: repo_path, type: filepath}
+
+  # --- Project children ---
+  - name: sprint
+    pk: sprint_id
+    fields:
+      - {key: project_id, type: fk, ref: project.project_id}
+      - {key: goal, type: text}
+      - {key: start_date, type: date}
+      - {key: end_date, type: date}
+      - {key: demo_notes, type: markdown}
+      - {key: retro_notes, type: markdown}
+
+  - name: task
+    pk: task_id
+    fields:
+      - {key: project_id, type: fk, ref: project.project_id}
+      - {key: title, type: text, required: true}
+      - {key: owner, type: text}
+      - {key: status, type: enum, options: [Todo, InProgress, Blocked, Done], default: Todo}
+      - {key: eta, type: date}
+      - {key: acceptance_criteria, type: markdown}
+      - {key: related_refs, type: array[text]}
+
+  - name: deliverable
+    pk: deliverable_id
+    fields:
+      - {key: project_id, type: fk, ref: project.project_id}
+      - {key: name, type: text, required: true}
+      - {key: format, type: text}
+      - {key: acceptance_tests, type: markdown}
+      - {key: reviewer, type: text}
+      - {key: repo_path, type: filepath}
+
+  # --- Cross-cutting ---
+  - name: area
+    pk: area_id
+    fields:
+      - {key: name, type: text, required: true}
+      - {key: kpis, type: array[text]}
+      - {key: sop_index, type: markdown}
+      - {key: repo_path, type: filepath}
+
+  - name: campaign
+    pk: campaign_id
+    fields:
+      - {key: venture_id, type: fk, ref: venture.venture_id}
+      - {key: objective, type: text}
+      - {key: audience, type: text}
+      - {key: channels, type: array[text]}
+      - {key: calendar, type: markdown}
+      - {key: kpis, type: array[text]}
+      - {key: repo_path, type: filepath}
+
+  - name: experiment
+    pk: experiment_id
+    fields:
+      - {key: venture_id, type: fk, ref: venture.venture_id}
+      - {key: hypothesis, type: markdown}
+      - {key: metrics, type: array[text]}
+      - {key: guardrails, type: array[text]}
+      - {key: procedure, type: markdown}
+      - {key: results, type: markdown}
+      - {key: decision, type: enum, options: [roll, kill, iterate], default: iterate}
+      - {key: repo_path, type: filepath}
+
+  - name: learning_unit
+    pk: learning_unit_id
+    fields:
+      - {key: name, type: text, required: true}
+      - {key: skills, type: array[text]}
+      - {key: resources, type: array[text]}
+      - {key: schedule, type: markdown}
+      - {key: assessments, type: markdown}
+      - {key: repo_path, type: filepath}
+
+  - name: environment
+    pk: environment_id
+    fields:
+      - {key: name, type: text, required: true}
+      - {key: tool_registry, type: markdown}
+      - {key: mcp_servers, type: array[text]}
+      - {key: secrets_policy, type: markdown}
+      - {key: setup_notes, type: markdown}
+      - {key: incident_recovery, type: markdown}
+      - {key: repo_path, type: filepath}
+
+retrieval:
+  chunking: {min_tokens: 200, max_tokens: 400, hierarchy_links: true}
+  metadata_fields: [entity, level, zone, version, tags, source_path, date]
+  strategy:
+    type: hybrid_plus_rerank
+    bm25: true
+    embeddings: true
+    reranker: cross_encoder
+    k_in: 30
+    k_out: 6
+
+eval:
+  framework_default: dspy        # programmatic optimization (Python)
+  ts_alternative: ax             # TypeScript option: https://github.com/ax-llm/ax
+  harness: [ragas, deepeval]     # weekly run; gate at 80%
+  metrics: [faithfulness, answer_relevancy, contextual_precision]
+
+caching:
+  preamble_stable: true
+  guidance: "Keep stable system/tools first; variable context last."

@@ -1,0 +1,3 @@
+# PURPOSE: Canonical list of portfolio initiatives (ULID crosswalk). Remove comment lines before strict CSV import.
+# COLUMNS: ulid,name,venture,program,project,status,priority,target_date
+ulid,name,venture,program,project,status,priority,target_date

@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #FAF8F3;
+  --text: #2B2B2B;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: theme('fontFamily.body');
+}
+
+@media print {
+  /* Hide interactive UI when printing */
+  .no-print { display: none !important; }
+  .page-break { page-break-after: always; }
+  body { background: white; }
+}

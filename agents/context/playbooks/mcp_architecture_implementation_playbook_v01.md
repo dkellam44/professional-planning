@@ -22,7 +22,7 @@
 
 **Infrastructure:**
 - Droplet state: `/docs/infrastructure/droplet_state_2025-10-28.md`
-- Docker compose: `/docs/ops/docker-compose.production.yml`
+- Docker compose: `/infra/docker/docker-compose.production.yml`
 - SyncBricks pattern: `/docs/infrastructure/syncbricks_solution_breakdown_v1.md`
 - Cloudflare Tunnel: `/docs/infrastructure/cloudflare_tunnel_token_guide_v1.md`
 
@@ -333,7 +333,7 @@ Last updated: YYYY-MM-DD
    - Document provenance in `/integrations/mcp/servers/coda/README.md`
 
 3. **Update Dockerfile** (30 min)
-   - Modify `/docs/ops/Dockerfile.coda-mcp-gateway` to build from `/integrations/mcp/servers/coda/src`
+   - Modify `/infra/docker/services/coda-mcp-gateway` to build from `/integrations/mcp/servers/coda/src`
    - Replace `FROM reaperberri/coda-mcp:latest` with local COPY
    - Keep mcp-proxy wrapper pattern
    - Test local build: `docker build -t coda-mcp-gateway:local -f docs/ops/Dockerfile.coda-mcp-gateway .`
@@ -350,7 +350,7 @@ Last updated: YYYY-MM-DD
    - `/integrations/mcp/servers/coda/DEPLOYMENT.md` - Deployment guide
    - `/docs/architecture/integrations/mcp/server_catalog_v01.md` - Initial catalog (14 servers)
    - `/docs/architecture/integrations/mcp/README.md` - Update navigation hub
-   - `/docs/ops/runbooks/mcp_troubleshooting_v01.md` - Troubleshooting guide
+   - `/docs/runbooks/mcp_troubleshooting_v01.md` - Troubleshooting guide
    - `/agents/context/playbooks/mcp_server_onboarding_template_v01.md` - Generic template
 
 6. **Update docker-compose with inline docs** (30 min)
@@ -581,7 +581,7 @@ cp ~/workspace/mcp-configs/user-scope/claude-desktop.json \
 ```
 
 ### Remote Server Configs (Tier 1)
-**Source of Truth**: `/docs/ops/docker-compose.production.yml`
+**Source of Truth**: `/infra/docker/docker-compose.production.yml`
 
 **Config workflow:**
 1. Edit `docker-compose.production.yml` locally
@@ -639,7 +639,7 @@ cp ~/workspace/mcp-configs/user-scope/claude-desktop.json \
 **Tier 1 (Remote):**
 ```bash
 # Check service status
-ssh root@tools
+ssh tools-droplet-agents
 docker compose -f docker-compose.production.yml ps
 
 # Check logs
@@ -686,8 +686,8 @@ npx -y @modelcontextprotocol/server-filesystem $PWD
 
 **What to commit:**
 - ✅ `/integrations/mcp/` (source code, docs, Dockerfiles)
-- ✅ `/docs/ops/docker-compose.production.yml`
-- ✅ `/docs/ops/Dockerfile.*`
+- ✅ `/infra/docker/docker-compose.production.yml`
+- ✅ `/infra/docker/services/*.Dockerfile`
 - ✅ `/mcp-configs/` (templates without secrets)
 - ✅ `.mcp/config.json` (project scope, without secrets)
 - ✅ `.mcp/.env.example` (placeholder)

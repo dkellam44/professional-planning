@@ -78,7 +78,7 @@ This directory contains the implementation code for all MCP servers across three
 - [MCP Integration Hub](/docs/architecture/integrations/mcp/README.md) - Technical architecture docs
 
 **Operations**:
-- [MCP Troubleshooting Runbook](/docs/ops/runbooks/mcp_troubleshooting_v01.md)
+- [MCP Troubleshooting Runbook](/docs/runbooks/mcp_troubleshooting_v01.md)
 - [Infrastructure State](/docs/infrastructure/droplet_state_2025-10-28.md)
 
 ---
@@ -125,12 +125,12 @@ This directory contains the implementation code for all MCP servers across three
    - Document provenance in `servers/{mcp-name}/README.md`
 
 5. **Create Dockerfile** (Tier 1 only):
-   - Save to `/docs/ops/Dockerfile.{mcp-name}-mcp-gateway`
-   - Follow mcp-proxy wrapper pattern (see Coda example)
+   - Save to `/infra/docker/services/{mcp-name}-mcp.Dockerfile`
+   - Follow mcp-proxy wrapper pattern (see existing examples)
    - Test local build before deploying
 
 6. **Update configuration**:
-   - **Tier 1**: Add service to `/docs/ops/docker-compose.production.yml`
+   - **Tier 1**: Add service to `/infra/docker/docker-compose.production.yml`
    - **Tier 2**: Add template to `/workspace/mcp-configs/user-scope/`
    - **Tier 3**: Add to project `.mcp/config.json`
 
@@ -152,7 +152,7 @@ This directory contains the implementation code for all MCP servers across three
 cd /Users/davidkellam/workspace/portfolio
 
 # Build Docker image
-docker build -t {mcp-name}-mcp-gateway:local -f docs/ops/Dockerfile.{mcp-name}-mcp-gateway .
+docker build -t {mcp-name}-mcp-gateway:local -f infra/docker/services/{mcp-name}-mcp.Dockerfile .
 
 # Test locally
 docker run --rm -p 8080:8080 -e API_KEY="test-key" {mcp-name}-mcp-gateway:local
@@ -295,7 +295,7 @@ docker logs coda-mcp-gateway --tail 50
 npx -y @modelcontextprotocol/server-calculator
 ```
 
-**Full troubleshooting guide**: [MCP Troubleshooting Runbook](/docs/ops/runbooks/mcp_troubleshooting_v01.md)
+**Full troubleshooting guide**: [MCP Troubleshooting Runbook](/docs/runbooks/mcp_troubleshooting_v01.md)
 
 ---
 

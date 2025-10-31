@@ -1,0 +1,337 @@
+# Task Card: Polish for Launch
+
+id: polish-for-launch
+date: 2025-10-13
+goal: >
+  Address code review findings to prepare pitch deck for KD review. Display blurbs,
+  remove broken NavBar, redesign regenerative visual, add portrait, create content
+  drafts system, and expand appendix structure.
+
+context_notes:
+  - docs/context/2025-10-13-code-review.md
+  - docs/context/2025-10-13-polish-decisions.md
+  - docs/context/2025-10-12-refresh-and-blurbs.md
+
+inputs:
+  review_findings:
+    overall_rating: "4/5 stars"
+    code_quality: "4.1/5"
+    critical_gaps:
+      - Blurbs not displayed (high impact)
+      - NavBar non-functional (professional concern)
+      - Regenerative visual weak (differentiation issue)
+
+  decisions_made:
+    navigation: "Remove NavBar entirely"
+    blurbs: "Display in all components with consistent styling"
+    regenerative: "Redesign with infinity loop + ops language"
+    portrait: "Add to Fit slide with elegant styling"
+    content_workflow: "Create /content/drafts/ staging system"
+
+files_to_touch:
+  critical_fixes:
+    - app/page.tsx (remove NavBar import/usage)
+    - components/NavBar.tsx (delete file)
+    - components/slides/TitleCard.tsx (add blurb display)
+    - components/slides/TextSlide.tsx (add blurb prop and display)
+    - components/slides/MetricsLoop.tsx (add blurb display)
+    - components/slides/OfferCards.tsx (add blurb display)
+    - components/slides/CTASection.tsx (add blurb display - priority!)
+
+  visual_enhancements:
+    - components/slides/MetricsLoop.tsx (redesign with infinity loop)
+    - components/slides/TextSlide.tsx (add portrait rendering for Fit slide)
+    - content/slides/regenerative.json (update labels)
+    - content/slides/fit.json (add portrait path)
+
+  content_system:
+    - content/drafts/README.md (create with workflow instructions)
+    - content/drafts/blurbs.md (create template)
+    - content/drafts/profile-long.md (create template)
+    - content/drafts/resume.md (create template)
+
+  appendix_expansion:
+    - app/appendix/page.tsx (update structure)
+    - content/appendix/profile-long.mdx (create)
+    - content/appendix/resume.mdx (create placeholder)
+
+phases:
+  - name: Phase 1 - Critical Fixes
+    duration: "30 minutes"
+    priority: "CRITICAL - Before merge"
+    tasks:
+      - name: Remove NavBar
+        steps:
+          - Delete components/NavBar.tsx
+          - Remove NavBar import from app/page.tsx
+          - Remove <NavBar total={7} /> from JSX
+          - Test: Verify no errors, slides still scroll normally
+        acceptance:
+          - File deleted successfully
+          - No TypeScript errors
+          - App builds without issues
+
+      - name: Display blurbs in all components
+        steps:
+          - Add blurb prop to TitleCard, TextSlide, MetricsLoop, OfferCards, CTASection
+          - Render blurb with consistent styling (text-sm, italic or light weight)
+          - Contextual placement (above or below main content, whichever reads better)
+          - Optional: subtle background (bg-cream) or left border (border-l-2 border-gold)
+        priority_component: "CTASection (Kali Das reference)"
+        styling:
+          size: "text-sm"
+          color: "text-charcoal/80"
+          spacing: "mb-4 or mt-4"
+          optional_bg: "bg-cream/50 or bg-lavender/20"
+          optional_border: "border-l-2 border-gold pl-4"
+        acceptance:
+          - All 7 slides display their blurbs correctly
+          - Styling consistent across slides
+          - Mobile layout clean (no overflow)
+          - CTA slide prominently shows Kali Das blurb
+
+  - name: Phase 2 - Content Staging System
+    duration: "15 minutes"
+    priority: "HIGH - Workflow improvement"
+    tasks:
+      - name: Create content/drafts directory
+        steps:
+          - mkdir -p content/drafts
+          - Create README.md with workflow instructions
+          - Create blurbs.md template with sections for each slide
+          - Create profile-long.md template
+          - Create resume.md template
+        acceptance:
+          - Directory exists with 4 files
+          - README explains workflow clearly
+          - Templates are easy to fill out
+
+  - name: Phase 3 - Visual Enhancements
+    duration: "1.5-2 hours"
+    priority: "MEDIUM - Before sharing with KD"
+    tasks:
+      - name: Redesign regenerative visual
+        current_state: "Static circle with Seed/Tend/Harvest/Compost"
+        target_state: "Infinity loop with ops-relevant language"
+        options:
+          preferred: "Infinity loop (figure-8)"
+          left_loop: "Creative Freedom or Creative Work"
+          right_loop: "Operational Calm or Systems Support"
+          center: "Sustained Flow or Regenerative Rhythm"
+          styling: "SVG with gradient (sage → plum or gold → plum)"
+          animation: "Optional subtle CSS or Framer Motion"
+        steps:
+          - Update MetricsLoop.tsx component
+          - Replace circle with SVG infinity loop
+          - Update content/slides/regenerative.json labels
+          - Add gradient styling
+          - Consider subtle animation (optional)
+        acceptance:
+          - Visual is elegant and modern
+          - Language is ops-relevant (not agricultural)
+          - Renders cleanly on mobile and desktop
+          - Maintains alignment with metrics list
+
+      - name: Add portrait to Fit slide
+        steps:
+          - Update TextSlide or create variant to support portrait
+          - Add portrait rendering (rounded, with gold ring border)
+          - Upload portrait image to /public/images/
+          - Update fit.json with portrait path
+          - Position: next to bullets or as visual anchor
+        styling:
+          shape: "rounded-2xl or rounded-full"
+          border: "ring-2 ring-gold"
+          size: "max-w-xs on desktop, full width on mobile"
+        acceptance:
+          - Portrait displays on Fit slide
+          - Styling is elegant and professional
+          - Mobile layout adapts properly
+          - Adds personal warmth to slide
+
+      - name: Polish blurb styling
+        steps:
+          - Ensure consistency across all blurb displays
+          - Choose: subtle background vs left border
+          - Verify spacing is generous but not excessive
+          - Test mobile readability
+        acceptance:
+          - All blurbs styled identically
+          - Easy to distinguish from body text
+          - Maintains spacious feel
+
+      - name: Emphasize CTA blurb
+        steps:
+          - Style CTA blurb more prominently than others
+          - Position above CTA buttons (visual hierarchy)
+          - Consider subtle emphasis (italic + light background)
+        content: "I hold deep respect for the foundation Kali Das has helped build..."
+        acceptance:
+          - Kali Das reference is prominent and readable
+          - Placement feels intentional (not buried)
+          - Contributes to trust-building
+
+  - name: Phase 4 - Appendix Expansion
+    duration: "45 minutes"
+    priority: "MEDIUM - Depth for interested prospects"
+    tasks:
+      - name: Restructure appendix page
+        steps:
+          - Update app/appendix/page.tsx layout
+          - Keep profile.mdx as summary section
+          - Add profile-long.mdx section
+          - Add resume.mdx section (placeholder)
+          - Add navigation/anchor links
+        acceptance:
+          - Three sections render correctly
+          - Navigation works (smooth scroll)
+          - Mobile layout is clean
+
+      - name: Add smart navigation from slides
+        steps:
+          - Add "View Full Profile" link to Fit slide
+          - Add external profile/resume links to CTA slide
+          - Use proper attributes (target="_blank" rel="noopener noreferrer")
+          - Style links consistently
+        acceptance:
+          - Links work correctly
+          - External links open in new tab
+          - No security warnings
+          - Styling matches deck aesthetic
+
+  - name: Phase 5 - Style & Layout Polish
+    duration: "1 hour"
+    priority: "LOW - Final polish"
+    tasks:
+      - name: Typography audit
+        checklist:
+          - Heading hierarchy consistent (h1: 4xl, h2: 3xl, h3: xl)
+          - Body line-height: 1.6-1.8
+          - Responsive sizing works mobile → desktop
+
+      - name: Spacing audit
+        checklist:
+          - Spaciousness feels consistent across slides
+          - Padding: p-6 (mobile) → p-10 (desktop)
+          - Vertical spacing: space-y-8 → space-y-10
+          - Never cramped or excessive
+
+      - name: Color contrast verification
+        checklist:
+          - All text meets WCAG AA minimums
+          - Plum text on cream: verify contrast
+          - Gold accents: decorative only (not info-bearing)
+
+acceptance_criteria:
+  before_merge:
+    - TypeScript builds without errors
+    - All blurbs display correctly
+    - NavBar removed, no broken UI
+    - Mobile layout clean and spacious
+    - content/drafts/ system in place
+
+  before_sharing_with_kd:
+    - Portrait on Fit slide with elegant styling
+    - Regenerative visual redesigned (infinity loop, ops language)
+    - Appendix expanded with navigation
+    - Font optimization complete (next/font)
+    - Preview deployment tested on mobile
+
+  quality_standards:
+    - Code: Clean, consistent, no console errors
+    - Design: Embodies "spaciousness through structure"
+    - Content: Trust-building, differentiated, specific
+    - Performance: Fast load, no janky animations
+    - Accessibility: Semantic HTML, proper ARIA
+
+commit_templates:
+  critical_fixes: |
+    feat: display blurbs and remove broken NavBar
+
+    - Add blurb rendering to all slide components (TitleCard, TextSlide, MetricsLoop, OfferCards, CTASection)
+    - Style blurbs consistently with subtle distinction (text-sm, contextual placement)
+    - Emphasize CTA blurb about Kali Das legacy (trust-building content)
+    - Remove non-functional NavBar component
+    - Delete components/NavBar.tsx
+
+    This addresses critical gaps from code review: blurbs contain rich trust-building
+    content but were hidden, and broken NavBar undermined professional positioning.
+
+    See: docs/context/2025-10-13-polish-decisions.md
+
+  visual_enhancements: |
+    feat: redesign regenerative visual and add portrait to Fit slide
+
+    - Replace static circle with elegant infinity loop (SVG)
+    - Update labels from agricultural (Seed/Tend) to ops-relevant (Creative ↔ Operational)
+    - Add gradient styling (sage → plum)
+    - Render portrait on Fit slide with rounded styling and gold border
+    - Polish blurb styling for consistency and emphasis (especially CTA)
+
+    Regenerative visual now differentiates as systems thinker with sophisticated design.
+    Portrait adds personal warmth and human connection.
+
+    See: docs/context/2025-10-13-code-review.md
+
+  content_system: |
+    chore: create content drafts staging system
+
+    - Add content/drafts/ directory
+    - Create README with workflow instructions
+    - Add templates: blurbs.md, profile-long.md, resume.md
+
+    Enables safer content iteration by separating drafting (markdown) from
+    implementation (validated JSON/MDX). AI and humans can collaborate more
+    naturally on raw content before committing to schemas.
+
+  appendix_expansion: |
+    feat: expand appendix with profile-long and resume sections
+
+    - Restructure app/appendix/page.tsx for three sections
+    - Add profile-long.mdx for detailed background
+    - Add resume.mdx placeholder
+    - Add smart navigation from Fit and CTA slides
+    - Support external links (Google Drive, etc)
+
+    Provides depth for interested prospects while maintaining clean main deck.
+
+post_completion:
+  testing_checklist:
+    - Run `npm run typecheck && npm run build`
+    - Test on mobile (Chrome DevTools + real device)
+    - Verify all blurbs display and read well
+    - Check regenerative visual on various screen sizes
+    - Test appendix navigation and external links
+    - Verify no console errors or warnings
+
+  preview_deployment:
+    - Push to branch, verify Vercel preview URL
+    - Share preview with trusted reviewer (optional)
+    - Test on iPhone and Android if possible
+    - Check loading speed (should feel fast)
+
+  before_production:
+    - Merge PR #2 to main
+    - Monitor production deployment
+    - Quick smoke test on live URL
+    - Share with KamalaDevi when confident
+
+estimated_time: "4-5 hours total (can split across 2-3 sessions)"
+
+dependencies:
+  - PR #2 TypeScript fixes (completed)
+  - Code review findings (documented)
+  - Polish decisions (documented)
+
+notes:
+  - Prioritize critical fixes first (blurbs + NavBar)
+  - Visual enhancements can iterate based on preference
+  - Content drafts system enables easier collaboration going forward
+  - Some decisions still open (portrait shape, loop gradient, profile hosting)
+  - Font optimization recommended but not blocking for initial share
+
+references:
+  - Code review: docs/context/2025-10-13-code-review.md
+  - Decisions: docs/context/2025-10-13-polish-decisions.md
+  - ICP context: docs/content-review-context.md
+  - Previous task: docs/agents/tasks/2025-10-12_refresh-and-blurbs.yml

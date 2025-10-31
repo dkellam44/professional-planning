@@ -42,7 +42,7 @@ Keep this plan open during execution; note deviations or upgrades in `logs/conte
 ## 2. Phase Breakdown
 
 ### Phase 0 — Preparation & Environment (≈30 min)
-1. Confirm droplet access (`ssh root@tools`) and that `docker compose` stack is healthy:  
+1. Confirm droplet access (`ssh tools-droplet-agents`) and that `docker compose` stack is healthy:
    `docker compose -f docker-compose.production.yml ps`
 2. Snapshot current state (optional):  
    - `docker compose -f docker-compose.production.yml logs coda-mcp-gateway > logs/ops/coda-mcp-gateway_pre-upgrade.log`
@@ -93,7 +93,7 @@ Keep this plan open during execution; note deviations or upgrades in `logs/conte
 
 ### Phase 5 — Customization & Learning Loop (ongoing)
 1. Prioritise enhancements (e.g., new tools, richer queries, n8n triggers).  
-   - Track tasks in `inbox/` or `integrations/coda-mcp/TODO.md`.
+   - Track tasks in `planning/` or `integrations/coda-mcp/TODO.md`.
 2. Pair with agent for guided coding sessions:  
    - Start with failing tests or TODO comment.  
    - Use GenAI to generate scaffolding, manually review, then run tests.

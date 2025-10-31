@@ -112,7 +112,7 @@ This system uses a **dual SoT** approach where different types of information ha
 
 **Beginner Concept — Authority Map**: A JSON file that defines which system "owns" which fields. When both systems have a "status" field, the authority map says which one wins if they conflict.
 
-📍 **Location**: `/z_archive/sot/authority_map_v0_2.json` (needs to be moved to `/sot/` per consolidation playbook)
+📍 **Location**: `/archive/sot/authority_map_v0_2.json` (needs to be moved to `/sot/` per consolidation playbook)
 
 **Current state**: Minimal (only 3 entities defined: Pass, Decision, Asset)
 **Goal**: Expand to cover all entities and field-level authority
@@ -180,10 +180,10 @@ portfolio/
 │
 ├── prompts/                   # Prompt templates and bundles
 │
-├── inbox/                     # Unsorted/processing files
+├── planning/                     # Unsorted/processing files
 │   └── [9 files awaiting triage]
 │
-├── y_collection_box/          # Temporary holding for active work
+├── sessions/          # Temporary holding for active work
 │
 └── z_archive/                 # Historical/deprecated content
     └── [previous iterations, superseded approaches]
@@ -413,7 +413,7 @@ Recent important decisions:
 
 📍 **Navigation**: `/docs/infrastructure/INDEX.md`
 📍 **Current State**: `/docs/infrastructure/droplet_state_2025-10-28.md`
-📍 **Docker Compose**: `/docs/ops/docker-compose.production.yml`
+📍 **Docker Compose**: `/infra/docker/docker-compose.production.yml`
 
 ### Ventures
 
@@ -423,7 +423,7 @@ Recent important decisions:
 
 ### Source of Truth
 
-**Authority Map**: `/z_archive/sot/authority_map_v0_2.json` (to be moved to `/sot/`)
+**Authority Map**: `/archive/sot/authority_map_v0_2.json` (to be moved to `/sot/`)
 **SoT Architecture**: `/docs/architecture/sot_architecture_v0_2.md`
 **Coda Mapping**: `/docs/architecture/integrations/coda/founder_hq_to_sot_v0_2.md`
 
@@ -546,7 +546,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 **For infrastructure**:
 - INDEX (`/docs/infrastructure/INDEX.md`) - navigation to all infrastructure docs
 - Droplet state (`/docs/infrastructure/droplet_state_2025-10-28.md`) - current production state
-- Docker Compose (`/docs/ops/docker-compose.production.yml`) - service definitions
+- Docker Compose (`/infra/docker/docker-compose.production.yml`) - service definitions
 
 **For business context**:
 - Venture specs (`/business_model/context/[venture]/`) - positioning, offers, strategy

@@ -92,7 +92,7 @@ curl -I https://coda.bestviable.com/sse
 - [Coda MCP Upgrade Plan](../../../agents/context/playbooks/coda_mcp_gateway_upgrade_plan_v01.md) - Coda-specific deployment
 
 **Operations**:
-- [MCP Troubleshooting Runbook](../../ops/runbooks/mcp_troubleshooting_v01.md) - Diagnostics and recovery procedures
+- [MCP Troubleshooting Runbook](../../runbooks/mcp_troubleshooting_v01.md) - Diagnostics and recovery procedures
 
 ### Implementation Code
 
@@ -245,7 +245,7 @@ curl -I https://github.bestviable.com/sse
 curl -I https://memory.bestviable.com/sse
 
 # Check droplet services
-ssh root@tools
+ssh tools-droplet-agents
 docker compose -f docker-compose.production.yml ps | grep mcp-gateway
 
 # View logs
@@ -287,7 +287,7 @@ docker logs coda-mcp-gateway --tail 50
 
 ### Docker Compose
 
-**Location**: `/docs/ops/docker-compose.production.yml`
+**Location**: `/infra/docker/docker-compose.production.yml`
 
 **MCP Services**:
 - `coda-mcp-gateway` (port 8080)
@@ -295,7 +295,7 @@ docker logs coda-mcp-gateway --tail 50
 - `memory-mcp-gateway` (port 8082, planned)
 
 **Each service includes**:
-- Dockerfile: `/docs/ops/Dockerfile.{mcp-name}-mcp-gateway`
+- Dockerfile: `/infra/docker/services/{mcp-name}-mcp.Dockerfile`
 - mcp-proxy wrapper for stdio → SSE conversion
 - Environment variables for API keys
 - Virtual host for nginx-proxy auto-discovery

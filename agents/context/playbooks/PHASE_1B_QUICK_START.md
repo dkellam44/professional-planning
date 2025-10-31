@@ -6,7 +6,7 @@
 
 ## Step 1: Create Dockerfile.coda-mcp-gateway (5 min)
 
-**File location**: `/Users/davidkellam/workspace/portfolio/docs/ops/Dockerfile.coda-mcp-gateway`
+**File location**: `/Users/davidkellam/workspace/portfolio/infra/docker/services/coda-mcp-gateway`
 
 ```dockerfile
 FROM node:23-alpine
@@ -86,13 +86,13 @@ CMD ["mcp-proxy", "--host", "0.0.0.0", "--port", "8080", "--", "node", "dist/ind
 
 ### 3A: Copy Files (5 min)
 ```bash
-scp docs/ops/Dockerfile.coda-mcp-gateway root@tools:~/
-scp docs/ops/docker-compose.production.yml root@tools:~/
+scp docs/ops/Dockerfile.coda-mcp-gateway tools-droplet-agents:~/
+scp docs/ops/docker-compose.production.yml tools-droplet-agents:~/
 ```
 
 ### 3B: Build on Droplet (30 min)
 ```bash
-ssh root@tools
+ssh tools-droplet-agents
 
 # Verify files arrived
 ls -la docker-compose.production.yml Dockerfile.coda-mcp-gateway
@@ -155,7 +155,7 @@ docker logs coda-mcp-gateway --tail 100
 ## Full Documentation
 
 - **Playbook**: /agents/context/playbooks/mcp_architecture_implementation_playbook_v01.md
-- **Troubleshooting**: /docs/ops/runbooks/mcp_troubleshooting_v01.md
+- **Troubleshooting**: /docs/runbooks/mcp_troubleshooting_v01.md
 - **Architecture**: /agents/decisions/2025-10-29_mcp-tier-architecture_v01.md
 
 ## Next After Phase 1B Success

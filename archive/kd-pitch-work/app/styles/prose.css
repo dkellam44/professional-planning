@@ -1,0 +1,146 @@
+/**
+ * Prose Styles for MDX Content (Appendix Pages)
+ * Ensures readable typography for long-form content
+ */
+
+.prose {
+  max-width: 65ch;
+  font-size: 1.125rem;
+  line-height: 1.7;
+  color: #333;
+}
+
+.prose h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: #812D6B;
+  margin-top: 2rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.2;
+}
+
+.prose h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.875rem;
+  font-weight: 600;
+  color: #812D6B;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  line-height: 1.3;
+}
+
+.prose h3 {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.375rem;
+  font-weight: 500;
+  color: #9BA88C;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose p {
+  margin-bottom: 1.25rem;
+}
+
+.prose ul,
+.prose ol {
+  margin-top: 1rem;
+  margin-bottom: 1.25rem;
+  padding-left: 1.5rem;
+}
+
+.prose li {
+  margin-bottom: 0.5rem;
+  line-height: 1.7;
+}
+
+.prose ul > li {
+  list-style-type: disc;
+}
+
+.prose ol > li {
+  list-style-type: decimal;
+}
+
+.prose strong {
+  font-weight: 600;
+  color: #812D6B;
+}
+
+.prose em {
+  font-style: italic;
+  color: #9BA88C;
+}
+
+.prose a {
+  color: #812D6B;
+  text-decoration: underline;
+  text-decoration-color: #D8A7C4;
+  text-underline-offset: 2px;
+}
+
+.prose a:hover {
+  color: #D8A7C4;
+}
+
+.prose blockquote {
+  font-family: 'Crimson Text', serif;
+  font-size: 1.25rem;
+  font-style: italic;
+  color: #812D6B;
+  border-left: 4px solid #D8A7C4;
+  padding-left: 1.5rem;
+  margin: 2rem 0;
+}
+
+.prose code {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  background: #FAF8F3;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  color: #812D6B;
+}
+
+.prose pre {
+  background: #FAF8F3;
+  border: 1px solid #D4B483;
+  border-radius: 6px;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+}
+
+.prose pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.prose hr {
+  border: none;
+  border-top: 1px solid #D4B483;
+  margin: 3rem 0;
+}
+
+@media print {
+  .prose {
+    font-size: 11pt;
+    line-height: 1.6;
+  }
+
+  .prose h1 {
+    font-size: 18pt;
+    page-break-after: avoid;
+  }
+
+  .prose h2 {
+    font-size: 14pt;
+    page-break-after: avoid;
+  }
+
+  .prose h3 {
+    font-size: 12pt;
+    page-break-after: avoid;
+  }
+}

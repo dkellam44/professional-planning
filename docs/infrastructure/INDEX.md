@@ -17,7 +17,7 @@ Complete reference guide for SyncBricks pattern infrastructure (nginx-proxy, acm
 ## Quick Navigation
 
 ### For Deployment (Next Session)
-**Start here:** `/ops/PRODUCTION_DEPLOYMENT_QUICKSTART.md` (one-page reference)
+**Start here:** `/docs/infrastructure/deployment/PRODUCTION_DEPLOYMENT_QUICKSTART.md` (one-page reference)
 1. Pre-deployment checklist
 2. Configuration setup
 3. Deploy services
@@ -223,7 +223,7 @@ Complete reference guide for SyncBricks pattern infrastructure (nginx-proxy, acm
 - **Audience:** Operators, deployment agents, infrastructure team
 - **Estimated Reading Time:** 8-10 minutes
 - **Use Case:** Understand current production state, verify deployment, track infrastructure changes
-- **Related:** Deployment in `droplet_migration_procedure_v1.md`, configuration in `/docs/ops/docker-compose.production.yml`
+- **Related:** Deployment in `droplet_migration_procedure_v1.md`, configuration in `/infra/docker/docker-compose.production.yml`
 
 ---
 

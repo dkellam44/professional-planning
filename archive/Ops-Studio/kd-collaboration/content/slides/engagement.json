@@ -1,0 +1,25 @@
+{
+  "h1": "Engagement Path",
+  "blurb": "Every collaboration finds its own rhythm. These options reflect shapes that tend to work beautifully — from short sprints to sustained partnerships. Choose what feels right for your pace, or we can co-design a form that evolves with your needs.",
+  "cards": [
+    {
+      "icon": "⚡",
+      "title": "Starter Sprint",
+      "desc": "2-week sprint to create immediate calm — inbox/calendar systems, publishing rhythm, and a single source of truth for priorities.",
+      "price": "$1,200–$1,500"
+    },
+    {
+      "icon": "🌿",
+      "title": "Ongoing Partnership",
+      "desc": "Steady rhythm at 10–15 hrs/week — keep systems humming, handle weekly publishing, reclaim 4–6 hours of your creative time monthly.",
+      "price": "$2,250–$2,800/mo"
+    },
+    {
+      "icon": "🌈",
+      "title": "Fractional COO",
+      "desc": "Strategic operational leadership — launch choreography, team coordination, dashboard design, and quarterly roadmap planning for expansion seasons.",
+      "price": "Custom"
+    }
+  ],
+  "note": "All engagements begin with a short discovery call. Ongoing partnerships renew monthly with flexible opt-out — your investment is protected by clear deliverables and make-good provisions."
+}
