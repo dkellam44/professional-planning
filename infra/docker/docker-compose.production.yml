@@ -274,6 +274,9 @@ services:
       LETSENCRYPT_HOST: coda.${DOMAIN}
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:-admin@bestviable.com}
 
+      # Disable HTTP->HTTPS redirects (Cloudflare Tunnel handles SSL)
+      HTTPS_METHOD: noredirect
+
     networks:
       - proxy
       - syncbricks
