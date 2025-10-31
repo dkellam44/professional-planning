@@ -5,12 +5,12 @@
 - version: v01
 - tags: [runbook, troubleshooting, mcp, operations]
 - source_path: /docs/runbooks/mcp_troubleshooting_v01.md
-- date: 2025-10-29
+- date: 2025-10-31
 ---
 
 # MCP Troubleshooting Runbook
 
-**Purpose**: Step-by-step diagnostics and recovery procedures for MCP servers across all three tiers.
+**Purpose**: Step-by-step diagnostics and recovery procedures for MCP servers across all three tiers (HTTP Streaming Transport).
 
 **When to use**: Use this runbook when:
 - MCP tools are unavailable in AI clients
@@ -42,15 +42,16 @@
 
 ```bash
 # From local machine
-curl -I https://coda.bestviable.com/sse
-curl -I https://github.bestviable.com/sse
-curl -I https://memory.bestviable.com/sse
-curl -I https://firecrawl.bestviable.com/sse
+curl -I https://coda.bestviable.com/health
+curl -I https://github.bestviable.com/health
+curl -I https://memory.bestviable.com/health
+curl -I https://firecrawl.bestviable.com/health
 
-# Expected: HTTP/1.1 200 OK
-# If 502/503/504: Service down
-# If timeout: Routing issue
-# If 404: DNS or Cloudflare Tunnel misconfigured
+# Expected: HTTP/1.1 200 OK + JSON health status
+# If 502/503/504: Service down (container not running)
+# If 301 Moved Permanently: HTTPS redirect loop (see Redirect Loops section)
+# If timeout or no response: Cloudflare Tunnel not configured for domain
+# If 404: DNS misconfigured or service path incorrect
 ```
 
 **Detailed health check from droplet:**
@@ -82,7 +83,7 @@ docker logs cloudflared --tail 40
 ### Tier 1: Container Not Running
 
 **Symptoms:**
-- `curl https://{mcp}.bestviable.com/sse` returns 502 Bad Gateway
+- `curl https://{mcp}.bestviable.com/health` returns 502 Bad Gateway
 - `docker compose ps` shows container stopped or unhealthy
 
 **Diagnostic steps:**
@@ -170,7 +171,7 @@ docker compose -f docker-compose.production.yml restart nginx-proxy
 sleep 30
 
 # Test endpoint
-curl -I https://{mcp-name}.bestviable.com/sse
+curl -I https://{mcp-name}.bestviable.com/health
 ```
 
 ---
@@ -178,10 +179,11 @@ curl -I https://{mcp-name}.bestviable.com/sse
 ### Tier 1: Redirect Loops
 
 **Symptoms:**
+- `curl https://{mcp}.bestviable.com/health` returns `301 Moved Permanently`
 - Browser shows "ERR_TOO_MANY_REDIRECTS"
-- `curl -L https://{mcp}.bestviable.com/sse` loops infinitely
+- `curl -L https://{mcp}.bestviable.com/health` loops infinitely
 
-**Cause**: Cloudflare Tunnel terminates TLS, but nginx-proxy or MCP service tries to redirect HTTP → HTTPS
+**Cause**: Cloudflare Tunnel terminates TLS and forwards HTTP to nginx-proxy. nginx-proxy tries to redirect HTTP → HTTPS, causing infinite loop.
 
 **Diagnostic steps:**
 
@@ -208,11 +210,13 @@ environment:
 docker compose -f docker-compose.production.yml up -d {mcp-name}-mcp-gateway
 
 # Test
-curl -I https://{mcp-name}.bestviable.com/sse
-# Should now return 200 without redirects
+curl -I https://{mcp-name}.bestviable.com/health
+# Should now return 200 OK without 301 redirects
 ```
 
-**Reference**: See ADR `/agents/decisions/2025-10-28_cloudflare-proxy-trust-config_v01.md` for full context.
+**Reference**:
+- ADR: `/agents/decisions/2025-10-28_cloudflare-proxy-trust-config_v01.md`
+- Official nginx-proxy documentation: https://github.com/nginx-proxy/nginx-proxy (HTTPS_METHOD environment variable)
 
 ---
 
@@ -257,15 +261,119 @@ docker logs -f acme-companion
 ls -la ./certs/ | grep {mcp-name}.bestviable.com
 
 # 5. Test endpoint
-curl -I https://{mcp-name}.bestviable.com/sse
+curl -I https://{mcp-name}.bestviable.com/health
 ```
+
+---
+
+### Tier 1: Cloudflare Tunnel Not Running
+
+**Symptoms:**
+- `curl https://{mcp}.bestviable.com/health` returns Cloudflare error 1033
+- External HTTPS endpoints completely unresponsive
+
+**Diagnostic steps:**
+
+```bash
+ssh tools-droplet-agents
+
+# Check if cloudflared container is running
+docker ps --filter name=cloudflared
+
+# If not running, check logs for why it stopped
+docker logs cloudflared --tail 100
+```
+
+**Recovery actions:**
+
+```bash
+ssh tools-droplet-agents
+
+# Start cloudflared tunnel
+docker compose -f docker-compose.production.yml up -d cloudflared
+
+# Watch logs for successful connection
+docker logs -f cloudflared
+
+# Should see:
+# "Registered tunnel connection" messages for configured domains
+# Multiple connection registrations (typically 4)
+
+# Test endpoints
+curl -I https://coda.bestviable.com/health
+```
+
+**Reference**: See `/docs/infrastructure/cloudflare_tunnel_token_guide_v1.md` for tunnel setup and token management.
+
+---
+
+### Tier 1: Cloudflare Tunnel Domain Not Configured
+
+**Symptoms:**
+- Service works internally (`curl http://127.0.0.1:808X/health` returns 200 OK)
+- Service returns `301 Moved Permanently` OR times out externally
+- Other services on same droplet working fine
+
+**Root Cause**: Domain not added to Cloudflare Tunnel configuration in Zero Trust dashboard
+
+**Diagnostic steps:**
+
+```bash
+ssh tools-droplet-agents
+
+# Check tunnel logs to see configured domains
+docker logs cloudflared --tail 50 | grep "Updated to new configuration"
+
+# Should show all configured hostnames in ingress rules
+# Example:
+# "ingress":[{"hostname":"coda.bestviable.com",...}, {"hostname":"github.bestviable.com",...}]
+
+# Test internal endpoint (should work)
+curl http://127.0.0.1:808X/health
+
+# Test external endpoint (will fail if not in tunnel config)
+curl https://{new-service}.bestviable.com/health
+```
+
+**Recovery actions:**
+
+This requires access to Cloudflare Zero Trust dashboard:
+
+1. Login to Cloudflare Zero Trust dashboard
+2. Navigate to **Access** → **Tunnels**
+3. Find your tunnel (e.g., "bestviable-tunnel")
+4. Click **Configure**
+5. Go to **Public Hostname** tab
+6. Click **Add a public hostname**:
+   - **Subdomain**: `{mcp-name}` (e.g., "github", "memory", "firecrawl")
+   - **Domain**: `bestviable.com`
+   - **Service**: `http://nginx-proxy` (internal docker network service name)
+   - **HTTP Host Header**: Leave empty or set to subdomain.domain
+7. Click **Save**
+8. Wait 30-60 seconds for tunnel to reload configuration
+
+9. Verify in tunnel logs:
+```bash
+ssh tools-droplet-agents
+docker logs cloudflared --tail 20
+
+# Should show "Updated to new configuration" with new hostname
+```
+
+10. Test endpoint:
+```bash
+curl -I https://{new-service}.bestviable.com/health
+# Should now return 200 OK
+```
+
+**Note**: Without Cloudflare dashboard access, this blocker cannot be resolved. Services will work internally but not be accessible externally.
 
 ---
 
 ### Tier 1: DNS / Cloudflare Tunnel Issues
 
 **Symptoms:**
-- `curl https://{mcp}.bestviable.com/sse` times out or shows "Could not resolve host"
+- `curl https://{mcp}.bestviable.com/health` times out or shows "Could not resolve host"
 - `dig {mcp}.bestviable.com` returns NXDOMAIN
 
 **Diagnostic steps:**
@@ -552,7 +660,7 @@ nano .env
 docker compose -f docker-compose.production.yml restart {mcp-name}-mcp-gateway
 
 # Test
-curl -X POST https://{mcp-name}.bestviable.com/sse \
+curl -X POST https://{mcp-name}.bestviable.com/health \
   -H "Authorization: Bearer ${API_KEY_VAR}" \
   -d '{"method": "tools/list"}'
 ```
@@ -594,7 +702,7 @@ docker stats {mcp-name}-mcp-gateway --no-stream
 docker logs {mcp-name}-mcp-gateway --tail 100 | grep -E "(rate|limit|429)"
 
 # Test endpoint latency
-time curl -X POST https://{mcp-name}.bestviable.com/sse \
+time curl -X POST https://{mcp-name}.bestviable.com/health \
   -H "Authorization: Bearer ${API_KEY}" \
   -d '{"method": "tools/list"}'
 ```
@@ -659,9 +767,9 @@ sleep 120
 docker compose -f docker-compose.production.yml ps | grep mcp-gateway
 
 # Test endpoints
-curl -I https://coda.bestviable.com/sse
-curl -I https://github.bestviable.com/sse
-curl -I https://memory.bestviable.com/sse
+curl -I https://coda.bestviable.com/health
+curl -I https://github.bestviable.com/health
+curl -I https://memory.bestviable.com/health
 ```
 
 ---
@@ -687,7 +795,7 @@ docker compose -f docker-compose.production.yml build {mcp-name}-mcp-gateway
 docker compose -f docker-compose.production.yml up -d {mcp-name}-mcp-gateway
 
 # Verify
-curl -I https://{mcp-name}.bestviable.com/sse
+curl -I https://{mcp-name}.bestviable.com/health
 ```
 
 ---
@@ -724,10 +832,32 @@ If issue persists after following this runbook:
 ## Related Documentation
 
 - **Server Catalog**: `/docs/architecture/integrations/mcp/server_catalog_v01.md`
+- **Deployment Flows**: `/docs/architecture/integrations/mcp/DEPLOYMENT_FLOWS.md`
 - **Architecture**: `/agents/context/playbooks/mcp_architecture_implementation_playbook_v01.md`
 - **ADRs**: `/agents/decisions/2025-10-29_mcp-tier-architecture_v01.md`
 - **Infrastructure**: `/docs/infrastructure/droplet_state_2025-10-28.md`
 - **SyncBricks Pattern**: `/docs/infrastructure/syncbricks_solution_breakdown_v1.md`
+- **Cloudflare Tunnel Guide**: `/docs/infrastructure/cloudflare_tunnel_token_guide_v1.md`
+
+---
+
+## Operational Notes
+
+### SSH Access
+Droplet access is configured with SSH alias for convenience:
+```bash
+ssh tools-droplet-agents  # Alias for: ssh root@159.65.97.146
+```
+
+**Configuration**: See `~/.ssh/config` for alias definition
+
+### Official Documentation URLs
+The following external documentation was referenced in this runbook:
+- nginx-proxy: https://github.com/nginx-proxy/nginx-proxy
+- Cloudflare Tunnels: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/
+
+### Token Budget Monitoring
+For agents working on troubleshooting sessions, use the **token-budget-advisor skill** to monitor context window usage proactively, especially when gathering large diagnostic outputs.
 
 ---
 
@@ -736,5 +866,6 @@ If issue persists after following this runbook:
 - Recovery procedures change
 - New tier added
 - Infrastructure architecture changes
+- External documentation URLs change
 
-**Last Updated**: 2025-10-29
+**Last Updated**: 2025-10-31 (Updated for HTTP Streaming Transport and added Cloudflare Tunnel configuration issues)
