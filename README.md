@@ -120,6 +120,37 @@ See ADR: `decisions/2025-10-26_infrastructure-syncbricks-adoption_v01.md`
 
 ---
 
+## MCP Servers (Model Context Protocol)
+
+**Status**: ✅ Production Deployed (2025-10-31)
+
+Four HTTP streaming MCP servers are deployed and operational on the droplet, providing AI agents with structured access to tools and data:
+
+### Available Servers
+
+| Server | Endpoint | Tools | Status |
+|--------|----------|-------|--------|
+| **Coda** | `https://coda.bestviable.com/mcp` | 34 tools | ✅ Production |
+| **GitHub** | `https://github.bestviable.com/mcp` | ~15 tools | ✅ Production |
+| **Memory** | `https://memory.bestviable.com/mcp` | 5 tools | ✅ Production |
+| **Firecrawl** | `https://firecrawl.bestviable.com/mcp` | 6 tools | ✅ Production |
+
+### Documentation
+
+**For end-to-end developers & operators**:
+- **Server Catalog**: `/docs/architecture/integrations/mcp/server_catalog_v01.md` — Complete inventory of all MCP services, tiers, and status
+- **Deployment Flows**: `/docs/architecture/integrations/mcp/DEPLOYMENT_FLOWS.md` — Architecture diagrams showing how requests flow through localhost → HTTPS → docker networks
+- **Individual Server Docs**: `/integrations/mcp/servers/{name}/README.md`
+
+**Quick reference**:
+- Local development: `http://localhost:8080-8084/mcp` (use when Docker Desktop running)
+- Remote (external): `https://coda.bestviable.com/mcp` (no local setup required, services run on droplet)
+- Bearer token: Required for authentication (configured in client config)
+
+**For new users**: Start with the Server Catalog to understand what tools are available, then reference Deployment Flows to understand connection architecture.
+
+---
+
 ## Quick Start
 
 ### 1. Create a New Venture

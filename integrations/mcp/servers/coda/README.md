@@ -10,8 +10,9 @@
 
 # Coda MCP Server
 
-**Status**: ✅ Production Deployed
-**Endpoint**: https://coda.bestviable.com/sse
+**Status**: ✅ Production Deployed (HTTP Streaming - 2025-10-31)
+**Endpoint**: https://coda.bestviable.com/mcp
+**Local Development**: http://localhost:8080/mcp
 **Tools**: 34 across 8 categories
 **Source**: dustingood fork (4x more tools than original)
 **Tier**: 1 (Remote Transport)
@@ -114,21 +115,41 @@ Coda MCP Server exposes the Coda API as an MCP-compatible tool set. It enables A
 
 ### Using via Claude Code/Desktop
 
-The server is available at `https://coda.bestviable.com/sse`. If configured in your client:
+The server is available at `https://coda.bestviable.com/mcp` (external HTTPS) or `http://localhost:8080/mcp` (local development).
+
+**Production Configuration** (Claude Desktop/Code):
 
 ```json
 {
   "mcpServers": {
-    "coda": {
-      "command": "sse",
-      "url": "https://coda.bestviable.com/sse",
+    "coda-mcp-http": {
+      "url": "https://coda.bestviable.com/mcp",
       "env": {
-        "CODA_API_TOKEN": "your-api-token-here"
+        "MCP_BEARER_TOKEN": "14460eab-8367-40a5-b430-33c40671f6f4"
       }
     }
   }
 }
 ```
+
+**Local Development Configuration**:
+
+```json
+{
+  "mcpServers": {
+    "coda-mcp-local": {
+      "url": "http://localhost:8080/mcp",
+      "env": {
+        "MCP_BEARER_TOKEN": "14460eab-8367-40a5-b430-33c40671f6f4"
+      }
+    }
+  }
+}
+```
+
+**Requirements**:
+- Production: No local setup required (services run on droplet)
+- Local: Docker Desktop with services running: `docker compose up -d coda-mcp-gateway`
 
 ### Example: List Your Documents
 
@@ -148,6 +169,31 @@ The agent uses `coda_get_page_content` to retrieve markdown.
 > "Add a new row to the 'Tasks' table with title 'Review PR' and status 'In Progress'"
 
 The agent uses `coda_create_rows` to insert the data.
+
+---
+
+## Deployment Architecture
+
+### Connection Flow
+
+The Coda MCP gateway operates in three connection contexts:
+
+```
+External HTTPS (https://coda.bestviable.com/mcp)
+    ↓ nginx-proxy + acme-companion (HTTPS termination)
+    ↓
+Docker Internal Network (proxy)
+    ↓
+coda-mcp-gateway:8080/mcp
+    ↓
+Coda API
+```
+
+- **External clients**: Use `https://coda.bestviable.com/mcp` (requires Bearer token)
+- **Local development**: Use `http://localhost:8080/mcp` (direct container access)
+- **n8n workflows**: Use `http://coda-mcp-gateway:8080/mcp` (internal docker network)
+
+See [Deployment Flows](../../docs/architecture/integrations/mcp/DEPLOYMENT_FLOWS.md) for detailed architecture diagrams and troubleshooting.
 
 ---
 
@@ -236,6 +282,8 @@ Error: Content exceeds maximum size
 
 ---
 
-**Last Updated**: 2025-10-30
-**Status**: Deployed and operational
-**Endpoint Health**: https://coda.bestviable.com/sse → HTTP 200 OK
+**Last Updated**: 2025-10-31
+**Status**: Deployed and operational (HTTP Streaming)
+**Production Endpoint**: https://coda.bestviable.com/mcp → HTTP 200 OK
+**Local Endpoint**: http://localhost:8080/mcp → HTTP 200 OK
+**Transport**: Streaming HTTP (MCP SDK StreamableHTTPServerTransport)

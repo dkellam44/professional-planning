@@ -25,24 +25,33 @@
 
 ## Tier 1: Remote Transport Servers (Droplet-Hosted)
 
-Remote MCPs accessible to all AI clients via SSE over HTTPS. Hosted on DigitalOcean droplet (tools.bestviable.com) using SyncBricks pattern.
+Remote MCPs accessible to all AI clients via **streaming HTTP** over HTTPS. Hosted on DigitalOcean droplet (159.65.97.146) using SyncBricks pattern with nginx-proxy routing and Let's Encrypt SSL.
+
+**Deployment Transport**: Streaming HTTP (MCP SDK StreamableHTTPServerTransport)
+
+**Connection Flows**: See [DEPLOYMENT_FLOWS.md](./DEPLOYMENT_FLOWS.md) for detailed diagrams and examples:
+- Local development (localhost:8080-8084)
+- External HTTPS (https://service.bestviable.com/mcp)
+- Internal docker network (container-to-container)
+- Bearer token authentication
 
 | Name | Endpoint | Status | Tools | Source | Docs | Updated |
 |------|----------|--------|-------|--------|------|---------|
-| **coda** | `https://coda.bestviable.com/sse` | ✅ Production | 34 tools | dustingood/coda-mcp fork | [Docs](../../../../integrations/mcp/servers/coda/) | 2025-10-30 |
-| **digitalocean** | `https://digitalocean.bestviable.com/sse` | 🟡 Ready to Deploy | 50+ tools (Droplets, Apps, DBaaS, Networking) | digitalocean-labs/mcp-digitalocean | [Docs](../../../../integrations/mcp/servers/digitalocean/) | 2025-10-30 |
-| **cloudflare** | `https://cloudflare.bestviable.com/sse` | 🟡 Ready to Deploy | Proxy to selected Cloudflare MCP | cloudflare/mcp-server-cloudflare | [Docs](../../../../integrations/mcp/servers/cloudflare/) | 2025-10-30 |
-| **github** | `https://github.bestviable.com/sse` | 🚧 Planned | ~15 tools | @modelcontextprotocol/server-github | [Docs](../../../../integrations/mcp/servers/github/) | - |
-| **memory** | `https://memory.bestviable.com/sse` | 🚧 Planned | 5 tools | @modelcontextprotocol/server-memory | [Docs](../../../../integrations/mcp/servers/memory/) | - |
-| **firecrawl** | `https://firecrawl.bestviable.com/sse` | 🚧 Planned | 6 tools | firecrawl-mcp | [Docs](../../../../integrations/mcp/servers/firecrawl/) | - |
-| **puppeteer** | `https://puppeteer.bestviable.com/sse` | 🔮 Future | 10 tools | @modelcontextprotocol/server-puppeteer | [Docs](../../../../integrations/mcp/servers/puppeteer/) | - |
+| **coda** | `https://coda.bestviable.com/mcp` | ✅ Production | 34 tools | dustingood/coda-mcp fork | [Docs](../../../../integrations/mcp/servers/coda/) | 2025-10-31 |
+| **github** | `https://github.bestviable.com/mcp` | ✅ Production | ~15 tools | @modelcontextprotocol/server-github | [Docs](../../../../integrations/mcp/servers/github/) | 2025-10-31 |
+| **memory** | `https://memory.bestviable.com/mcp` | ✅ Production | 5 tools | @modelcontextprotocol/server-memory | [Docs](../../../../integrations/mcp/servers/memory/) | 2025-10-31 |
+| **firecrawl** | `https://firecrawl.bestviable.com/mcp` | ✅ Production | 6 tools | firecrawl-mcp | [Docs](../../../../integrations/mcp/servers/firecrawl/) | 2025-10-31 |
+| **digitalocean** | `https://digitalocean.bestviable.com/mcp` | 🟡 Ready to Deploy | 50+ tools (Droplets, Apps, DBaaS, Networking) | digitalocean-labs/mcp-digitalocean | [Docs](../../../../integrations/mcp/servers/digitalocean/) | 2025-10-30 |
+| **cloudflare** | `https://cloudflare.bestviable.com/mcp` | 🟡 Ready to Deploy | Proxy to selected Cloudflare MCP | cloudflare/mcp-server-cloudflare | [Docs](../../../../integrations/mcp/servers/cloudflare/) | 2025-10-30 |
+| **puppeteer** | `https://puppeteer.bestviable.com/mcp` | 🔮 Future | 10 tools | @modelcontextprotocol/server-puppeteer | [Docs](../../../../integrations/mcp/servers/puppeteer/) | - |
 
 ### Coda MCP Gateway
 
-**Status**: ✅ Production (deployed 2025-10-30)
-**Endpoint**: https://coda.bestviable.com/sse
-**Transport**: SSE over HTTPS
+**Status**: ✅ Production (deployed 2025-10-31, HTTP streaming upgrade)
+**Endpoint**: https://coda.bestviable.com/mcp
+**Transport**: Streaming HTTP (MCP SDK StreamableHTTPServerTransport)
 **Container**: `coda-mcp-gateway` (port 8080)
+**Local Dev**: http://localhost:8080/mcp
 
 **Tools Provided** (34 total):
 - Documents (5): list, get, create, update, stats
@@ -416,17 +425,26 @@ These are candidates for future deployment based on operational needs:
 
 **Manual Health Verification**:
 ```bash
-# Test Tier 1 endpoints
-curl -I https://coda.bestviable.com/sse
-curl -I https://github.bestviable.com/sse
-curl -I https://memory.bestviable.com/sse
+# Test Tier 1 endpoints (local)
+for port in 8080 8081 8082 8084; do
+  curl -I http://127.0.0.1:$port/health
+done
+
+# Test Tier 1 endpoints (external HTTPS)
+curl -I https://coda.bestviable.com/mcp
+curl -I https://github.bestviable.com/mcp
+curl -I https://memory.bestviable.com/mcp
+curl -I https://firecrawl.bestviable.com/mcp
 
 # Check droplet services
-ssh tools-droplet-agents
+ssh root@159.65.97.146
 docker compose -f docker-compose.production.yml ps | grep mcp-gateway
 
 # View logs
 docker logs coda-mcp-gateway --tail 50
+docker logs github-mcp-gateway --tail 50
+docker logs memory-mcp-gateway --tail 50
+docker logs firecrawl-mcp-gateway --tail 50
 ```
 
 ---
