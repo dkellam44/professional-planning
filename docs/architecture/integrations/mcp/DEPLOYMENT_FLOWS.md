@@ -364,6 +364,48 @@ https://coda.bestviable.com/.well-known/oauth-authorization-server
 
 ## Troubleshooting Connection Issues
 
+### Common Issues Quick Reference Table
+
+| Error/Symptom | HTTP Code | Root Cause | Solution | Reference |
+|---------------|-----------|------------|----------|-----------|
+| Connection refused | 000 | Cloudflare Tunnel not running | Check `docker logs cloudflared`, restart if needed | [Cloudflare Guide](/docs/infrastructure/cloudflare_tunnel_token_guide_v1.md) |
+| SSL handshake failed | 525 | SSL/TLS mode incompatible | Set Cloudflare SSL mode to "Flexible" via dashboard | [Status Doc](/sessions/handoffs/CLOUDFLARE_COMPLETION_STATUS.md) |
+| Redirect loop | 301 | HTTPS redirect conflict | Disable "Always Use HTTPS" or add `HTTPS_METHOD=noredirect` | [Troubleshooting](/docs/runbooks/mcp_troubleshooting_v01.md) |
+| Bad gateway | 502 | nginx-proxy routing issue | Check nginx config, restart nginx-proxy | [Agent Flow](/docs/runbooks/MCP_AGENT_TROUBLESHOOTING_FLOW.md) |
+| Service unavailable | 503 | Gateway container not running | Check container status, restart specific gateway | [Agent Flow](/docs/runbooks/MCP_AGENT_TROUBLESHOOTING_FLOW.md) |
+| Invalid SSL cert | 526 | Let's Encrypt cert issue | Check acme-companion logs, force renewal | This document, below |
+| Unauthorized | 401 | Missing/invalid Bearer token | Verify token in env vars, test with valid token | This document, below |
+| Container not starting | N/A | Missing env vars or port conflict | Check logs, verify VIRTUAL_HOST set | [Troubleshooting](/docs/runbooks/mcp_troubleshooting_v01.md) |
+| MCP tools unavailable | N/A | Client config or protocol issue | Follow decision tree from Step 1 | [Agent Flow](/docs/runbooks/MCP_AGENT_TROUBLESHOOTING_FLOW.md) |
+
+### Cloudflare-Specific Issues (HTTP 525, 301, 000)
+
+**When to suspect Cloudflare issues**:
+- All services return same error code (525/301/000)
+- Services worked previously, broke after Cloudflare changes
+- Internal endpoints work (localhost), external don't
+
+**Key Settings to Check**:
+1. **SSL/TLS Mode**: Must be "Flexible" (not "Full" or "Full Strict")
+   - Location: Cloudflare Dashboard → SSL/TLS → Overview
+   - Why: Origin uses HTTP, not HTTPS
+2. **Always Use HTTPS**: Should be disabled
+   - Location: Cloudflare Dashboard → SSL/TLS → Edge Certificates
+   - Why: Cloudflare Tunnel already handles HTTPS
+3. **DNS Proxied**: All CNAME records must be proxied (orange cloud)
+   - Location: Cloudflare Dashboard → DNS → Records
+   - Why: Traffic must route through Cloudflare
+
+**Quick Test**:
+```bash
+# Test all external endpoints
+for service in coda github memory firecrawl; do
+  echo "=== $service ==="
+  curl -I https://${service}.bestviable.com/health
+done
+# Expected: All return HTTP/2 200 OK
+```
+
 ### Cannot connect to localhost:8080
 
 **Symptom**: `Connection refused` or `ERR_CONNECTION_REFUSED`
@@ -396,6 +438,7 @@ docker logs coda-mcp-gateway --tail 50
 - nginx-proxy not running
 - Certificate not issued
 - DNS not resolving
+- Cloudflare SSL/TLS mode incorrect
 
 **Solutions**:
 ```bash
@@ -410,6 +453,9 @@ docker exec nginx-proxy cat /etc/nginx/certs/coda.bestviable.com.crt
 
 # Force certificate renewal
 docker compose restart acme-companion
+
+# Check Cloudflare SSL mode (must be Flexible)
+# Go to Cloudflare Dashboard → SSL/TLS → Overview
 ```
 
 ### 401 Unauthorized errors

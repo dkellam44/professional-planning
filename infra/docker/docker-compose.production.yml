@@ -323,6 +323,7 @@ services:
       VIRTUAL_PORT: 8081
       LETSENCRYPT_HOST: github.${DOMAIN}
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:-admin@bestviable.com}
+      HTTPS_METHOD: noredirect
 
     networks:
       - proxy
@@ -370,6 +371,7 @@ services:
       VIRTUAL_PORT: 8082
       LETSENCRYPT_HOST: memory.${DOMAIN}
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:-admin@bestviable.com}
+      HTTPS_METHOD: noredirect
 
     volumes:
       - ./data/memory-mcp:/data
@@ -422,6 +424,7 @@ services:
       VIRTUAL_PORT: 8084
       LETSENCRYPT_HOST: firecrawl.${DOMAIN}
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:-admin@bestviable.com}
+      HTTPS_METHOD: noredirect
 
     networks:
       - proxy

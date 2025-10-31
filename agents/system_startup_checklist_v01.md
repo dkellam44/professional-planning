@@ -45,7 +45,15 @@ Use this checklist at the start of any new agent session (human or AI) so work b
    - Note service versions, sync method (manual `scp`, etc.).
 2. **Verify remote status (if needed)**
    - Optional quick check: `ssh tools-droplet-agents` → `cd /root/portfolio/infra/docker && docker compose -f docker-compose.production.yml ps`.
-   - Ensure `https://n8n.bestviable.com` and `https://coda.bestviable.com/sse` responded recently (see Session Notes).
+   - Ensure MCP services are responding:
+     - `https://n8n.bestviable.com` (n8n automation)
+     - `https://coda.bestviable.com/mcp` (Coda MCP gateway)
+     - `https://github.bestviable.com/mcp` (GitHub MCP gateway)
+     - `https://memory.bestviable.com/mcp` (Memory MCP gateway)
+     - `https://firecrawl.bestviable.com/mcp` (Firecrawl MCP gateway)
+3. **MCP Troubleshooting Reference**
+   - If services not responding, see: `docs/runbooks/mcp_troubleshooting_v01.md`
+   - Quick health check: `curl -I https://[service].bestviable.com/health` (should return HTTP 200)
 
 ---
 

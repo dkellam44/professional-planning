@@ -32,7 +32,8 @@ If the file or directories do not exist, create them.
 Below is a sample `mcp_servers.json` that wires up:
 
 - **Local time server** (`~/mcp-server-time/main.py`)
-- **Coda MCP gateway** exposed at `https://coda.bestviable.com/sse`
+- **Coda MCP gateway** exposed at `https://coda.bestviable.com/mcp`
+- **GitHub, Memory, Firecrawl MCP gateways** (additional examples)
 
 Update the paths, URLs, and environment variables for your environment.
 
@@ -51,12 +52,40 @@ Update the paths, URLs, and environment variables for your environment.
     {
       "name": "coda-gateway",
       "type": "sse",
-      "url": "https://coda.bestviable.com/sse",
+      "url": "https://coda.bestviable.com/mcp",
       "headers": {
         "Authorization": "Bearer ${CODA_API_TOKEN}"
       },
       "env": {
         "CODA_API_TOKEN": "PLACEHOLDER_TOKEN"
+      }
+    },
+    {
+      "name": "github-gateway",
+      "type": "sse",
+      "url": "https://github.bestviable.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      },
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "PLACEHOLDER_TOKEN"
+      }
+    },
+    {
+      "name": "memory-gateway",
+      "type": "sse",
+      "url": "https://memory.bestviable.com/mcp",
+      "env": {}
+    },
+    {
+      "name": "firecrawl-gateway",
+      "type": "sse",
+      "url": "https://firecrawl.bestviable.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${FIRECRAWL_API_KEY}"
+      },
+      "env": {
+        "FIRECRAWL_API_KEY": "PLACEHOLDER_TOKEN"
       }
     }
   ]
@@ -65,8 +94,9 @@ Update the paths, URLs, and environment variables for your environment.
 
 ### Notes
 - `type: "stdio"` runs a local binary or script; `type: "sse"` connects to an SSE endpoint (Cloudflare tunnel works out of the box).
+- **Endpoint paths**: All MCP gateways use `/mcp` endpoint (not `/sse`) for HTTP streaming.
 - For sensitive tokens, prefer referencing environment variables (`${...}`) rather than storing raw values in the file.
-- Additional servers (e.g., GitHub, calendar) can be appended to the `servers` array following the same structure.
+- Additional servers can be appended to the `servers` array following the same structure.
 
 ---
 
