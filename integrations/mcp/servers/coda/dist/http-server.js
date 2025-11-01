@@ -23,6 +23,7 @@ const streamableHttp_js_1 = require("@modelcontextprotocol/sdk/server/streamable
 const server_js_1 = require("./server.js");
 const client_gen_js_1 = require("./client/client.gen.js");
 const token_counter_js_1 = require("./utils/token-counter.js");
+const memory_hooks_js_1 = require("./types/memory-hooks.js");
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 8080;
 const SERVICE_NAME = 'coda-mcp';
@@ -122,6 +123,13 @@ const bearerTokenMiddleware = (req, res, next) => {
 // Apply Bearer token validation to /mcp endpoints
 app.use('/mcp', bearerTokenMiddleware);
 const sessionMetrics = new Map();
+// ============================================================================
+// Memory Hooks Configuration
+// ============================================================================
+// Use logging hooks in development, can be swapped with persistent layer
+const memoryHooks = process.env.NODE_ENV === 'production'
+    ? { /* production hooks would go here */}
+    : memory_hooks_js_1.loggingMemoryHooks;
 /**
  * Track response metadata for context budgeting
  */
@@ -184,6 +192,23 @@ app.post('/mcp', async (req, res) => {
             });
             return;
         }
+        // Prepare tool call info for memory hooks
+        const toolCall = {
+            sessionId: transport.sessionId || 'unknown',
+            timestamp: new Date(),
+            toolName: req.body?.method || 'unknown',
+            toolMethod: req.body?.method,
+            params: req.body?.params || req.body
+        };
+        // Call onToolCall hook BEFORE execution
+        try {
+            if (memoryHooks.onToolCall) {
+                await memoryHooks.onToolCall(toolCall);
+            }
+        }
+        catch (hookError) {
+            console.warn('[MEMORY-HOOK] onToolCall error:', hookError);
+        }
         // Handle the request
         const startTime = Date.now();
         await transport.handleRequest(req, res, req.body);
@@ -193,6 +218,25 @@ app.post('/mcp', async (req, res) => {
         if (req.body) {
             const estimatedTokens = (0, token_counter_js_1.estimateToolResponseTokens)(req.body.method || 'unknown', req.body);
             metrics.totalTokens += estimatedTokens;
+        }
+        // Call onResponse hook AFTER execution
+        const toolResponse = {
+            sessionId: transport.sessionId || 'unknown',
+            timestamp: new Date(),
+            toolName: toolCall.toolName,
+            success: !res.statusCode || res.statusCode < 400,
+            metadata: {
+                duration,
+                tokenEstimate: metrics.totalTokens
+            }
+        };
+        try {
+            if (memoryHooks.onResponse) {
+                await memoryHooks.onResponse(toolResponse);
+            }
+        }
+        catch (hookError) {
+            console.warn('[MEMORY-HOOK] onResponse error:', hookError);
         }
         console.log('[MCP] POST /mcp handled', {
             sessionId: transport.sessionId,
@@ -266,6 +310,24 @@ app.delete('/mcp', async (req, res) => {
         // Let transport handle DELETE (close session)
         await transport.handleRequest(req, res);
         delete sessions[sessionId];
+        // Call onSessionEnd hook BEFORE cleanup
+        const sessionContext = {
+            sessionId: sessionId || 'unknown',
+            startTime: metrics?.startTime || new Date(),
+            endTime: new Date(),
+            totalRequests: metrics?.requestCount || 0,
+            totalTokens: metrics?.totalTokens || 0,
+            tools: [], // Would need to track this separately
+            errors: 0 // Would need to track this separately
+        };
+        try {
+            if (memoryHooks.onSessionEnd) {
+                await memoryHooks.onSessionEnd(sessionContext);
+            }
+        }
+        catch (hookError) {
+            console.warn('[MEMORY-HOOK] onSessionEnd error:', hookError);
+        }
         // Log session summary and cleanup metrics
         console.log('[MCP] DELETE /mcp handled - session terminated', {
             sessionId,
