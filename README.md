@@ -14,7 +14,7 @@
 
 This is an **AI-ready context architecture** for a solo operator, designed for portability, verifiability, and mode-aware retrieval across planning (chat) and execution (Claude Code CLI).
 
-**Current Status**: ✅ Foundation complete; ✅ Infrastructure documentation & production configuration deployed (2025-10-26); ✅ Docker deployment operational (2025-10-27)
+**Current Status**: ✅ Foundation complete; ✅ Infrastructure documentation & production configuration deployed (2025-10-26); ✅ Docker deployment operational (2025-10-27); ✅ Coda MCP HTTP-native server deployed (2025-11-01)
 
 ---
 
@@ -124,18 +124,18 @@ See ADR: `decisions/2025-10-26_infrastructure-syncbricks-adoption_v01.md`
 
 ## MCP Servers (Model Context Protocol)
 
-**Status**: ✅ Production Deployed (2025-10-31)
+**Status**: ✅ Coda MCP Production Deployed (2025-11-01)
 
 Four HTTP streaming MCP servers are deployed and operational on the droplet, providing AI agents with structured access to tools and data:
 
 ### Available Servers
 
-| Server | Endpoint | Tools | Status |
-|--------|----------|-------|--------|
-| **Coda** | `https://coda.bestviable.com/mcp` | 34 tools | ✅ Production |
-| **GitHub** | `https://github.bestviable.com/mcp` | ~15 tools | ✅ Production |
-| **Memory** | `https://memory.bestviable.com/mcp` | 5 tools | ✅ Production |
-| **Firecrawl** | `https://firecrawl.bestviable.com/mcp` | 6 tools | ✅ Production |
+| Server | Endpoint | Tools | Status | Notes |
+|--------|----------|-------|--------|-------|
+| **Coda** | `https://coda.bestviable.com/mcp` | 40+ tools | ✅ Production | HTTP-native, OAuth 2.0, token estimation |
+| **GitHub** | `https://github.bestviable.com/mcp` | ~15 tools | ✅ Production | MCP gateway wrapper |
+| **Memory** | `https://memory.bestviable.com/mcp` | 5 tools | ✅ Production | MCP gateway wrapper |
+| **Firecrawl** | `https://firecrawl.bestviable.com/mcp` | 6 tools | ✅ Production | MCP gateway wrapper |
 
 ### Documentation
 
@@ -310,6 +310,6 @@ This enables:
 
 ---
 
-**Version**: 0.4
-**Last Updated**: 2025-10-28
-**Status**: Foundation complete, production-ready
+**Version**: 0.5
+**Last Updated**: 2025-11-01
+**Status**: Foundation complete, MCP servers operational, production-ready
