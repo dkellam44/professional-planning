@@ -113,8 +113,12 @@ app.get('/.well-known/oauth-authorization-server', (req, res) => {
  * Protected Resource metadata endpoint
  * Informs clients about how to access protected resources on this server
  * Custom RFC for MCP integration
+ *
+ * Serves both:
+ * - /.well-known/oauth-protected-resource (OpenID Connect convention)
+ * - /.well-known/protected-resource-metadata (ChatGPT web connector convention)
  */
-app.get('/.well-known/oauth-protected-resource', (req, res) => {
+const protectedResourceMetadata = (req, res) => {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     res.json({
         resource_id: 'coda-mcp',
@@ -140,7 +144,10 @@ app.get('/.well-known/oauth-protected-resource', (req, res) => {
         }
     });
     console.log('[OAUTH] Protected Resource metadata requested');
-});
+};
+// Register both endpoint conventions for maximum compatibility
+app.get('/.well-known/oauth-protected-resource', protectedResourceMetadata);
+app.get('/.well-known/protected-resource-metadata', protectedResourceMetadata);
 /**
  * Cloudflare Access Token Validation Endpoint
  * When Cloudflare Access is configured, tokens are passed in X-CF-Access-Token header
@@ -480,6 +487,7 @@ const server = app.listen(PORT, () => {
     console.log(`[${SERVICE_NAME}] OAuth / Discovery Endpoints:`);
     console.log(`[${SERVICE_NAME}]   GET    /.well-known/oauth-authorization-server`);
     console.log(`[${SERVICE_NAME}]   GET    /.well-known/oauth-protected-resource`);
+    console.log(`[${SERVICE_NAME}]   GET    /.well-known/protected-resource-metadata`);
     console.log(`[${SERVICE_NAME}]   POST   /oauth/validate-token`);
     console.log(`[${SERVICE_NAME}]`);
     console.log(`[${SERVICE_NAME}] Health & Status:`);
