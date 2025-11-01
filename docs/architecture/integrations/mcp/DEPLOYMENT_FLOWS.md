@@ -358,6 +358,12 @@ Response format:
 # RFC 8414 compliant OAuth metadata
 http://localhost:8080/.well-known/oauth-authorization-server
 https://coda.bestviable.com/.well-known/oauth-authorization-server
+
+# OpenID discovery alias (ChatGPT probes this)
+https://coda.bestviable.com/.well-known/openid-configuration
+
+# RFC 8707 protected resource metadata
+https://coda.bestviable.com/.well-known/oauth-protected-resource
 ```
 
 ---
@@ -563,8 +569,19 @@ curl -X POST https://coda.bestviable.com/mcp \
 curl -X POST https://coda.bestviable.com/mcp \
   -H "Authorization: Bearer 14460eab-8367-40a5-b430-33c40671f6f4" \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}'
-# Expected: MCP response (200 OK)
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"diag","version":"0.1"}}}'
+# Expected (excerpt):
+# {
+#   "jsonrpc": "2.0",
+#   "id": 1,
+#   "result": {
+#     "protocolVersion": "2025-03-26",
+#     "capabilities": { ... },
+#     "tools": [...]
+#   }
+# }
+# If you receive "Not Acceptable", the client is missing one of the Accept headers.
 ```
 
 ---

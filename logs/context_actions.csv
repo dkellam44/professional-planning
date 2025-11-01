@@ -19,3 +19,8 @@ date,actor,action,entity,notes
 2025-10-30,Claude Code (Haiku),rename-directories,sessions/,Renamed y_collection_box→sessions, inbox→planning, z_archive→archive
 2025-10-30,Claude Code (Haiku),update-docs,README.md,Refreshed directory structure + infrastructure sections
 2025-10-30,Claude Code (Haiku),deploy-droplet,/root/portfolio/infra/docker (via sync),Synced new infra layout to droplet and restarted stack with docker compose
+2025-10-31,Codex,debug-mcp,integrations/mcp/servers/coda/gateway/src/server.ts,Instrumented OAuth discovery + MCP request logging to troubleshoot ChatGPT connector failures
+2025-10-31,Codex,update-docs,docs/runbooks/MCP_AGENT_TROUBLESHOOTING_FLOW.md,Documented Accept header requirement for MCP initialize health check
+2025-10-31,Codex,update-playbook,agents/context/playbooks/coda_mcp_oauth_implementation_v01.md,Added post-OAuth initialize validation + official spec references
+2025-10-31,Codex,update-docs,docs/architecture/integrations/mcp/DEPLOYMENT_FLOWS.md,Updated initialize curl example with Accept headers and expected response
+2025-10-31,Codex,update-docs,README.md,Clarified infra docs/ops symlink and linked external MCP specs

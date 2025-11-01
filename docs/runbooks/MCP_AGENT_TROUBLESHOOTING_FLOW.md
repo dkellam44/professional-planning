@@ -458,7 +458,19 @@ EOF
 
 **Expected**: MCP server responds with initialize result
 
-**If failing**:
+> ⚠ **Common Failure (HTTP 406 / Not Acceptable)**  
+> The Coda gateway requires clients to accept both JSON responses *and* SSE upgrades.  
+> If you see `{"error":"Not Acceptable: Client must accept both application/json and text/event-stream"}`, retry with:
+> ```bash
+> curl -s https://coda.bestviable.com/mcp \
+>   -H "Authorization: Bearer $CODA_API_TOKEN" \
+>   -H "Content-Type: application/json" \
+>   -H "Accept: application/json, text/event-stream" \
+>   --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"diag","version":"0.1"}}}'
+> ```
+> (Spec reference: [MCP Basic Transport §Authentication & Authorization](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#authentication-and-authorization))
+
+**If still failing**:
 - MCP stdio server not responding
 - Gateway not properly forwarding stdio ↔ HTTP SSE
 - Check gateway server implementation

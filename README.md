@@ -92,6 +92,8 @@ infra/
     └── (new) sync / validation helpers
 ```
 
+> Legacy note: `docs/ops` exists only as a temporary symlink for backwards compatibility. Treat `/infra/` as the source of truth; plan to remove the symlink after 2025-11-15 once downstream references are updated.
+
 The portfolio uses the **SyncBricks pattern** for Docker-based infrastructure:
 - **nginx-proxy** — Auto-discovery reverse proxy (no manual config files)
 - **acme-companion** — Automatic SSL certificate management via Let's Encrypt
@@ -146,6 +148,10 @@ Four HTTP streaming MCP servers are deployed and operational on the droplet, pro
 - Local development: `http://localhost:8080-8084/mcp` (use when Docker Desktop running)
 - Remote (external): `https://coda.bestviable.com/mcp` (no local setup required, services run on droplet)
 - Bearer token: Required for authentication (configured in client config)
+- Official documentation:
+  - OpenAI MCP overview — https://platform.openai.com/docs/mcp
+  - MCP authorization & dynamic client registration — https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization#2-4-dynamic-client-registration
+  - MCP transport authentication requirements — https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#authentication-and-authorization
 
 **For new users**: Start with the Server Catalog to understand what tools are available, then reference Deployment Flows to understand connection architecture.
 
