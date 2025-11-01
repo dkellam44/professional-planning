@@ -496,6 +496,40 @@ services:
       - no-new-privileges:true
 
   # ============================================================================
+  # CODA MCP (HTTP-NATIVE MCP SERVER FOR CODA API)
+  # ============================================================================
+
+  coda-mcp:
+    image: coda-mcp:v1.0.0
+    container_name: coda-mcp
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - VIRTUAL_HOST=coda.${DOMAIN}
+      - VIRTUAL_PORT=8080
+      - LETSENCRYPT_HOST=coda.${DOMAIN}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-admin@bestviable.com}
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks:
+      - proxy
+    depends_on:
+      - nginx-proxy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "com.github.jrcs.letsencrypt_nginx_proxy_companion.main=coda.${DOMAIN}"
+      - "letsencrypt.host=coda.${DOMAIN}"
+      - "letsencrypt.email=${LETSENCRYPT_EMAIL:-admin@bestviable.com}"
+    security_opt:
+      - no-new-privileges:true
+
+  # ============================================================================
   # CLOUDFLARE MCP GATEWAY (REMOTE TRANSPORT WRAPPER)
   # ============================================================================
 

@@ -10,7 +10,7 @@ RUN corepack enable
 WORKDIR /build
 
 COPY package.json pnpm-lock.yaml ./
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 COPY . /build
 
@@ -26,12 +26,17 @@ LABEL description="Coda MCP Server - HTTP-Native Implementation"
 
 ENV NODE_ENV=production
 ENV PORT=8080
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
 
 WORKDIR /app
 
+# Enable pnpm in runtime stage
+RUN corepack enable
+
 # Copy built application from builder stage
 COPY --from=builder /build/package.json /build/pnpm-lock.yaml ./
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --production
+RUN pnpm install --frozen-lockfile --production
 
 COPY --from=builder /build/dist ./dist
 

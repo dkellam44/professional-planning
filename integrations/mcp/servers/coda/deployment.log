@@ -1,0 +1,142 @@
+
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;34mPRE-DEPLOYMENT CHECKS[0m
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[1;33m→[0m Checking local build...
+[0;32m✓[0m Local build exists
+[1;33m→[0m Checking SSH access to tools-droplet-agents...
+[0;32m✓[0m SSH access verified
+[1;33m→[0m Checking Docker on droplet...
+[0;32m✓[0m Docker available: Docker version 28.2.2, build 28.2.2-0ubuntu1~25.04.1
+[1;33m→[0m Checking Docker Compose on droplet...
+[0;32m✓[0m Docker Compose available
+
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;34mSTEP 1: COPY FILES TO DROPLET[0m
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[1;33m→[0m Creating remote directory: /root/portfolio/integrations/mcp/servers/coda
+[0;32m✓[0m Remote directory created
+[1;33m→[0m Copying Coda MCP files to droplet...
+[1;33m→[0m Using rsync for efficient transfer...
+Transfer starting: 78 files
+./
+.dockerignore
+CLAUDE.md
+CLIENT_INTEGRATION_GUIDE.md
+DEPLOYMENT_EXECUTION_STATUS.md
+DEPLOYMENT_READY.md
+DEPLOY_TO_DROPLET.sh
+DOCKERFILE_MIGRATION_NOTES.md
+DROPLET_DEPLOYMENT_GUIDE.md
+Dockerfile
+FILES_AND_GUIDES.md
+FINAL_PROJECT_STATUS.md
+LICENSE
+MONITORING_HEALTH_CHECKS.md
+PHASE_1_COMPLETION_SUMMARY.md
+PHASE_2_SUMMARY.md
+PRE_DEPLOYMENT_CHECKLIST.md
+QUICK_REFERENCE.md
+README.md
+SESSION_COMPLETION_SUMMARY.md
+TESTING_WITH_REAL_TOKEN.md
+TEST_QUICK_START.md
+deployment.log
+eslint.config.js
+openapi-ts.config.ts
+package-lock.json
+package.json
+pnpm-lock.yaml
+release.sh
+test-oauth.sh
+test-with-real-token.sh
+tsconfig.json
+validate-deployment.sh
+vitest.config.js
+examples/
+examples/README.md
+examples/curl-mcp-request.sh
+examples/token-estimation-demo.ts
+src/
+src/config.ts
+src/http-server.ts
+src/index.ts
+src/server.test.ts
+src/server.ts
+src/client/
+src/client/client.gen.ts
+src/client/helpers.ts
+src/client/index.ts
+src/client/sdk.gen.ts
+src/client/types.gen.ts
+src/middleware/
+src/middleware/response-wrapper.ts
+src/types/
+src/types/memory-hooks.ts
+src/utils/
+src/utils/token-counter.ts
+
+sent 231127 bytes  received 1200 bytes  2522551 bytes/sec
+total size is 1430340  speedup is 6.16
+[0;32m✓[0m Files copied to droplet
+[1;33m→[0m Verifying files on droplet...
+total 652
+drwxr-xr-x  5 501 staff   4096 Nov  1 22:36 .
+drwxr-xr-x 10 501 staff   4096 Oct 29 23:34 ..
+-rw-r--r--  1 501 staff   6148 Oct 31 01:09 .DS_Store
+-rw-r--r--  1 501 staff    227 Nov  1 21:10 .dockerignore
+-rw-r--r--  1 501 staff   4785 Oct 30 04:59 CHANGELOG.md
+-rw-r--r--  1 501 staff  17080 Nov  1 21:15 CLAUDE.md
+-rw-r--r--  1 501 staff  17339 Nov  1 22:14 CLIENT_INTEGRATION_GUIDE.md
+-rw-r--r--  1 501 staff   8481 Oct 30 04:59 DEPLOYMENT.md
+-rw-r--r--  1 501 staff  10848 Nov  1 22:34 DEPLOYMENT_EXECUTION_STATUS.md
+-rw-r--r--  1 501 staff   8593 Nov  1 22:25 DEPLOYMENT_READY.md
+-rwxr-xr-x  1 501 staff  10494 Nov  1 22:36 DEPLOY_TO_DROPLET.sh
+-rw-r--r--  1 501 staff   3770 Nov  1 21:14 DOCKERFILE_MIGRATION_NOTES.md
+-rw-r--r--  1 501 staff  10184 Nov  1 22:13 DROPLET_DEPLOYMENT_GUIDE.md
+-rw-r--r--  1 501 staff   1379 Nov  1 21:10 Dockerfile
+-rw-r--r--  1 501 staff  10461 Nov  1 22:20 FILES_AND_GUIDES.md
+-rw-r--r--  1 501 staff  12295 Nov  1 22:34 FINAL_PROJECT_STATUS.md
+-rw-r--r--  1 501 staff   1088 Nov  1 20:22 LICENSE
+-rw-r--r--  1 501 staff  11370 Nov  1 21:24 MONITORING_HEALTH_CHECKS.md
+-rw-r--r--  1 501 staff  13520 Nov  1 21:25 PHASE_1_COMPLETION_SUMMARY.md
+[0;32m✓[0m Files verified
+
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;34mSTEP 2: BUILD DOCKER IMAGE ON DROPLET[0m
+[0;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[1;33m→[0m Building Docker image: coda-mcp:v1.0.0
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  777.3MB
+Step 1/20 : FROM node:23-alpine AS builder
+23-alpine: Pulling from library/node
+fe07684b16b8: Already exists
+dfb92eddc1a1: Already exists
+1b67613f0a72: Already exists
+c9ddb8507f84: Already exists
+Digest: sha256:a34e14ef1df25b58258956049ab5a71ea7f0d498e41d0b514f4b8de09af09456
+Status: Downloaded newer image for node:23-alpine
+ ---> 4920d009efd5
+Step 2/20 : ENV PNPM_HOME="/pnpm"
+ ---> Running in c04ec292f9ad
+ ---> Removed intermediate container c04ec292f9ad
+ ---> ffd907655d09
+Step 3/20 : ENV PATH="$PNPM_HOME:$PATH"
+ ---> Running in a617e389b8ab
+ ---> Removed intermediate container a617e389b8ab
+ ---> d946d59785eb
+Step 4/20 : RUN corepack enable
+ ---> Running in ece168b1db81
+ ---> Removed intermediate container ece168b1db81
+ ---> 32cd86e76a5e
+Step 5/20 : WORKDIR /build
+ ---> Running in e06cbf59c716
+ ---> Removed intermediate container e06cbf59c716
+ ---> 2f559a23e0d7
+Step 6/20 : COPY package.json pnpm-lock.yaml ./
+ ---> 7c1b0ce10bf0
+Step 7/20 : RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+the --mount option requires BuildKit. Refer to https://docs.docker.com/go/buildkit/ to learn how to build images with BuildKit enabled
