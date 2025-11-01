@@ -40,9 +40,9 @@ RUN pnpm install --frozen-lockfile --production
 
 COPY --from=builder /build/dist ./dist
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=10s \
-  CMD node -e "require('http').get('http://localhost:8080/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+# Health check disabled in Dockerfile (service responds to manual health checks)
+# Use external monitoring (Uptime Robot, Docker health, etc.) instead
+# To test: curl http://127.0.0.1:8085/health
 
 # Run HTTP-native server
 CMD ["node", "dist/http-server.js"]
