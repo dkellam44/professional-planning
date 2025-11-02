@@ -26,6 +26,7 @@ const token_counter_js_1 = require("./utils/token-counter.js");
 const memory_hooks_js_1 = require("./types/memory-hooks.js");
 const sse_transport_js_1 = require("./transports/sse-transport.js");
 const chatgpt_tools_js_1 = require("./tools/chatgpt-tools.js");
+const oauth_routes_js_1 = __importDefault(require("./auth/oauth-routes.js"));
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 8080;
 const SERVICE_NAME = 'coda-mcp';
@@ -91,6 +92,12 @@ app.get('/health', (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
+// ============================================================================
+// Mount OAuth Routes (Dynamic Client Registration & Token Exchange)
+// ============================================================================
+// OAuth routes don't require Bearer token authentication
+// They're used by Claude/ChatGPT for dynamic client registration
+app.use('/oauth', oauth_routes_js_1.default);
 // ============================================================================
 // OAuth 2.0 / OIDC Endpoints (Cloudflare Access Integration)
 // ============================================================================
