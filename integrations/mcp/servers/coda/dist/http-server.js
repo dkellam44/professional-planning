@@ -24,10 +24,16 @@ const server_js_1 = require("./server.js");
 const client_gen_js_1 = require("./client/client.gen.js");
 const token_counter_js_1 = require("./utils/token-counter.js");
 const memory_hooks_js_1 = require("./types/memory-hooks.js");
+const sse_transport_js_1 = require("./transports/sse-transport.js");
+const chatgpt_tools_js_1 = require("./tools/chatgpt-tools.js");
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 8080;
 const SERVICE_NAME = 'coda-mcp';
 const SERVICE_VERSION = '1.0.0';
+// ============================================================================
+// SSE Transport Manager (for ChatGPT support)
+// ============================================================================
+const sseManager = new sse_transport_js_1.SSETransportManager();
 // ============================================================================
 // Middleware
 // ============================================================================
@@ -148,6 +154,139 @@ const protectedResourceMetadata = (req, res) => {
 // Register both endpoint conventions for maximum compatibility
 app.get('/.well-known/oauth-protected-resource', protectedResourceMetadata);
 app.get('/.well-known/protected-resource-metadata', protectedResourceMetadata);
+// ============================================================================
+// SSE Endpoint for ChatGPT (Server-Sent Events)
+// ============================================================================
+/**
+ * SSE endpoint for ChatGPT MCP connector
+ *
+ * Provides streaming JSON-RPC responses for ChatGPT integration
+ * Implements two required tools:
+ * - search(query): Find documents
+ * - fetch(id): Get full document content
+ */
+app.get('/sse', (req, res) => {
+    try {
+        // Extract and validate Bearer token
+        const token = (0, sse_transport_js_1.extractBearerToken)(req);
+        if (!token) {
+            res.status(401).json({
+                error: 'Missing or invalid authorization header',
+                message: 'Bearer token required'
+            });
+            return;
+        }
+        // Create new SSE connection
+        const sessionId = req.headers['mcp-session-id'] || (0, crypto_1.randomUUID)();
+        const connectionId = sseManager.createConnection(req, res, sessionId);
+        console.log(`[SSE] New connection initialized: ${connectionId}`);
+        console.log(`[SSE] Client: ChatGPT`);
+        console.log(`[SSE] Session: ${connectionId}`);
+        // Store token for tool execution
+        res.locals.token = token;
+        res.locals.sessionId = connectionId;
+        // Send capabilities when client connects
+        const capabilities = {
+            version: '1.0.0',
+            tools: chatgpt_tools_js_1.chatgptToolDefinitions,
+            support: {
+                search: true,
+                fetch: true,
+            }
+        };
+        sseManager.sendMessage(connectionId, {
+            type: 'capabilities',
+            data: capabilities
+        });
+    }
+    catch (error) {
+        console.error('[SSE] Connection error:', error);
+        res.status(500).json({
+            error: 'Internal server error',
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+/**
+ * SSE tool execution endpoint
+ *
+ * ChatGPT sends tool requests as POST to /sse/execute
+ * with the tool name and arguments
+ */
+app.post('/sse/execute', async (req, res) => {
+    try {
+        const { sessionId, toolName, arguments: toolArgs } = req.body;
+        const token = (0, sse_transport_js_1.extractBearerToken)(req);
+        if (!token) {
+            res.status(401).json({ error: 'Unauthorized' });
+            return;
+        }
+        if (!sessionId || !toolName) {
+            res.status(400).json({
+                error: 'Missing sessionId or toolName'
+            });
+            return;
+        }
+        console.log(`[SSE-EXEC] Tool: ${toolName}`, toolArgs);
+        // Execute the tool
+        const result = await (0, chatgpt_tools_js_1.executeChatGPTTool)(toolName, toolArgs, token);
+        // Send result back to client
+        const connection = sseManager.getConnection(sessionId);
+        if (connection) {
+            sseManager.sendMessage(sessionId, {
+                type: 'tool_result',
+                tool: toolName,
+                data: result
+            });
+            res.json({
+                status: 'sent',
+                sessionId,
+                tool: toolName
+            });
+        }
+        else {
+            res.status(404).json({
+                error: 'Session not found'
+            });
+        }
+    }
+    catch (error) {
+        console.error('[SSE-EXEC] Error:', error);
+        res.status(500).json({
+            error: 'Tool execution failed',
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+/**
+ * SSE session info endpoint
+ *
+ * ChatGPT can query session information
+ */
+app.get('/sse/session/:sessionId', (req, res) => {
+    const { sessionId } = req.params;
+    const connection = sseManager.getConnection(sessionId);
+    if (!connection) {
+        res.status(404).json({ error: 'Session not found' });
+        return;
+    }
+    const uptime = new Date().getTime() - connection.startTime.getTime();
+    res.json({
+        sessionId,
+        uptime,
+        requestCount: connection.requestCount,
+        status: 'active'
+    });
+});
+/**
+ * SSE stats endpoint
+ *
+ * Monitoring and diagnostics
+ */
+app.get('/sse/stats', (req, res) => {
+    const stats = sseManager.getStats();
+    res.json(stats);
+});
 /**
  * Cloudflare Access Token Validation Endpoint
  * When Cloudflare Access is configured, tokens are passed in X-CF-Access-Token header
@@ -489,6 +628,12 @@ const server = app.listen(PORT, () => {
     console.log(`[${SERVICE_NAME}]   GET    /.well-known/oauth-protected-resource`);
     console.log(`[${SERVICE_NAME}]   GET    /.well-known/protected-resource-metadata`);
     console.log(`[${SERVICE_NAME}]   POST   /oauth/validate-token`);
+    console.log(`[${SERVICE_NAME}]`);
+    console.log(`[${SERVICE_NAME}] SSE Endpoints (ChatGPT Support):`);
+    console.log(`[${SERVICE_NAME}]   GET    /sse           (streaming connection)`);
+    console.log(`[${SERVICE_NAME}]   POST   /sse/execute   (tool execution)`);
+    console.log(`[${SERVICE_NAME}]   GET    /sse/session/:id (session info)`);
+    console.log(`[${SERVICE_NAME}]   GET    /sse/stats     (monitoring)`);
     console.log(`[${SERVICE_NAME}]`);
     console.log(`[${SERVICE_NAME}] Health & Status:`);
     console.log(`[${SERVICE_NAME}]   GET    /health    (health check)`);
