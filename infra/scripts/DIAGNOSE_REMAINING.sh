@@ -31,7 +31,7 @@ check_service() {
 check_service nginx-proxy
 check_service cloudflared
 check_service n8n
-check_service coda-mcp-gateway
+check_service coda-mcp
 
 echo ""
 echo "======================================"
@@ -50,8 +50,8 @@ docker compose -f docker-compose.production.yml exec n8n curl -v http://localhos
 echo ""
 
 # Test coda from inside
-echo "Testing coda endpoint from coda-mcp-gateway container:"
-docker compose -f docker-compose.production.yml exec coda-mcp-gateway curl -v http://localhost:8080/health 2>&1 | head -20 || echo "curl to coda health failed"
+echo "Testing coda endpoint from coda-mcp container:"
+docker compose -f docker-compose.production.yml exec coda-mcp curl -v http://localhost:8080/health 2>&1 | head -20 || echo "curl to coda health failed"
 echo ""
 
 # Test cloudflared from inside
@@ -64,7 +64,7 @@ echo "DOCKER INSPECT - ALL UNHEALTHY"
 echo "======================================"
 echo ""
 
-for service in nginx-proxy cloudflared n8n coda-mcp-gateway; do
+for service in nginx-proxy cloudflared n8n coda-mcp; do
     echo "--- $service health config ---"
     docker inspect $service 2>/dev/null | jq '.[] | {Name: .Name, State: .State, HealthCheck: .HealthCheck}' 2>/dev/null || echo "Could not inspect $service"
     echo ""

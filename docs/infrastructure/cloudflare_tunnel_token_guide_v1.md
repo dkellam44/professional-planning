@@ -260,7 +260,7 @@ docker-compose -f docker-compose.production.yml ps
 # postgres        Up (healthy)
 # qdrant          Up (healthy)
 # n8n             Up (healthy)
-# coda-mcp-gateway Up (healthy)
+# coda-mcp        Up (healthy)
 ```
 
 ### Test DNS Resolution
@@ -287,7 +287,7 @@ curl -H "Host: n8n.bestviable.com" http://nginx-proxy
 
 # Test coda-mcp via tunnel
 curl -H "Host: coda.bestviable.com" http://nginx-proxy
-# Should return response from coda-mcp-gateway
+# Should return response from coda-mcp (HTTP-native server)
 ```
 
 **Browser test:**
@@ -298,7 +298,7 @@ curl -H "Host: coda.bestviable.com" http://nginx-proxy
    - No warnings about untrusted certificates
 
 2. Open https://coda.bestviable.com
-   - Should show Coda MCP Gateway response
+   - Should show Coda MCP endpoint response
    - SSL certificate valid (green lock)
 
 ### Check Tunnel Logs
@@ -516,10 +516,10 @@ if [ "$TUNNEL_STATUS" != "HEALTHY" ]; then
 fi
 
 # Check service health
-for service in n8n coda-mcp-gateway; do
-  STATUS=$(curl -s https://$service.bestviable.com/health || echo "FAIL")
+for endpoint in n8n.bestviable.com coda.bestviable.com; do
+  STATUS=$(curl -s https://$endpoint/health || echo "FAIL")
   if [ "$STATUS" = "FAIL" ]; then
-    echo "WARNING: $service health check failed"
+    echo "WARNING: $endpoint health check failed"
   fi
 done
 ```

@@ -14,6 +14,8 @@
 **Last Verified**: 2025-10-30 05:36 UTC
 **Infrastructure Version**: `/infra/` (restructured, symmetrical with local)
 
+> **2025-11-02 Update:** Snapshot recorded before the HTTP-native Coda MCP rollout. Entries referencing `coda-mcp-gateway` describe the legacy container; rely on `infra/docker/docker-compose.production.yml` and `network_wiring_diagram_v2.md` for the current service map.
+
 ---
 
 ## Quick Health Check

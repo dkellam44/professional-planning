@@ -1,0 +1,14 @@
+# Environment secrets - NEVER commit to version control
+.env
+.env.local
+.env.production
+
+# Docker volumes and generated files
+certs/
+vhost.d/
+html/
+acme/
+
+# System files
+.DS_Store
+*.log

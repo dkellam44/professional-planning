@@ -1,0 +1,38 @@
+# Environment variables - NEVER commit secrets
+.env
+.env.local
+.env.*.local
+
+# Node modules (if building locally)
+node_modules/
+pnpm-lock.yaml
+
+# Build artifacts
+dist/
+build/
+*.tsbuildinfo
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Testing
+.coverage/
+.jest/
+
+# Docker
+docker-compose.override.yml

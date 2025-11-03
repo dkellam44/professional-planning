@@ -99,7 +99,7 @@ docker compose -f docker-compose.production.yml ps
 - postgres: Ready in 10-15 seconds
 - qdrant: Ready in 15-20 seconds
 - n8n: Ready in 30-60 seconds (database migration)
-- coda-mcp-gateway: Ready in 20-30 seconds
+- coda-mcp: Ready in 20-30 seconds
 - cloudflared: Ready in 5-10 seconds
 
 **Total time:** ~1-2 minutes for full stack
@@ -150,7 +150,7 @@ curl -H "Host: n8n.bestviable.com" http://localhost
 # Should return n8n login page HTML
 
 curl -H "Host: coda.bestviable.com" http://localhost
-# Should return response from coda-mcp-gateway
+# Should return response from coda-mcp (HTTP-native server)
 ```
 
 **Test from browser:**

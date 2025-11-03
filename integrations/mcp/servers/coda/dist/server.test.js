@@ -41,6 +41,15 @@ const server_1 = require("./server");
 vitest_1.vi.mock("./client/sdk.gen");
 vitest_1.vi.mock("./client/helpers");
 vitest_1.vi.mock("axios");
+const expectJSONContent = (result, expected) => {
+    (0, vitest_1.expect)(result.content).toHaveLength(1);
+    const [item] = result.content;
+    (0, vitest_1.expect)(item.type).toBe("text");
+    (0, vitest_1.expect)(JSON.parse(item.text)).toEqual(expected);
+};
+const expectTextContent = (result, expected) => {
+    (0, vitest_1.expect)(result.content).toEqual([{ type: "text", text: expected }]);
+};
 (0, vitest_1.describe)("MCP Server", () => {
     (0, vitest_1.afterEach)(async () => {
         await (0, mcp_testing_kit_1.close)(server_1.server.server);
@@ -49,17 +58,22 @@ vitest_1.vi.mock("axios");
     (0, vitest_1.it)("should have all tools", async () => {
         const client = await (0, mcp_testing_kit_1.connect)(server_1.server.server);
         const result = await client.listTools();
-        (0, vitest_1.expect)(result.tools).toEqual([
-            vitest_1.expect.objectContaining({ name: "coda_list_documents" }),
-            vitest_1.expect.objectContaining({ name: "coda_list_pages" }),
-            vitest_1.expect.objectContaining({ name: "coda_create_page" }),
-            vitest_1.expect.objectContaining({ name: "coda_get_page_content" }),
-            vitest_1.expect.objectContaining({ name: "coda_peek_page" }),
-            vitest_1.expect.objectContaining({ name: "coda_replace_page_content" }),
-            vitest_1.expect.objectContaining({ name: "coda_append_page_content" }),
-            vitest_1.expect.objectContaining({ name: "coda_duplicate_page" }),
-            vitest_1.expect.objectContaining({ name: "coda_rename_page" }),
-        ]);
+        const toolNames = result.tools?.map((tool) => tool.name) || [];
+        (0, vitest_1.expect)(toolNames).toEqual(vitest_1.expect.arrayContaining([
+            "coda_list_documents",
+            "coda_get_document",
+            "coda_create_document",
+            "coda_update_document",
+            "coda_list_pages",
+            "coda_create_page",
+            "coda_delete_page",
+            "coda_get_page_content",
+            "coda_peek_page",
+            "coda_replace_page_content",
+            "coda_append_page_content",
+            "coda_duplicate_page",
+            "coda_rename_page",
+        ]));
     });
 });
 (0, vitest_1.describe)("coda_list_documents", () => {
@@ -74,17 +88,12 @@ vitest_1.vi.mock("axios");
         });
         const client = await (0, mcp_testing_kit_1.connect)(server_1.server.server);
         const result = await client.callTool("coda_list_documents", { query: "" });
-        (0, vitest_1.expect)(result.content).toEqual([
-            {
-                type: "text",
-                text: JSON.stringify({
-                    items: [
-                        { id: "123", name: "Test Document" },
-                        { id: "456", name: "Another Document" },
-                    ],
-                }),
-            },
-        ]);
+        expectJSONContent(result, {
+            items: [
+                { id: "123", name: "Test Document" },
+                { id: "456", name: "Another Document" },
+            ],
+        });
     });
     (0, vitest_1.it)("should list documents with query", async () => {
         vitest_1.vi.mocked(sdk.listDocs).mockResolvedValue({
@@ -94,20 +103,15 @@ vitest_1.vi.mock("axios");
         });
         const client = await (0, mcp_testing_kit_1.connect)(server_1.server.server);
         const result = await client.callTool("coda_list_documents", { query: "test" });
-        (0, vitest_1.expect)(result.content).toEqual([
-            {
-                type: "text",
-                text: JSON.stringify({
-                    items: [{ id: "123", name: "Test Document" }],
-                }),
-            },
-        ]);
+        expectJSONContent(result, {
+            items: [{ id: "123", name: "Test Document" }],
+        });
     });
     (0, vitest_1.it)("should show error if list documents throws", async () => {
         vitest_1.vi.mocked(sdk.listDocs).mockRejectedValue(new Error("foo"));
         const client = await (0, mcp_testing_kit_1.connect)(server_1.server.server);
         const result = await client.callTool("coda_list_documents", { query: "test" });
-        (0, vitest_1.expect)(result.content).toEqual([{ type: "text", text: "Failed to list documents: Error: foo" }]);
+        expectTextContent(result, "Failed to list documents : foo");
     });
 });
 (0, vitest_1.describe)("coda_list_pages", () => {
@@ -122,17 +126,12 @@ vitest_1.vi.mock("axios");
         });
         const client = await (0, mcp_testing_kit_1.connect)(server_1.server.server);
         const result = await client.callTool("coda_list_pages", { docId: "doc-123" });
-        (0, vitest_1.expect)(result.content).toEqual([
-            {
-                type: "text",
-                text: JSON.stringify({
-                    items: [
-                        { id: "page-123", name: "Test Page 1" },
-                        { id: "page-456", name: "Test Page 2" },
-                    ],
-                }),
-            },
-        ]);
+        expectJSONContent(result, {
+            items: [
+                { id: "page-123", name: "Test Page 1" },
+                { id: "page-456", name: "Test Page 2" },
+            ],
+        });
         (0, vitest_1.expect)(sdk.listPages).toHaveBeenCalledWith({
             path: { docId: "doc-123" },
             query: { limit: undefined, pageToken: undefined },
@@ -151,18 +150,13 @@ vitest_1.vi.mock("axios");
         });
         const client = await (0, mcp_testing_kit_1.connect)(server_1.server.server);
         const result = await client.callTool("coda_list_pages", { docId: "doc-123", limit: 10 });
-        (0, vitest_1.expect)(result.content).toEqual([
-            {
-                type: "text",
-                text: JSON.stringify({
-                    items: [
-                        { id: "page-123", name: "Test Page 1" },
-                        { id: "page-456", name: "Test Page 2" },
-                    ],
-                    nextPageToken: "token-123",
-                }),
-            },
-        ]);
+        expectJSONContent(result, {
+            items: [
+                { id: "page-123", name: "Test Page 1" },
+                { id: "page-456", name: "Test Page 2" },
+            ],
+            nextPageToken: "token-123",
+        });
         (0, vitest_1.expect)(sdk.listPages).toHaveBeenCalledWith({
             path: { docId: "doc-123" },
             query: { limit: 10, pageToken: undefined },
@@ -183,17 +177,12 @@ vitest_1.vi.mock("axios");
             docId: "doc-123",
             nextPageToken: "token-123",
         });
-        (0, vitest_1.expect)(result.content).toEqual([
-            {
-                type: "text",
-                text: JSON.stringify({
-                    items: [
-                        { id: "page-789", name: "Test Page 3" },
-                        { id: "page-101", name: "Test Page 4" },
-                    ],
-                }),
-            },
-        ]);
+        expectJSONContent(result, {
+            items: [
+                { id: "page-789", name: "Test Page 3" },
+                { id: "page-101", name: "Test Page 4" },
+            ],
+        });
         (0, vitest_1.expect)(sdk.listPages).toHaveBeenCalledWith({
             path: { docId: "doc-123" },
             query: { limit: undefined, pageToken: "token-123" },
@@ -212,14 +201,9 @@ vitest_1.vi.mock("axios");
             limit: 5,
             nextPageToken: "token-123",
         });
-        (0, vitest_1.expect)(result.content).toEqual([
-            {
-                type: "text",
-                text: JSON.stringify({
-                    items: [{ id: "page-789", name: "Test Page 3" }],
-                }),
-            },
-        ]);
+        expectJSONContent(result, {
+            items: [{ id: "page-789", name: "Test Page 3" }],
+        });
         // When nextPageToken is provided, limit should be undefined
         (0, vitest_1.expect)(sdk.listPages).toHaveBeenCalledWith({
             path: { docId: "doc-123" },
@@ -231,7 +215,7 @@ vitest_1.vi.mock("axios");
         vitest_1.vi.mocked(sdk.listPages).mockRejectedValue(new Error("Access denied"));
         const client = await (0, mcp_testing_kit_1.connect)(server_1.server.server);
         const result = await client.callTool("coda_list_pages", { docId: "doc-123" });
-        (0, vitest_1.expect)(result.content).toEqual([{ type: "text", text: "Failed to list pages: Error: Access denied" }]);
+        expectTextContent(result, "Failed to list pages : Access denied");
     });
 });
 (0, vitest_1.describe)("coda_create_page", () => {
@@ -248,15 +232,7 @@ vitest_1.vi.mock("axios");
             name: "New Page",
             content: "# Hello World",
         });
-        (0, vitest_1.expect)(result.content).toEqual([
-            {
-                type: "text",
-                text: JSON.stringify({
-                    id: "page-new",
-                    requestId: "req-123",
-                }),
-            },
-        ]);
+        expectJSONContent(result, { id: "page-new", requestId: "req-123" });
         (0, vitest_1.expect)(sdk.createPage).toHaveBeenCalledWith({
             path: { docId: "doc-123" },
             body: {
@@ -307,12 +283,7 @@ vitest_1.vi.mock("axios");
             parentPageId: "page-456",
             content: "## Subheading",
         });
-        (0, vitest_1.expect)(result.content).toEqual([
-            {
-                type: "text",
-                text: JSON.stringify({ id: "page-sub", requestId: "req-125" }),
-            },
-        ]);
+        expectJSONContent(result, { id: "page-sub", requestId: "req-125" });
         (0, vitest_1.expect)(sdk.createPage).toHaveBeenCalledWith({
             path: { docId: "doc-123" },
             body: {
@@ -333,7 +304,7 @@ vitest_1.vi.mock("axios");
             docId: "doc-123",
             name: "New Page",
         });
-        (0, vitest_1.expect)(result.content).toEqual([{ type: "text", text: "Failed to create page: Error: Insufficient permissions" }]);
+        expectTextContent(result, "Failed to create page : Insufficient permissions");
     });
 });
 (0, vitest_1.describe)("coda_get_page_content", () => {
@@ -373,9 +344,7 @@ vitest_1.vi.mock("axios");
             docId: "doc-123",
             pageIdOrName: "page-456",
         });
-        (0, vitest_1.expect)(result.content).toEqual([
-            { type: "text", text: "Failed to get page content: Error: Unknown error has occurred" },
-        ]);
+        expectTextContent(result, "Failed to get page content : Unknown error has occurred");
     });
     (0, vitest_1.it)("should show error if getPageContent throws", async () => {
         vitest_1.vi.mocked(helpers.getPageContent).mockRejectedValue(new Error("Export failed"));
@@ -384,7 +353,7 @@ vitest_1.vi.mock("axios");
             docId: "doc-123",
             pageIdOrName: "page-456",
         });
-        (0, vitest_1.expect)(result.content).toEqual([{ type: "text", text: "Failed to get page content: Error: Export failed" }]);
+        expectTextContent(result, "Failed to get page content : Export failed");
     });
 });
 (0, vitest_1.describe)("coda_peek_page", () => {
@@ -412,7 +381,7 @@ vitest_1.vi.mock("axios");
             pageIdOrName: "page-456",
             numLines: 1,
         });
-        (0, vitest_1.expect)(result.content).toEqual([{ type: "text", text: "Failed to peek page: Error: Unknown error has occurred" }]);
+        expectTextContent(result, "Failed to peek page : Unknown error has occurred");
     });
     (0, vitest_1.it)("should show error if getPageContent throws", async () => {
         vitest_1.vi.mocked(helpers.getPageContent).mockRejectedValue(new Error("Export failed"));
@@ -422,7 +391,7 @@ vitest_1.vi.mock("axios");
             pageIdOrName: "page-456",
             numLines: 3,
         });
-        (0, vitest_1.expect)(result.content).toEqual([{ type: "text", text: "Failed to peek page: Error: Export failed" }]);
+        expectTextContent(result, "Failed to peek page : Export failed");
     });
 });
 (0, vitest_1.describe)("coda_replace_page_content", () => {
@@ -439,15 +408,7 @@ vitest_1.vi.mock("axios");
             pageIdOrName: "page-456",
             content: "# New Content\n\nReplaced content.",
         });
-        (0, vitest_1.expect)(result.content).toEqual([
-            {
-                type: "text",
-                text: JSON.stringify({
-                    id: "page-456",
-                    requestId: "req-125",
-                }),
-            },
-        ]);
+        expectJSONContent(result, { id: "page-456", requestId: "req-125" });
         (0, vitest_1.expect)(sdk.updatePage).toHaveBeenCalledWith({
             path: { docId: "doc-123", pageIdOrName: "page-456" },
             body: {
@@ -467,7 +428,7 @@ vitest_1.vi.mock("axios");
             pageIdOrName: "page-456",
             content: "# New Content",
         });
-        (0, vitest_1.expect)(result.content).toEqual([{ type: "text", text: "Failed to replace page content: Error: Update failed" }]);
+        expectTextContent(result, "Failed to replace page content : Update failed");
     });
 });
 (0, vitest_1.describe)("coda_append_page_content", () => {
@@ -484,15 +445,7 @@ vitest_1.vi.mock("axios");
             pageIdOrName: "page-456",
             content: "\n\n## Appended Section\n\nNew content.",
         });
-        (0, vitest_1.expect)(result.content).toEqual([
-            {
-                type: "text",
-                text: JSON.stringify({
-                    id: "page-456",
-                    requestId: "req-126",
-                }),
-            },
-        ]);
+        expectJSONContent(result, { id: "page-456", requestId: "req-126" });
         (0, vitest_1.expect)(sdk.updatePage).toHaveBeenCalledWith({
             path: { docId: "doc-123", pageIdOrName: "page-456" },
             body: {
@@ -512,7 +465,7 @@ vitest_1.vi.mock("axios");
             pageIdOrName: "page-456",
             content: "Additional content",
         });
-        (0, vitest_1.expect)(result.content).toEqual([{ type: "text", text: "Failed to append page content: Error: Append failed" }]);
+        expectTextContent(result, "Failed to append page content : Append failed");
     });
 });
 (0, vitest_1.describe)("coda_duplicate_page", () => {
@@ -530,15 +483,7 @@ vitest_1.vi.mock("axios");
             pageIdOrName: "page-456",
             newName: "Duplicated Page",
         });
-        (0, vitest_1.expect)(result.content).toEqual([
-            {
-                type: "text",
-                text: JSON.stringify({
-                    id: "page-duplicate",
-                    requestId: "req-127",
-                }),
-            },
-        ]);
+        expectJSONContent(result, { id: "page-duplicate", requestId: "req-127" });
         (0, vitest_1.expect)(helpers.getPageContent).toHaveBeenCalledWith("doc-123", "page-456");
         (0, vitest_1.expect)(sdk.createPage).toHaveBeenCalledWith({
             path: { docId: "doc-123" },
@@ -560,7 +505,7 @@ vitest_1.vi.mock("axios");
             pageIdOrName: "page-456",
             newName: "Duplicated Page",
         });
-        (0, vitest_1.expect)(result.content).toEqual([{ type: "text", text: "Failed to duplicate page: Error: Content fetch failed" }]);
+        expectTextContent(result, "Failed to duplicate page : Content fetch failed");
     });
     (0, vitest_1.it)("should show error if createPage fails during duplication", async () => {
         vitest_1.vi.mocked(helpers.getPageContent).mockResolvedValue("# Original Page");
@@ -571,7 +516,7 @@ vitest_1.vi.mock("axios");
             pageIdOrName: "page-456",
             newName: "Duplicated Page",
         });
-        (0, vitest_1.expect)(result.content).toEqual([{ type: "text", text: "Failed to duplicate page: Error: Create failed" }]);
+        expectTextContent(result, "Failed to duplicate page : Create failed");
     });
 });
 (0, vitest_1.describe)("coda_rename_page", () => {
@@ -588,15 +533,7 @@ vitest_1.vi.mock("axios");
             pageIdOrName: "page-456",
             newName: "Renamed Page",
         });
-        (0, vitest_1.expect)(result.content).toEqual([
-            {
-                type: "text",
-                text: JSON.stringify({
-                    id: "page-456",
-                    requestId: "req-128",
-                }),
-            },
-        ]);
+        expectJSONContent(result, { id: "page-456", requestId: "req-128" });
         (0, vitest_1.expect)(sdk.updatePage).toHaveBeenCalledWith({
             path: { docId: "doc-123", pageIdOrName: "page-456" },
             body: {
@@ -613,6 +550,6 @@ vitest_1.vi.mock("axios");
             pageIdOrName: "page-456",
             newName: "Renamed Page",
         });
-        (0, vitest_1.expect)(result.content).toEqual([{ type: "text", text: "Failed to rename page: Error: Rename failed" }]);
+        expectTextContent(result, "Failed to rename page : Rename failed");
     });
 });

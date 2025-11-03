@@ -12,6 +12,8 @@
 
 **Purpose**: Point-in-time snapshot of production infrastructure for change tracking and operational reference.
 
+> **2025-11-02 Update:** This snapshot predates the HTTP-native `coda-mcp` service. References to `coda-mcp-gateway` reflect the legacy deployment that has since been archived; use `network_wiring_diagram_v2.md` and the updated compose/service scripts for current state.
+
 **Status**: ✅ OPERATIONAL (verified 2025-10-28)
 
 ---

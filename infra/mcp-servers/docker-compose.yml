@@ -1,0 +1,228 @@
+# MCP Servers Stack - Direct Cloudflare Tunnel Routing
+# Phase 2: Separate MCP deployment with independent services
+#
+# Architecture:
+#   - NO nginx-proxy layer (direct CF tunnel routing)
+#   - Each service on separate port (8085, 8081, 8084)
+#   - Separate from n8n stack (/infra/n8n/)
+#   - Can be upgraded independently
+#   - Can add nginx-proxy layer later if needed
+#
+# Setup:
+#   1. cp .env.example .env
+#   2. Edit .env with your API tokens
+#   3. docker-compose -f docker-compose.yml up -d
+#
+# Cloudflare Tunnel Routing (in Cloudflare dashboard):
+#   coda-mcp.bestviable.com → localhost:8085
+#   github-mcp.bestviable.com → localhost:8081
+#   firecrawl-mcp.bestviable.com → localhost:8084
+#
+
+version: '3.8'
+
+networks:
+  mcp-network:
+    driver: bridge
+
+services:
+  # ============================================================================
+  # CODA MCP SERVER (HTTP-native with OAuth support)
+  # ============================================================================
+  coda-mcp:
+    build:
+      context: ../../integrations/mcp/servers/coda
+      dockerfile: Dockerfile
+    image: coda-mcp:latest
+    container_name: coda-mcp
+    restart: unless-stopped
+    networks:
+      - mcp-network
+    ports:
+      - "127.0.0.1:8085:8080"
+    environment:
+      # Server Configuration
+      - NODE_ENV=production
+      - PORT=8080
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+
+      # Coda API
+      - CODA_API_TOKEN=${CODA_API_TOKEN}
+
+      # Cloudflare Access (if deployed behind CF tunnel)
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    labels:
+      - "service=coda-mcp"
+      - "version=1.0.0"
+      - "mcp-service=true"
+
+  # ============================================================================
+  # GITHUB MCP SERVER (OAuth-ready gateway)
+  # ============================================================================
+  github-mcp:
+    build:
+      context: ../../integrations/mcp/servers/github
+      dockerfile: gateway/Dockerfile
+    image: github-mcp:latest
+    container_name: github-mcp
+    restart: unless-stopped
+    networks:
+      - mcp-network
+    ports:
+      - "127.0.0.1:8081:8080"
+    environment:
+      # Server Configuration
+      - NODE_ENV=production
+      - PORT=8080
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+
+      # GitHub API
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - GITHUB_API_ENDPOINT=${GITHUB_API_ENDPOINT:-https://api.github.com}
+
+      # OAuth Configuration
+      - OAUTH_CLIENT_ID=${GITHUB_OAUTH_CLIENT_ID:-}
+      - OAUTH_CLIENT_SECRET=${GITHUB_OAUTH_CLIENT_SECRET:-}
+
+      # Cloudflare Access
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    labels:
+      - "service=github-mcp"
+      - "version=1.0.0"
+      - "mcp-service=true"
+
+  # ============================================================================
+  # FIRECRAWL MCP SERVER (Web crawling & scraping)
+  # ============================================================================
+  firecrawl-mcp:
+    build:
+      context: ../../integrations/mcp/servers/firecrawl
+      dockerfile: gateway/Dockerfile
+    image: firecrawl-mcp:latest
+    container_name: firecrawl-mcp
+    restart: unless-stopped
+    networks:
+      - mcp-network
+    ports:
+      - "127.0.0.1:8084:8080"
+    environment:
+      # Server Configuration
+      - NODE_ENV=production
+      - PORT=8080
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+
+      # Firecrawl API
+      - FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY:-}
+      - FIRECRAWL_API_ENDPOINT=${FIRECRAWL_API_ENDPOINT:-https://api.firecrawl.dev}
+
+      # Cloudflare Access
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    labels:
+      - "service=firecrawl-mcp"
+      - "version=1.0.0"
+      - "mcp-service=true"
+
+  # ============================================================================
+  # OPTIONAL: CLOUDFLARE MCP SERVER (Access token management)
+  # ============================================================================
+  # Uncomment to enable Cloudflare MCP server
+  #
+  # cloudflare-mcp:
+  #   build:
+  #     context: ../../integrations/mcp/servers/cloudflare
+  #     dockerfile: src/Dockerfile
+  #   image: cloudflare-mcp:latest
+  #   container_name: cloudflare-mcp
+  #   restart: unless-stopped
+  #   networks:
+  #     - mcp-network
+  #   ports:
+  #     - "127.0.0.1:8086:8080"
+  #   environment:
+  #     - NODE_ENV=production
+  #     - PORT=8080
+  #     - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+  #     - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID}
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 3
+
+  # ============================================================================
+  # OPTIONAL: MEMORY MCP SERVER (Short-term conversation memory)
+  # ============================================================================
+  # Uncomment to enable Memory MCP server
+  #
+  # memory-mcp:
+  #   build:
+  #     context: ../../integrations/mcp/servers/memory
+  #     dockerfile: gateway/Dockerfile
+  #   image: memory-mcp:latest
+  #   container_name: memory-mcp
+  #   restart: unless-stopped
+  #   networks:
+  #     - mcp-network
+  #   ports:
+  #     - "127.0.0.1:8082:8080"
+  #   environment:
+  #     - NODE_ENV=production
+  #     - PORT=8080
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 3
+
+  # ============================================================================
+  # OPTIONAL: DIGITALOCEAN MCP SERVER (Infrastructure management)
+  # ============================================================================
+  # Uncomment to enable DigitalOcean MCP server
+  #
+  # digitalocean-mcp:
+  #   build:
+  #     context: ../../integrations/mcp/servers/digitalocean
+  #     dockerfile: src/Dockerfile
+  #   image: digitalocean-mcp:latest
+  #   container_name: digitalocean-mcp
+  #   restart: unless-stopped
+  #   networks:
+  #     - mcp-network
+  #   ports:
+  #     - "127.0.0.1:8087:8080"
+  #   environment:
+  #     - NODE_ENV=production
+  #     - PORT=8080
+  #     - DIGITALOCEAN_API_TOKEN=${DIGITALOCEAN_API_TOKEN}
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 3

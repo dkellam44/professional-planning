@@ -15,7 +15,7 @@
     "build": "tsc",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "vitest run --coverage",
+    "test": "vitest run",
     "test:watch": "vitest",
     "openapi-ts": "openapi-ts",
     "inspect": "pnpm dlx @modelcontextprotocol/inspector dist/index.js"

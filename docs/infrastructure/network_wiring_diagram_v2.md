@@ -24,7 +24,7 @@ graph TD
             G["nginx-proxy<br/>(Reverse Proxy)<br/>━━━━━━━━━<br/>Auto-discovers via<br/>docker.sock"]
             H["acme-companion<br/>(SSL Auto-Renewal)<br/>━━━━━━━━━<br/>Watches for<br/>LETSENCRYPT_HOST"]
             I["n8n:5678<br/>(Automation Engine)"]
-            J["coda-mcp-gateway:8080<br/>(Coda MCP Server)"]
+            J["coda-mcp:8080<br/>(HTTP MCP Server)"]
         end
 
         subgraph BackendNetwork["BACKEND NETWORK<br/>(Internal Only)"]
@@ -114,7 +114,7 @@ graph TD
   - Reads `VIRTUAL_HOST` environment variable from services
   - Dynamically generates nginx config
   - Routes `Host: n8n.bestviable.com` → n8n:5678
-  - Routes `Host: coda.bestviable.com` → coda-mcp-gateway:8080
+  - Routes `Host: coda.bestviable.com` → coda-mcp:8080
 
 ### 5. SSL Certificate Management
 - **acme-companion** monitors for `LETSENCRYPT_HOST` labels
@@ -126,21 +126,20 @@ graph TD
   5. Auto-renews 30 days before expiry
 - **Result:** No manual certificate management needed
 
-### 6. Service Execution
 - **n8n:** Handles automation workflows
   - Connects to postgres (backend network only)
   - Connects to qdrant (backend network only)
   - Accessible externally via nginx-proxy
 
-- **coda-mcp-gateway:** Wraps Coda MCP as HTTP service
+- **coda-mcp (HTTP-native):** Directly serves MCP over HTTP/SSE
   - Listens on 8080
-  - Accessible externally via nginx-proxy
+  - Accessible externally via nginx-proxy (no separate gateway container)
   - Makes API calls to coda.io
 
 ### 7. Backend Network Isolation
 - **Two Docker networks:**
-  - **proxy:** nginx-proxy, acme-companion, cloudflared, n8n, coda-mcp-gateway
-  - **syncbricks:** postgres, qdrant, n8n, coda-mcp-gateway
+  - **proxy:** nginx-proxy, acme-companion, cloudflared, n8n, coda-mcp
+  - **syncbricks:** postgres, qdrant, n8n, coda-mcp
 
 - **Security benefit:** Database only accessible from services in backend network
   - postgres NOT accessible from cloudflared or nginx-proxy
@@ -159,7 +158,7 @@ graph TD
 - **n8n** makes outbound calls to:
   - Coda.io (Coda API)
   - Other external services (webhooks, integrations)
-- **coda-mcp-gateway** calls:
+- **coda-mcp (HTTP-native)** calls:
   - Coda.io REST API
 - **cloudflared** calls:
   - Cloudflare infrastructure (tunnel heartbeat)
@@ -239,7 +238,7 @@ docker-compose ensures proper startup sequence:
    └─ acme-companion generates certificate
    └─ Ready for external traffic
 
-6. coda-mcp-gateway starts (health check)
+6. coda-mcp starts (health check)
    └─ Depends on: n8n running (loose dependency)
    └─ nginx-proxy auto-discovers
    └─ acme-companion generates certificate
@@ -283,7 +282,7 @@ Backend network (No internet access)
 - nginx-proxy ← Internet-connected
 - acme-companion ← Manages certs
 - n8n ← External access via nginx-proxy
-- coda-mcp-gateway ← External access via nginx-proxy
+- coda-mcp ← External access via nginx-proxy
 
 **Backend Services (syncbricks network):**
 - postgres ← Database (NO internet access)
@@ -332,7 +331,7 @@ DigitalOcean Droplet
   ↓
 cloudflared + nginx-proxy (auto-discovery)
   ├─ n8n (via label)
-  ├─ coda-mcp-gateway (via label)
+  ├─ coda-mcp (via label)
   └─ acme-companion (auto-SSL)
 ```
 
@@ -389,7 +388,7 @@ cloudflared      tunnel info              60s         10s       3
 postgres         pg_isready               10s         5s        5
 qdrant           curl /health             30s         10s       3
 n8n              curl /health             30s         10s       3
-coda-mcp-gateway curl /health             30s         10s       3
+coda-mcp         curl /health             30s         10s       3
 ```
 
 **Docker Compose Behavior:**

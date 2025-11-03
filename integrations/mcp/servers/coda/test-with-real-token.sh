@@ -15,12 +15,19 @@
 #   CODA_API_TOKEN=pat_abc123xyz ./test-with-real-token.sh https://coda.bestviable.com
 #############################################################################
 
-set -e
+STRICT="${STRICT:-1}"
+
+if [ "$STRICT" = "1" ]; then
+  set -e
+else
+  set +e
+fi
 
 # Configuration
 SERVER_URL="${1:-http://localhost:8080}"
 TOKEN="${CODA_API_TOKEN:-}"
 VERBOSE="${VERBOSE:-false}"
+DEFAULT_PROTOCOL_VERSION="${PROTOCOL_VERSION:-2025-03-26}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -70,6 +77,86 @@ verbose() {
   fi
 }
 
+initialize_session() {
+  if ! test_token_provided; then
+    echo ""
+    return 1
+  fi
+
+  log_test "Initialize MCP session"
+
+  local headers_file
+  headers_file=$(mktemp)
+
+  local payload
+  payload=$(cat <<EOF
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "${DEFAULT_PROTOCOL_VERSION}",
+    "capabilities": {},
+    "client": {"name": "coda-mcp-test", "version": "1.0"},
+    "clientInfo": {"name": "coda-mcp-test", "version": "1.0"}
+  }
+}
+EOF
+  )
+
+  local response
+  response=$(curl -s -L -D "$headers_file" "$SERVER_URL/mcp" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Accept: application/json, text/event-stream" \
+    -H "Content-Type: application/json" \
+    -d "$payload")
+
+  verbose "Initialize response: $response"
+
+  local session_id
+  session_id=$(grep -i 'mcp-session-id:' "$headers_file" | awk '{print $2}' | tr -d '\r')
+  rm -f "$headers_file"
+
+  if [ -z "$session_id" ]; then
+    log_fail "Failed to initialize MCP session"
+    return 1
+  fi
+
+  log_pass "Session initialized (ID: ${session_id})"
+  LAST_SESSION_ID="$session_id"
+  echo "$session_id"
+}
+
+call_mcp() {
+  local session_id="$1"
+  local payload="$2"
+
+  curl -s -L -X POST "$SERVER_URL/mcp" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Mcp-Session-Id: $session_id" \
+    -H "Mcp-Protocol-Version: $DEFAULT_PROTOCOL_VERSION" \
+    -H "Accept: application/json, text/event-stream" \
+    -H "Content-Type: application/json" \
+    -d "$payload"
+}
+
+stream_mcp() {
+  local session_id="$1"
+  curl -s -L -X GET "$SERVER_URL/mcp" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Mcp-Session-Id: $session_id" \
+    -H "Mcp-Protocol-Version: $DEFAULT_PROTOCOL_VERSION" \
+    -H "Accept: text/event-stream"
+}
+
+close_session() {
+  local session_id="$1"
+  curl -s -L -X DELETE "$SERVER_URL/mcp" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Mcp-Session-Id: $session_id" \
+    -H "Mcp-Protocol-Version: $DEFAULT_PROTOCOL_VERSION"
+}
+
 #############################################################################
 # Test Functions
 #############################################################################
@@ -77,7 +164,7 @@ verbose() {
 test_server_reachable() {
   log_test "Server reachable at $SERVER_URL"
 
-  if curl -s -f "$SERVER_URL/health" > /dev/null 2>&1; then
+  if curl -s -L -f "$SERVER_URL/health" > /dev/null 2>&1; then
     log_pass "Server is reachable"
   else
     log_fail "Server is not reachable at $SERVER_URL"
@@ -101,7 +188,7 @@ test_token_provided() {
 test_health_endpoint() {
   log_test "Health endpoint responds"
 
-  response=$(curl -s "$SERVER_URL/health")
+  response=$(curl -s -L "$SERVER_URL/health")
 
   if echo "$response" | jq -e '.status == "ok"' > /dev/null 2>&1; then
     log_pass "Health endpoint returns valid response"
@@ -115,7 +202,7 @@ test_health_endpoint() {
 test_oauth_authorization_server() {
   log_test "OAuth Authorization Server metadata"
 
-  response=$(curl -s "$SERVER_URL/.well-known/oauth-authorization-server")
+  response=$(curl -s -L "$SERVER_URL/.well-known/oauth-authorization-server")
 
   if echo "$response" | jq -e '.issuer' > /dev/null 2>&1; then
     issuer=$(echo "$response" | jq -r '.issuer')
@@ -130,9 +217,9 @@ test_oauth_authorization_server() {
 test_oauth_protected_resource() {
   log_test "OAuth Protected Resource metadata"
 
-  response=$(curl -s "$SERVER_URL/.well-known/oauth-protected-resource")
+  response=$(curl -s -L "$SERVER_URL/.well-known/oauth-protected-resource")
 
-  if echo "$response" | jq -e '.issuer' > /dev/null 2>&1; then
+  if echo "$response" | jq -e '.resource_id' > /dev/null 2>&1; then
     log_pass "Protected Resource metadata available"
     verbose "Full response: $response"
   else
@@ -145,7 +232,7 @@ test_token_validation_endpoint() {
   log_test "Token validation endpoint"
 
   # Test with invalid token
-  response=$(curl -s -X POST "$SERVER_URL/oauth/validate-token" \
+  response=$(curl -s -L -X POST "$SERVER_URL/oauth/validate-token" \
     -H "Content-Type: application/json" \
     -d '{"token":"invalid-token"}')
 
@@ -161,7 +248,7 @@ test_token_validation_endpoint() {
 test_mcp_unauthorized() {
   log_test "MCP endpoint rejects requests without Bearer token"
 
-  response=$(curl -s -X POST "$SERVER_URL/mcp" \
+  response=$(curl -s -L -X POST "$SERVER_URL/mcp" \
     -H "Content-Type: application/json" \
     -d '{"jsonrpc":"2.0","id":1,"method":"resources/list","params":{}}')
 
@@ -181,18 +268,18 @@ test_mcp_with_bearer_token() {
 
   log_test "MCP endpoint with Bearer token"
 
-  SESSION_ID=$(uuidgen)
+  local session_id
+  session_id=$(initialize_session) || return 1
 
-  response=$(curl -s -X POST "$SERVER_URL/mcp" \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Mcp-Session-Id: $SESSION_ID" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "jsonrpc": "2.0",
-      "id": 1,
-      "method": "resources/list",
-      "params": {}
-    }')
+  local payload
+  payload='{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/list",
+    "params": {}
+  }'
+
+  response=$(call_mcp "$session_id" "$payload")
 
   verbose "Response: $response"
 
@@ -210,18 +297,18 @@ test_coda_list_documents() {
 
   log_test "List Coda documents"
 
-  SESSION_ID=$(uuidgen)
+  local session_id
+  session_id=$(initialize_session) || return 1
 
-  response=$(curl -s -X POST "$SERVER_URL/mcp" \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Mcp-Session-Id: $SESSION_ID" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "jsonrpc": "2.0",
-      "id": 1,
-      "method": "coda_list_documents",
-      "params": {}
-    }')
+  local payload
+  payload='{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "coda_list_documents",
+    "params": {}
+  }'
+
+  response=$(call_mcp "$session_id" "$payload")
 
   verbose "Response: $response"
 
@@ -245,37 +332,29 @@ test_session_persistence() {
 
   log_test "Session persistence across requests"
 
-  SESSION_ID=$(uuidgen)
+  local session_id
+  session_id=$(initialize_session) || return 1
 
-  # Request 1
   verbose "Request 1: POST /mcp"
-  response1=$(curl -s -X POST "$SERVER_URL/mcp" \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Mcp-Session-Id: $SESSION_ID" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "jsonrpc": "2.0",
-      "id": 1,
-      "method": "coda_list_documents",
-      "params": {"limit": 1}
-    }')
+  local payload1='{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "coda_list_documents",
+    "params": {"limit": 1}
+  }'
+  response1=$(call_mcp "$session_id" "$payload1")
 
   verbose "Response 1: $response1"
 
   # Request 2 with same session
   verbose "Request 2: GET /mcp (SSE stream)"
-  response2=$(curl -s -X GET "$SERVER_URL/mcp" \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Mcp-Session-Id: $SESSION_ID" \
-    -H "Accept: text/event-stream")
+  response2=$(stream_mcp "$session_id")
 
   verbose "Response 2: ${response2:0:100}..."
 
   # Cleanup
   verbose "Request 3: DELETE /mcp"
-  response3=$(curl -s -X DELETE "$SERVER_URL/mcp" \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Mcp-Session-Id: $SESSION_ID")
+  response3=$(close_session "$session_id")
 
   verbose "Response 3: $response3"
 
@@ -302,7 +381,7 @@ test_cors_headers() {
 test_response_headers() {
   log_test "Response includes required headers"
 
-  headers=$(curl -s -I "$SERVER_URL/health" 2>&1 | grep -E "Content-Type|Server")
+  headers=$(curl -s -L -I "$SERVER_URL/health" 2>&1 | grep -E "Content-Type|Server")
 
   if [ -n "$headers" ]; then
     log_pass "Response headers present"
@@ -319,18 +398,17 @@ test_json_response_format() {
 
   log_test "JSON-RPC 2.0 response format"
 
-  SESSION_ID=$(uuidgen)
+  local session_id
+  session_id=$(initialize_session) || return 1
 
-  response=$(curl -s -X POST "$SERVER_URL/mcp" \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Mcp-Session-Id: $SESSION_ID" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "jsonrpc": "2.0",
-      "id": 1,
-      "method": "coda_list_documents",
-      "params": {}
-    }')
+  local payload='{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "coda_list_documents",
+    "params": {}
+  }'
+
+  response=$(call_mcp "$session_id" "$payload")
 
   verbose "Response: $response"
 
@@ -353,18 +431,17 @@ test_error_handling() {
 
   log_test "Error handling for invalid method"
 
-  SESSION_ID=$(uuidgen)
+  local session_id
+  session_id=$(initialize_session) || return 1
 
-  response=$(curl -s -X POST "$SERVER_URL/mcp" \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Mcp-Session-Id: $SESSION_ID" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "jsonrpc": "2.0",
-      "id": 1,
-      "method": "nonexistent_tool",
-      "params": {}
-    }')
+  local payload='{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "nonexistent_tool",
+    "params": {}
+  }'
+
+  response=$(call_mcp "$session_id" "$payload")
 
   verbose "Response: $response"
 
@@ -385,7 +462,7 @@ test_performance() {
   log_test "Performance: Response time for health check"
 
   start=$(date +%s%N)
-  curl -s "$SERVER_URL/health" > /dev/null
+  curl -s -L "$SERVER_URL/health" > /dev/null
   end=$(date +%s%N)
 
   duration_ms=$(((end - start) / 1000000))
@@ -404,19 +481,16 @@ test_performance_mcp() {
 
   log_test "Performance: Response time for MCP request"
 
-  SESSION_ID=$(uuidgen)
-
   start=$(date +%s%N)
-  curl -s -X POST "$SERVER_URL/mcp" \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Mcp-Session-Id: $SESSION_ID" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "jsonrpc": "2.0",
-      "id": 1,
-      "method": "coda_list_documents",
-      "params": {"limit": 1}
-    }' > /dev/null
+  local session_id
+  session_id=$(initialize_session) || return 1
+  local perf_payload='{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "coda_list_documents",
+    "params": {"limit": 1}
+  }'
+  call_mcp "$session_id" "$perf_payload" > /dev/null
   end=$(date +%s%N)
 
   duration_ms=$(((end - start) / 1000000))

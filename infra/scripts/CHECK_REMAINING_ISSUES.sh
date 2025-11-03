@@ -5,20 +5,20 @@
 cd ~/portfolio/ops
 
 echo "======================================"
-echo "CHECKING CODA-MCP-GATEWAY ISSUE"
+echo "CHECKING CODA-MCP ISSUE"
 echo "======================================"
 echo ""
 
 echo "1. Coda logs (last 50 lines):"
-docker compose -f docker-compose.production.yml logs coda-mcp-gateway --tail 50
+docker compose -f docker-compose.production.yml logs coda-mcp --tail 50
 echo ""
 
 echo "2. Coda environment variables:"
-docker compose -f docker-compose.production.yml exec coda-mcp-gateway env | grep -E "PORT|NODE_ENV|CODA|LOG"
+docker compose -f docker-compose.production.yml exec coda-mcp env | grep -E "PORT|NODE_ENV|CODA|LOG"
 echo ""
 
 echo "3. Check if coda process is actually running:"
-docker compose -f docker-compose.production.yml exec coda-mcp-gateway sh -c "ps aux 2>/dev/null || echo 'ps not available'"
+docker compose -f docker-compose.production.yml exec coda-mcp sh -c "ps aux 2>/dev/null || echo 'ps not available'"
 echo ""
 
 echo ""

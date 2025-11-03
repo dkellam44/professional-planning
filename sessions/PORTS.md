@@ -27,7 +27,7 @@ These ports are exposed to the internet via nginx-proxy reverse proxy:
 |---------|--------------|---------------|-------------|--------|
 | **nginx-proxy** | 80 → 443 | `bestviable.com` | 80, 443 | HTTP/HTTPS (auto-redirect) |
 | **n8n** | 5678 | `n8n.bestviable.com` | 443 (HTTPS) | Via nginx-proxy, auto-discovered |
-| **Coda MCP Gateway** | 8080 | `coda.bestviable.com` | 443 (HTTPS) | Via nginx-proxy, auto-discovered |
+| **Coda MCP (HTTP-native)** | 8080 | `coda.bestviable.com` | 443 (HTTPS) | Via nginx-proxy, auto-discovered |
 
 ---
 
@@ -36,7 +36,7 @@ These ports are exposed to the internet via nginx-proxy reverse proxy:
 These ports are **only accessible within the Docker container network** and NOT exposed to the internet:
 
 ### Proxy Network (`proxy` — internal bridge)
-Used by: nginx-proxy, acme-companion, cloudflared, n8n, coda-mcp-gateway
+Used by: nginx-proxy, acme-companion, cloudflared, n8n, coda-mcp
 
 | Service | Port | Protocol | Purpose |
 |---------|------|----------|---------|
@@ -45,7 +45,7 @@ Used by: nginx-proxy, acme-companion, cloudflared, n8n, coda-mcp-gateway
 | **cloudflared** | N/A | Tunnel | Cloudflare Tunnel outbound connection |
 
 ### Syncbricks Network (`syncbricks` — isolated backend)
-Used by: postgres, qdrant, n8n (hybrid), coda-mcp-gateway (hybrid)
+Used by: postgres, qdrant, n8n (hybrid), coda-mcp (hybrid)
 
 | Service | Port | Protocol | Purpose | Exposed? |
 |---------|------|----------|---------|----------|
@@ -59,13 +59,13 @@ Used by: postgres, qdrant, n8n (hybrid), coda-mcp-gateway (hybrid)
 
 ### Proxy Network
 - **Public-facing services**: nginx-proxy, acme-companion, cloudflared
-- **Services accessible via proxy**: n8n, coda-mcp-gateway
+- **Services accessible via proxy**: n8n, coda-mcp
 - **Access to internet**: Via Cloudflare Tunnel (cloudflared container)
 - **Access to database**: **BLOCKED** (not on syncbricks network)
 
 ### Syncbricks Network
 - **Backend services**: postgres, qdrant
-- **Hybrid services**: n8n, coda-mcp-gateway (both networks for flexibility)
+- **Hybrid services**: n8n, coda-mcp (both networks for flexibility)
 - **Access to internet**: **BLOCKED** (no tunnel connection)
 - **Security**: Database isolated from public internet
 
@@ -78,7 +78,7 @@ For local debugging or direct container access:
 | Service | Local Binding | Purpose |
 |---------|---------------|---------|
 | **n8n** | `127.0.0.1:5678` | Local access only (internal health checks) |
-| **coda-mcp-gateway** | `127.0.0.1:8080` | Local access only (internal health checks) |
+| **coda-mcp** | `127.0.0.1:8080` | Local access only (internal health checks) |
 
 **Note**: These are NOT exposed to the internet. External access goes through nginx-proxy + HTTPS + Cloudflare Tunnel.
 

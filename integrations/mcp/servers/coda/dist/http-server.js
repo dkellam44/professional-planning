@@ -107,7 +107,7 @@ app.use('/oauth', oauth_routes_js_1.default);
  * Reference: RFC 8414 - OAuth 2.0 Authorization Server Metadata
  */
 app.get('/.well-known/oauth-authorization-server', (req, res) => {
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = process.env.MCP_ISSUER_URL || `${req.protocol}://${req.get('host')}`;
     res.json({
         issuer: baseUrl,
         authorization_endpoint: `${baseUrl}/oauth/authorize`,
@@ -132,7 +132,7 @@ app.get('/.well-known/oauth-authorization-server', (req, res) => {
  * - /.well-known/protected-resource-metadata (ChatGPT web connector convention)
  */
 const protectedResourceMetadata = (req, res) => {
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = process.env.MCP_ISSUER_URL || `${req.protocol}://${req.get('host')}`;
     res.json({
         resource_id: 'coda-mcp',
         resource_name: 'Coda MCP Server',

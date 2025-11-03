@@ -12,6 +12,8 @@
 
 **Objective.** Consolidate scattered MCP servers into a three-tier architecture (remote transport, user-scope local, project-scope local) with clear documentation standards, making all MCP tools accessible to all AI clients (CLI agents, web chats, desktop apps, IDEs).
 
+> **2025-11-02 Note:** The Coda MCP server now ships as an HTTP-native service (`coda-mcp`) without the separate `coda-mcp-gateway` container. Treat any gateway-specific steps below as legacy; prefer the updated compose service and scripts in `/infra/docker` and `/infra/scripts`.
+
 ---
 
 ## 0. References & Context

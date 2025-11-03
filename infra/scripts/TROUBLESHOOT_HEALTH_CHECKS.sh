@@ -34,8 +34,8 @@ check_service cloudflared
 echo "Checking n8n..."
 check_service n8n
 
-echo "Checking coda-mcp-gateway..."
-check_service coda-mcp-gateway
+echo "Checking coda-mcp..."
+check_service coda-mcp
 
 echo ""
 echo "======================================"
@@ -58,8 +58,8 @@ echo "Testing n8n health endpoint..."
 docker compose -f docker-compose.production.yml exec n8n curl -I http://localhost:5678/health 2>&1 || echo "n8n health check failed"
 echo ""
 
-echo "Testing coda-mcp-gateway health endpoint..."
-docker compose -f docker-compose.production.yml exec coda-mcp-gateway curl -I http://localhost:8080/health 2>&1 || echo "coda health check failed"
+echo "Testing coda-mcp health endpoint..."
+docker compose -f docker-compose.production.yml exec coda-mcp curl -I http://localhost:8080/health 2>&1 || echo "coda health check failed"
 echo ""
 
 echo "======================================"
@@ -75,7 +75,7 @@ echo "DOCKER INSPECT - Health Check Config"
 echo "======================================"
 echo ""
 
-for service in nginx-proxy acme-companion cloudflared n8n coda-mcp-gateway; do
+for service in nginx-proxy acme-companion cloudflared n8n coda-mcp; do
     echo "--- $service health config ---"
     docker inspect $service 2>/dev/null | grep -A 20 '"HealthCheck"' || echo "No health config found"
     echo ""

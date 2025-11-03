@@ -27,11 +27,10 @@ Complete reference guide for SyncBricks pattern infrastructure (nginx-proxy, acm
 - How to obtain tunnel token
 - DNS configuration
 
-**Full guide:** `droplet_migration_procedure_v1.md` (Phase-by-phase)
-- 7 deployment phases
-- Health checks
-- Troubleshooting
-- Rollback procedures
+**Legacy full guide (archived):** `archive/docs/infrastructure/droplet_migration_procedure_v1.md`
+- 7 deployment phases (references legacy gateway pattern)
+- Health checks & troubleshooting (pending refresh)
+- Use QUICKSTART + `network_wiring_diagram_v2.md` for current deployment flow
 
 ---
 
@@ -42,17 +41,14 @@ Complete reference guide for SyncBricks pattern infrastructure (nginx-proxy, acm
 - Configuration examples
 - When to use SyncBricks
 
-**Then:** `syncbricks_n8n_full_analysis_v1.md`
-- Complete decision process
-- Problem statement
-- Alternative evaluation
-- Why this pattern won
+**Archived decision history:** `archive/docs/infrastructure/syncbricks_n8n_full_analysis_v1.md`
+- Complete decision process for adopting SyncBricks (legacy gateway references)
+- Alternative evaluation notes
 
-**Context:** `infrastructure_state_comparison_v1.md`
-- Before/after comparison
-- Security improvements
-- Operational metrics
-- Risk assessment
+**Context (legacy):** `archive/docs/infrastructure/infrastructure_state_comparison_v1.md`
+- Before/after comparison of pre-SyncBricks state
+- Security improvements (see `network_wiring_diagram_v2.md` for current view)
+- Operational metrics from original migration
 
 ---
 
@@ -251,7 +247,7 @@ Complete 7-service stack:
 4. **postgres** — Database (backend network isolated)
 5. **qdrant** — Vector store (backend network isolated)
 6. **n8n** — Automation engine (both networks)
-7. **coda-mcp-gateway** — Coda MCP HTTP wrapper (both networks)
+7. **coda-mcp** — Coda MCP HTTP-native server (proxy network; exposes /mcp + /sse)
 
 Features:
 - Health checks for all services
@@ -294,18 +290,18 @@ ADR documenting:
 5. Optional: `syncbricks_n8n_full_analysis_v1.md` — Learn decision process
 
 ### Path 3: "I need to operate this long-term" (2 hours)
-1. `droplet_migration_procedure_v1.md` — Complete deployment procedure
+1. `archive/docs/infrastructure/droplet_migration_procedure_v1.md` — Legacy deployment procedure (gateway-based)
 2. `cloudflare_tunnel_token_guide_v1.md` — Full token + operations guide
 3. `syncbricks_solution_breakdown_v1.md` — Component details
 4. Bookmark troubleshooting sections for reference
 5. Set up monitoring per operations guide
 
 ### Path 4: "I'm learning infrastructure patterns" (3 hours)
-1. `infrastructure_state_comparison_v1.md` — Problem/solution context
-2. `syncbricks_n8n_full_analysis_v1.md` — Decision process
+1. `archive/docs/infrastructure/infrastructure_state_comparison_v1.md` — Problem/solution context (legacy)
+2. `archive/docs/infrastructure/syncbricks_n8n_full_analysis_v1.md` — Decision process (legacy)
 3. `/decisions/2025-10-26_infrastructure-syncbricks-adoption_v01.md` — ADR
 4. `syncbricks_solution_breakdown_v1.md` — Technical details
-5. Review `droplet_migration_procedure_v1.md` for operational reality
+5. Review `archive/docs/infrastructure/droplet_migration_procedure_v1.md` for operational reality (legacy)
 6. Optional: Compare with other infrastructure patterns (Kubernetes, etc.)
 
 ---

@@ -10,13 +10,15 @@
 
 # Project Plan — Coda MCP Gateway Upgrade & Customization
 
+> **Status Update (2025-11-02):** Gateway layer decommissioned. The Coda MCP server now ships as an HTTP-native service (`coda-mcp`) and is deployed directly via `infra/docker/docker-compose.production.yml`. Keep this playbook for historical context; new implementation work should reference `agents/context/playbooks/http_native_mcp_server_v01.md` and related docs.
+
 **Objective.** Replace the current community Coda MCP build with a fork that matches (and eventually exceeds) the `dustinrgood/coda-mcp` feature set, deploy it inside the existing SyncBricks-style droplet stack, and create space for ongoing learning/customization.
 
 ---
 
 ## 0. References & Context
 - Infrastructure stack & tunnel notes: `SESSION_HANDOFF_2025-10-28_v1.md`, `context/sessions/2025-10-28_n8n-coda-production-notes.md`
-- Current compose & Docker template: `ops/docker-compose.production.yml`, `ops/Dockerfile.coda-mcp-gateway`
+- Current compose & Docker template: `ops/docker-compose.production.yml` (service `coda-mcp`)
 - HTTPS/Tunnel ADR: `decisions/2025-10-28_cloudflare-proxy-trust-config_v01.md`
 - Cloudflare/SyncBricks documentation: `docs/infrastructure/` package (quickstart + token guide)
 - Target MCP repos:  
