@@ -62,6 +62,7 @@ services:
       - nginx-proxy
     environment:
       - DEFAULT_EMAIL=${LETSENCRYPT_EMAIL:-admin@bestviable.com}
+      - NGINX_PROXY_CONTAINER=nginx-proxy
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - certs:/etc/nginx/certs
@@ -206,18 +207,6 @@ services:
         condition: service_healthy
       n8n-import:
         condition: service_completed_successfully
-
-    entrypoint: /bin/sh
-    command:
-      - "-c"
-      - |
-        echo 'Waiting for dependencies...'
-        while ! nc -z postgres 5432 || [ ! -f /home/node/.n8n/import_done ]; do
-          sleep 1
-        done
-        echo 'Dependencies ready. Starting n8n...'
-        sleep 5
-        n8n
 
     volumes:
       - n8n_storage:/home/node/.n8n
