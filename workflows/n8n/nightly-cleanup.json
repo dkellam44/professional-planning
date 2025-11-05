@@ -1,0 +1,50 @@
+{
+  "name": "nightly-cleanup",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": [
+          {
+            "hour": 2,
+            "minute": 0
+          }
+        ]
+      },
+      "id": "Cron_nightly_cleanup",
+      "name": "Nightly Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const now = new Date();\\nreturn [{\\n  json: {\\n    status: 'planned',\\n    tasks: [\\n      { action: 'purge_working_state', description: 'Delete working_state rows expired past TTL.', command: 'SQL DELETE ... WHERE expires_at < now()' },\\n      { action: 'archive_episodes', description: 'Move low-importance episodes older than 90 days to archive schema.', command: 'SQL INSERT ... SELECT ...' },\\n      { action: 'vacuum_analyze', description: 'Run VACUUM ANALYZE on memory tables to maintain performance.', command: 'VACUUM ANALYZE memory_entries;' }\\n    ],\\n    metadata: {\\n      generated_at: now.toISOString(),\\n      notes: 'Implement via Postgres + Qdrant maintenance nodes.'\\n    }\\n  }\\n}];"
+      },
+      "id": "Function_plan_maintenance",
+      "name": "Plan Maintenance",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        420,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Nightly Trigger": {
+      "main": [
+        [
+          {
+            "node": "Plan Maintenance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

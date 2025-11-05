@@ -1,0 +1,84 @@
+{
+  "name": "memory-writeback",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "memory/writeback",
+        "responseMode": "lastNode",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "Webhook_memory_writeback",
+      "name": "writeback_webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "memory-writeback"
+    },
+    {
+      "parameters": {
+        "functionCode": "const payload = items[0]?.json ?? {};\\nconst clientId = payload.client_id ?? 'anonymous';\\nconst conversation = Array.isArray(payload.conversation) ? payload.conversation : [];\\nconst cleaned = conversation\\n  .filter(message => message && typeof message.content === 'string' && message.content.trim().length > 0)\\n  .map((message, index) => ({\\n    index,\\n    role: message.role ?? 'assistant',\\n    content: message.content.trim(),\\n    metadata: message.metadata ?? {}\\n  }));\\nconst assistantReplies = cleaned.filter(message => message.role === 'assistant');\\nconst lastAssistant = assistantReplies.length ? assistantReplies[assistantReplies.length - 1].content : '';\\nreturn [{\\n  json: {\\n    client_id: clientId,\\n    conversation: cleaned,\\n    tags: Array.isArray(payload.tags) ? payload.tags : [],\\n    importance: Number(payload.importance ?? 0.5),\\n    last_assistant_message: lastAssistant,\\n    raw_input: payload,\\n    received_at: new Date().toISOString()\\n  }\\n}];"
+      },
+      "id": "Function_normalize_transcript",
+      "name": "normalize_transcript",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const item = items[0].json;\\nconst now = new Date();\\nconst facts = item.conversation\\n  .filter(message => message.role === 'assistant')\\n  .map(message => ({\\n    source_role: message.role,\\n    content: message.content,\\n    extracted_at: now.toISOString()\\n  }));\\nconst entry = {\\n  client_id: item.client_id,\\n  kind: 'conversation',\\n  summary: item.last_assistant_message?.substring(0, 280) ?? '',\\n  messages: item.conversation,\\n  tags: item.tags,\\n  importance: item.importance,\\n  created_at: now.toISOString()\\n};\\nreturn [{\\n  json: {\\n    status: 'accepted',\\n    client_id: item.client_id,\\n    writeback: {\\n      entry,\\n      facts,\\n      storage_plan: {\\n        postgres_table: 'memory_entries (planned)',\\n        qdrant_collection: 'memory_chunks (planned)'\\n      },\\n      next_actions: [\\n        'Map facts to Postgres upsert once schema is finalized.',\\n        'Embed assistant summary via OpenRouter embeddings API.',\\n        'Persist vector to Qdrant with pgvector backup.'\\n      ]\\n    },\\n    metadata: {\\n      received_at: item.received_at,\\n      processed_at: now.toISOString()\\n    }\\n  }\\n}];"
+      },
+      "id": "Function_prepare_writeback",
+      "name": "prepare_writeback",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        640,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "writeback_webhook": {
+      "main": [
+        [
+          {
+            "node": "normalize_transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "normalize_transcript": {
+      "main": [
+        [
+          {
+            "node": "prepare_writeback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

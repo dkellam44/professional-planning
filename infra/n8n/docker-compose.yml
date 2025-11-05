@@ -34,6 +34,10 @@ volumes:
     driver: local
   cloudflared_data:
     driver: local
+  html:
+    driver: local
+  vhost:
+    driver: local
 
 services:
   # ============================================================================
@@ -47,10 +51,14 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      - HTTPS_METHOD=noredirect
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
       - certs:/etc/nginx/certs:ro
       - acme:/etc/acme.sh
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
     networks:
       - proxy
 
@@ -67,6 +75,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - certs:/etc/nginx/certs
       - acme:/etc/acme.sh
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
     networks:
       - proxy
 
@@ -190,6 +200,14 @@ services:
       # Security
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
       - N8N_USER_MANAGEMENT_JWT_SECRET=${N8N_JWT_SECRET}
+
+      # Reverse proxy awareness
+      - N8N_REVERSE_PROXY=true
+      - N8N_PROTOCOL=https
+      - N8N_HOST=n8n.bestviable.com
+      - N8N_EDITOR_BASE_URL=https://n8n.bestviable.com
+      - N8N_API_BASE_URL=https://n8n.bestviable.com/api
+      - N8N_TRUSTED_PROXIES=loopback,linklocal,uniquelocal,cloudflare
 
       # Webhook URLs
       - WEBHOOK_URL=https://n8n.bestviable.com/

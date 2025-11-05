@@ -139,9 +139,9 @@ ssh tools-droplet-agents "docker logs nginx-proxy | tail -20"
    # Should show: nginx-proxy (Up, healthy)
    ```
 
-2. **Check docker labels are set correctly:**
+2. **Check VIRTUAL_* metadata is present:**
    ```bash
-   ssh tools-droplet-agents "docker inspect openweb | grep -A 2 VIRTUAL_HOST"
+   ssh tools-droplet-agents "docker inspect openweb --format '{{range .Config.Env}}{{println .}}{{end}}' | grep VIRTUAL_HOST"
    # Should show: VIRTUAL_HOST=openweb.bestviable.com
    ```
 
@@ -155,6 +155,35 @@ ssh tools-droplet-agents "docker logs nginx-proxy | tail -20"
    ssh tools-droplet-agents "docker logs cloudflared | grep 'Registered tunnel' | tail -1"
    # Should show a recent timestamp
    ```
+
+### Let’s Encrypt Challenge Keeps Returning 404
+
+If Cloudflare shows `Invalid response from /.well-known/acme-challenge/... 404`, double-check the proxy stack:
+
+- **Expose VIRTUAL_* via environment:** jwilder/nginx-proxy reads labels _or_ environment variables. If you define services in `infra/apps/docker-compose.yml`, set `VIRTUAL_HOST`, `VIRTUAL_PORT`, and `LETSENCRYPT_*` inside the service’s `environment:` block (labels are ignored unless docker-gen sees them).
+- **Mount shared volumes in the proxy stack:** In `infra/n8n/docker-compose.yml`, mount both `/etc/nginx/vhost.d` and `/usr/share/nginx/html` into **nginx-proxy** _and_ **acme-companion**. Without these volumes, acme-companion cannot write the HTTP-01 challenge files and validation fails.
+  ```yaml
+  nginx-proxy:
+    volumes:
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+
+  nginx-proxy-acme:
+    volumes:
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+  ```
+- **Recreate the app stack after updating env/volumes:** `ssh tools-droplet-agents "cd /root/portfolio/infra/apps && docker compose up -d"` so nginx-proxy regenerates configs and acme-companion retries issuance.
+
+### Local curl Can’t Resolve the Hostname
+
+macOS sandboxing may block `dig`/`curl` from binding to privileged ports. If `curl -I https://openweb.bestviable.com` fails locally with “Could not resolve host”, validate from the droplet instead:
+
+```bash
+ssh tools-droplet-agents "curl -I https://openweb.bestviable.com"
+```
+
+You should receive an `HTTP/2 200/301` with a valid Let’s Encrypt certificate once routes are live.
 
 ### SSL Certificate Not Generated
 

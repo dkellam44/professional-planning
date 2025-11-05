@@ -23,11 +23,10 @@ services:
     environment:
       - DOZZLE_LEVEL=info
       - DOZZLE_BASE=/
-    labels:
-      - "VIRTUAL_HOST=logs.bestviable.com"
-      - "VIRTUAL_PORT=8080"
-      - "LETSENCRYPT_HOST=logs.bestviable.com"
-      - "LETSENCRYPT_EMAIL=admin@bestviable.com"
+      - VIRTUAL_HOST=logs.bestviable.com
+      - VIRTUAL_PORT=8080
+      - LETSENCRYPT_HOST=logs.bestviable.com
+      - LETSENCRYPT_EMAIL=admin@bestviable.com
     deploy:
       resources:
         limits:
@@ -55,13 +54,12 @@ services:
       - WEBUI_NAME=David's Memory Control Plane
       - ENABLE_RAG_WEB_SEARCH=true
       - ENABLE_OAUTH_SIGNUP=false
+      - VIRTUAL_HOST=openweb.bestviable.com
+      - VIRTUAL_PORT=8080
+      - LETSENCRYPT_HOST=openweb.bestviable.com
+      - LETSENCRYPT_EMAIL=admin@bestviable.com
     volumes:
       - openweb_data:/app/backend/data
-    labels:
-      - "VIRTUAL_HOST=openweb.bestviable.com"
-      - "VIRTUAL_PORT=8080"
-      - "LETSENCRYPT_HOST=openweb.bestviable.com"
-      - "LETSENCRYPT_EMAIL=admin@bestviable.com"
     deploy:
       resources:
         limits:
@@ -89,11 +87,11 @@ services:
       - n8n_proxy
     volumes:
       - kuma_data:/app/data
-    labels:
-      - "VIRTUAL_HOST=kuma.bestviable.com"
-      - "VIRTUAL_PORT=3001"
-      - "LETSENCRYPT_HOST=kuma.bestviable.com"
-      - "LETSENCRYPT_EMAIL=admin@bestviable.com"
+    environment:
+      - VIRTUAL_HOST=kuma.bestviable.com
+      - VIRTUAL_PORT=3001
+      - LETSENCRYPT_HOST=kuma.bestviable.com
+      - LETSENCRYPT_EMAIL=admin@bestviable.com
     deploy:
       resources:
         limits:
