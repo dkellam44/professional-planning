@@ -36,13 +36,13 @@ Estimated time remaining in current sequence: **2-3 hours** of actual work.
 - Exact file locations created
 - **Why:** Understand where previous session left off
 
-### **3. PHASE2_MEMORY_CONTROL_PLANE_PLAYBOOK.md** (reference)
-**Location:** `/docs/infrastructure/PHASE2_MEMORY_CONTROL_PLANE_PLAYBOOK.md`
-- Complete operational playbook (all 4 phases)
-- Detailed command blocks
-- Verification checklists
-- Troubleshooting guide
-- **Why:** Your source of truth for execution steps
+### **3. N8N Workflow Templates** (reference)
+**Location:** `/workflows/n8n/WORKFLOW_README.md`
+- Complete workflow specifications (3 workflows)
+- Input/output schemas
+- Integration points with Open WebUI
+- Testing instructions
+- **Why:** Your source of truth for Phase 3 workflow implementation
 
 ### **4. DEPLOYMENT_GUIDE.md** (for Cloudflare Workers decisions)
 **Location:** `/integrations/cloudflare-workers/DEPLOYMENT_GUIDE.md`
