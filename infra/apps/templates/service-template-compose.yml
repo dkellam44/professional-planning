@@ -1,0 +1,95 @@
+version: '3.8'
+
+# REQUIRED: Reference existing networks (created by n8n stack)
+networks:
+  n8n_proxy:
+    external: true
+  # n8n_syncbricks:
+  #   external: true    # Uncomment if service needs database access
+
+services:
+  # REPLACE: "service-name" with your actual service name
+  service-name:
+    # REPLACE: with stable version tag (not :latest or :main)
+    image: your-registry/your-image:1.0.0
+
+    # MATCH: container name to service name
+    container_name: service-name
+
+    # RECOMMENDED: Auto-restart unless explicitly stopped
+    restart: unless-stopped
+
+    # REQUIRED: Attach to proxy network for nginx-proxy discovery
+    networks:
+      - n8n_proxy
+      # - n8n_syncbricks    # Uncomment if needs postgres/qdrant access
+
+    # REQUIRED: nginx-proxy auto-discovery configuration
+    environment:
+      # REPLACE: with your domain (must match Cloudflare entry)
+      - VIRTUAL_HOST=service.bestviable.com
+
+      # REPLACE: with your container's listening port
+      - VIRTUAL_PORT=8080
+
+      # MUST MATCH: VIRTUAL_HOST for SSL certificate
+      - LETSENCRYPT_HOST=service.bestviable.com
+
+      # Email for SSL renewal notifications
+      - LETSENCRYPT_EMAIL=admin@bestviable.com
+
+      # ADD: Application-specific environment variables below
+      # - APP_CONFIG_VAR=value
+      # - DATABASE_URL=postgres://user:pass@postgres:5432/dbname
+      # - API_KEY=your-api-key
+
+    # OPTIONAL: Persistent storage (uncomment if needed)
+    # volumes:
+    #   - service_data:/app/data
+    #   - /path/on/droplet:/container/path
+
+    # RECOMMENDED: Prevent OOM kills and resource issues
+    deploy:
+      resources:
+        limits:
+          # Memory limit (adjust based on app requirements)
+          # Start with 1000m (1GB) for most apps
+          # Increase to 2000m+ for ML models, data processing
+          # Decrease to 300-500m for lightweight services
+          memory: 1000m
+
+    # RECOMMENDED: Application health monitoring
+    healthcheck:
+      # REPLACE: with your app's health check command
+      # Common options:
+      #   - curl: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      #   - wget: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      #   - shell: ["CMD", "sh", "-c", "exit 0 || exit 1"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+
+      # Check interval (how often to run health check)
+      # Default: 30s (aggressive), Recommended: 60s (moderate)
+      interval: 60s
+
+      # Timeout (how long to wait for response before failing)
+      # Default: 10s (reasonable for most apps)
+      timeout: 10s
+
+      # Retries (failures before marking unhealthy)
+      # Default: 3 (reasonable), Recommended: 5 (more tolerant)
+      retries: 5
+
+      # Start period (grace period before first health check)
+      # CRITICAL: Must be long enough for app to initialize
+      # Too short: App marked unhealthy during startup
+      # Examples:
+      #   - Simple API: 30-40s
+      #   - Database migration: 60s
+      #   - ML model loading: 120-180s
+      start_period: 60s
+
+# OPTIONAL: Define volumes (uncomment if referenced above)
+# volumes:
+#   service_data:
+#     # Driver options if needed
+#     # driver: local
