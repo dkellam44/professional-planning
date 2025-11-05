@@ -1,0 +1,152 @@
+# Prompt 1 
+
+You are my DevOps co-pilot. Help me roll out a personal AI control plane on a small DigitalOcean droplet using the specs below. Work interactively: confirm assumptions, then generate exact commands, configs, and verification steps. After each phase, pause and ask me to run/confirm before proceeding.
+
+### My Current Reality
+
+* VPS: DigitalOcean droplet, 2 GB RAM, 50 GB disk (Ubuntu), swap will be used.
+* Ingress: Cloudflare Zero Trust + cloudflared tunnel already set up.
+* Reverse proxy: Nginx following syncbricks/n8n style. n8n is the only running container today.
+* Goal: Keep the droplet as a lean **control plane** (no on-box LLM inference). Use OpenRouter/Portkey for inference now; add GPU VM later.
+* Platform: I want to manage apps & DBs with **Dokploy** (self-hosted PaaS).
+* Memory & Agents: **OpenMemory** (self-host minimal) + **Letta** (Cloud/OSS later).
+* Vector/DB: Postgres (+pgvector) and Redis (prefer managed if heavy).
+* Tools: **MCP servers** default on **Cloudflare Agents**; small self-hosted MCPs (FS/DB) behind CF Access.
+
+### What I Need From You (phase by phase)
+
+1. **Audit & Plan**
+
+   * Validate prerequisites (Docker, docker compose plugin, ufw, swap).
+   * Recommend swap size and sysctls for 2 GB RAM.
+   * Confirm Cloudflare tunnel routing model (subdomain or subpath) and propose a tidy URL map:
+
+     * `/dokploy`, `/n8n`, `/ui`, `/mem`, `/mcp/*`
+   * Decide whether to keep Nginx or switch to Dokploy’s Traefik (default: keep Nginx for now).
+
+2. **Install Dokploy (behind Cloudflare)**
+
+   * Produce exact `docker compose` for Dokploy.
+   * Nginx `server`/`location` blocks (subpath) OR Traefik labels (subdomain) with CF Access headers.
+   * Health checks and first-login steps.
+
+3. **Migrate existing n8n into Dokploy**
+
+   * Compose/service definition, volume paths, env vars.
+   * Safe migration steps from the current container to Dokploy without data loss.
+
+4. **Deploy Open WebUI**
+
+   * Compose + env (`OPENAI_API_BASE_URL`, `OPENAI_API_KEY` placeholder).
+   * Nginx locations (or Traefik) and CF Access policy notes.
+
+5. **Provision Databases via Dokploy**
+
+   * **Postgres + pgvector**: init SQL to enable pgvector, create DB/user, connection string template.
+   * **Redis**: minimal config for TTL, rate limits, queues.
+   * Backup schedules and DO Spaces/S3 example.
+
+6. **Deploy OpenMemory**
+
+   * Minimal configuration (SQLite to start OR DSN for Postgres/Qdrant).
+   * Route `/mem`, health check, resource caps.
+
+7. **MCP Layer**
+
+   * **Cloudflare Agents (default):** generate Workers projects for generic HTTP fetch, web-scrape, calendar/email/GitHub with streamable-HTTP `/mcp`, fallback `/sse`, OAuth 2.1 wiring (scopes, redirect URI).
+   * **Self-hosted MCP (few only):** Node/Python skeleton servers with:
+
+     * `POST /mcp` (streamable-HTTP), optional `GET /sse`
+     * Auth Option A: validate CF-Access JWT; Option B: OAuth 2.1 (PKCE)
+     * Examples: `mcp-fs` (path allowlist `/data/client/*`), `mcp-sql` (parameterized queries to memory DB), `mcp-openmemory` (CRUD/search proxy).
+
+8. **Orchestration Contracts**
+
+   * n8n workflows:
+
+     * `/memory/assemble`: embed → KNN (pgvector/Qdrant) → OpenMemory profile/episodes → optional Letta memory → return context JSON.
+     * `/memory/writeback`: extract facts/episodes → upsert to OpenMemory → optional Letta block update.
+   * Provide n8n exportable JSON nodes (or curl scripts) and example payloads.
+   * Open WebUI pre/post hook configuration snippets.
+
+9. **Secrets & Policies**
+
+   * Where to store secrets (Dokploy env/secrets or CF Workers KV), and example `.env.example`.
+   * CF Access policies for each route; OAuth provider setup checklist.
+
+10. **Verification & Observability**
+
+* `curl` smoke tests for each endpoint.
+* Basic dashboards: Dozzle logs (or Dokploy logs), Uptime Kuma checks.
+* Postgres pgvector sanity query; Redis ping; OpenMemory health; MCP tool dry-runs.
+
+11. **GPU Burst Ready**
+
+* A saved compose or startup script for vLLM/TGI on a separate GPU VM.
+* n8n switch logic for inference base URL per workload.
+
+12. **Rollback & Backup**
+
+* Snapshot/backup/restore steps (Dokploy and volumes).
+* Rollback to previous compose versions.
+
+### Conventions & Placeholders
+
+* Domains: use `example.com` and subpaths `/dokploy`, `/n8n`, `/ui`, `/mem`, `/mcp/...`.
+* Secrets: use `CHANGEME_*` placeholders.
+* Assume Ubuntu with `apt`.
+* Keep everything idempotent and copy-pasteable.
+
+Ask your clarifying questions in tight batches, then output each phase with commands/configs/tests. End each phase with a short checklist for me to confirm before we continue.
+
+
+
+----
+
+# Prompt 2
+
+You are my DevOps co-pilot. We are extending my Dokploy-managed, Cloudflare-protected personal AI control plane with the extras below. Work interactively: confirm assumptions, then output exact commands/configs/tests per phase, pausing for my confirmation.
+
+### Current stack (baseline)
+
+* DO droplet (2 GB RAM), swap enabled; Cloudflare Zero Trust + tunnel; Nginx reverse proxy (syncbricks style).
+* Dokploy manages apps/DBs. Running/queued apps: n8n, Open WebUI, OpenMemory, Postgres(+pgvector), Redis.
+* MCP: Cloudflare Agents (default), a few self-hosted via Dokploy.
+* Inference: OpenRouter/Portkey; optional GPU VM later.
+
+### New extras to roll out (in this order)
+
+1. **Embeddings worker** (Redis queue → embeddings API → pgvector/Qdrant write)
+2. **Uptime Kuma** (HTTP/TCP checks + alert webhooks to n8n)
+3. **Email bridge** (IMAP or Gmail watch → summarize/chunk → enqueue)
+4. **Web capture** (Cloudflare Workers rendering or Playwright container)
+5. **File inbox + OCR** (Paperless-ngx **or** DIY Spaces+n8n+Unstructured)
+6. **Metabase** (BI over memory tables)
+7. **Optional Light RAG UI** (AnythingLLM or stay in Open WebUI)
+8. **Vaultwarden** (personal vault; not for app runtime secrets)
+
+### What to produce, phase by phase
+
+For each phase, provide:
+
+* **Docker/Dokploy specs** (compose service or Dokploy template settings); resource limits for 2 GB.
+* **Nginx or Traefik routes** (subpaths `/kuma`, `/metabase`, `/rag`, etc.), CF Access notes.
+* **n8n nodes/flows** (export JSON or curl-import) and example payloads.
+* **DB schemas** if needed (e.g., `embed_jobs`, `audit_log`), plus a KNN pgvector sanity query.
+* **Env & secrets** templates (`CHANGEME_*`), cost controls (rate limits/batching).
+* **Tests:** `curl` smoke tests, sample job enqueue, alert trigger, example dashboard queries.
+
+### Conventions
+
+* Hostname `https://example.com` with subpaths: `/dokploy`, `/n8n`, `/ui`, `/mem`, `/mcp/*`, plus new: `/kuma`, `/metabase`, `/rag`.
+* Secrets via Dokploy env/secrets (or Workers KV for CF components).
+* Embeddings: start with `text-embedding-3-small` (or bge-small via OpenRouter) and 1536-dim vectors.
+* Idempotency: de-dupe by `payload_hash` for ingestion/embedding jobs.
+
+### Acceptance checks per phase
+
+* All containers healthy; routes protected by CF Access.
+* Demo run: ingest an email & a web page → see chunks in OpenMemory; embedding jobs processed; KNN returns results; Metabase dashboard shows counts; Kuma green.
+* Summarize cost levers (requests/min, batch size, dimensions, retention) and provide a quick rollback path.
+
+Ask brief clarifying questions only if blocking; otherwise assume sensible defaults and proceed.

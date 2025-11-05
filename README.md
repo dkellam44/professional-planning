@@ -16,6 +16,8 @@ This is an **AI-ready context architecture** for a solo operator, designed for p
 
 **Current Status**: ✅ Foundation complete; ✅ Infrastructure documentation & production configuration deployed (2025-10-26); ✅ Docker deployment operational (2025-10-27); ✅ Coda MCP HTTP-native server deployed (2025-11-01)
 
+
+**User Info** : David Kellam the primary user is a beginner actively learning programming, AI, devops, and network infrastructure. When appropriate, be explicit about instructions, concepts, commands, file paths and so on without significantly slowing down work progress. Note 
 ---
 
 ## Architecture Principles
@@ -31,33 +33,7 @@ This is an **AI-ready context architecture** for a solo operator, designed for p
 ## Directory Structure
 
 ```
-portfolio/
-├── README.md                      # You are here
-├── agents/                        # Agent workflows, playbooks, handoffs
-├── archive/                       # Historical artifacts (formerly z_archive)
-├── docs/
-│   ├── architecture/              # Specs, diagrams, ADRs
-│   ├── business/                  # Business model/context references
-│   ├── infrastructure/            # Infrastructure documentation + deployment notes
-│   ├── quality_gates/             # Definitions of done, QA policies
-│   └── runbooks/                  # Operational runbooks + troubleshooting guides
-├── infra/                         # Operational infrastructure (mirrors droplet)
-│   ├── docker/                    # Compose files, Dockerfiles, volumes
-│   │   ├── docker-compose.production.yml
-│   │   ├── docker-compose.example.yml
-│   │   └── services/
-│   ├── scripts/                   # Deployment/validation helpers
-│   └── config/                    # Environment templates and local secrets
-├── integrations/                  # MCP servers, client templates, integrations
-├── logs/                          # Action logs (CSV)
-├── planning/                      # Active plans, specs, research (formerly inbox)
-├── prompts/                       # Prompt templates (JSONL)
-├── sessions/                      # Session assets and handoffs (formerly y_collection_box)
-│   └── handoffs/
-├── sot/                           # Source-of-truth schemas and authority maps
-├── templates/                     # Scaffolds for offers, engagements, etc.
-├── ventures/                      # Venture/project-specific workspaces
-└── REPO_TRIAGE_CHECKLIST.md       # Intake checklist for new collaborators
+needs updating.
 ```
 
 ## Source of Truth (SoT) v0.2
@@ -75,21 +51,7 @@ portfolio/
 Operational assets now live in `/infra/` so local and droplet layouts are symmetrical:
 
 ```
-infra/
-├── docker/
-│   ├── docker-compose.production.yml
-│   ├── docker-compose.example.yml
-│   ├── services/ (Dockerfiles for MCP gateways)
-│   └── certs/, html/, vhost.d/, data/, logs/, import/ (volume mounts)
-├── config/
-│   └── .env.example           # Template copied to infra/config/.env
-└── scripts/
-    ├── cleanup-droplet.sh
-    ├── CHECK_REMAINING_ISSUES.sh
-    ├── DEPLOY_FIXES.sh
-    ├── DIAGNOSE_REMAINING.sh
-    ├── TROUBLESHOOT_HEALTH_CHECKS.sh
-    └── (new) sync / validation helpers
+needs updating
 ```
 
 > Legacy note: `docs/ops` exists only as a temporary symlink for backwards compatibility. Treat `/infra/` as the source of truth; plan to remove the symlink after 2025-11-15 once downstream references are updated.
