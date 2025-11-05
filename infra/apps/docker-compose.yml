@@ -41,7 +41,7 @@ services:
   # OPEN WEBUI - Chat Interface
   # ============================================================================
   openweb:
-    image: ghcr.io/open-webui/open-webui:0.5.0
+    image: ghcr.io/open-webui/open-webui:0.6.34
     container_name: openweb
     restart: unless-stopped
     networks:
