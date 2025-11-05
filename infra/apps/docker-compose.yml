@@ -1,0 +1,109 @@
+version: '3.8'
+
+networks:
+  n8n_proxy:
+    external: true
+  n8n_syncbricks:
+    external: true
+
+services:
+  # ============================================================================
+  # DOZZLE - Log Viewer (lightweight)
+  # ============================================================================
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9999:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - n8n_proxy
+    environment:
+      - DOZZLE_LEVEL=info
+      - DOZZLE_BASE=/
+    labels:
+      - "VIRTUAL_HOST=logs.bestviable.com"
+      - "VIRTUAL_PORT=8080"
+      - "LETSENCRYPT_HOST=logs.bestviable.com"
+      - "LETSENCRYPT_EMAIL=admin@bestviable.com"
+    deploy:
+      resources:
+        limits:
+          memory: 50m
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================================================
+  # OPEN WEBUI - Chat Interface
+  # ============================================================================
+  openweb:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: openweb
+    restart: unless-stopped
+    networks:
+      - n8n_proxy
+      - n8n_syncbricks
+    environment:
+      - OPENAI_API_BASE_URL=https://openrouter.ai/api/v1
+      - OPENAI_API_KEY=${OPENROUTER_API_KEY:-sk-or-CHANGEME}
+      - WEBUI_AUTH=true
+      - WEBUI_NAME=David's Memory Control Plane
+      - ENABLE_RAG_WEB_SEARCH=true
+      - ENABLE_OAUTH_SIGNUP=false
+    volumes:
+      - openweb_data:/app/backend/data
+    labels:
+      - "VIRTUAL_HOST=openweb.bestviable.com"
+      - "VIRTUAL_PORT=8080"
+      - "LETSENCRYPT_HOST=openweb.bestviable.com"
+      - "LETSENCRYPT_EMAIL=admin@bestviable.com"
+    deploy:
+      resources:
+        limits:
+          memory: 300m
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================================================
+  # OPENMEMORY - Memory Backend (DEFERRED - Build custom image in Phase 3)
+  # ============================================================================
+  # Placeholder for OpenMemory deployment
+  # To deploy: Build Dockerfile in integrations/mcp/servers/openmemory-proxy/
+
+  # ============================================================================
+  # UPTIME KUMA - Service Monitoring
+  # ============================================================================
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    networks:
+      - n8n_proxy
+    volumes:
+      - kuma_data:/app/data
+    labels:
+      - "VIRTUAL_HOST=kuma.bestviable.com"
+      - "VIRTUAL_PORT=3001"
+      - "LETSENCRYPT_HOST=kuma.bestviable.com"
+      - "LETSENCRYPT_EMAIL=admin@bestviable.com"
+    deploy:
+      resources:
+        limits:
+          memory: 100m
+    healthcheck:
+      test: ["CMD", "node", "extra/healthcheck.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  openweb_data:
+  kuma_data:
