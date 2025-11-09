@@ -6,70 +6,132 @@
 
 ---
 
+## Path Reference Guide
+
+**IMPORTANT**: Paths are relative to portfolio root. Expand based on environment:
+- **LOCAL**: `/Users/davidkellam/workspace/portfolio/` (where you're editing)
+- **DROPLET**: `/root/portfolio/` (where container runs)
+
+Examples:
+- `LOCAL: /Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/http-server.ts`
+- `DROPLET: /root/portfolio/integrations/mcp/servers/coda/src/http-server.ts`
+
+All tasks reference relative paths; prefix with appropriate base path above.
+
+---
+
+## Progress Status
+
+**Last Updated**: 2025-11-08 (Session with Agent)
+
+**Phase 1 Status**:
+- ✅ **1.1.1-1.1.3**: Partially implemented (Bearer token works, Cloudflare JWT NOT validated yet)
+- ⚠️ **1.1.4-1.1.5**: Incomplete (middleware applied but JWT validation missing)
+- ⚠️ **1.2.1-1.2.4**: Wrong env var name (`API_KEY` instead of `CODA_API_TOKEN`)
+- ❌ **1.3.1-1.3.2**: Legacy OAuth endpoints still present
+- ⚠️ **1.4.1-1.4.2**: Health check exists but incomplete auth status
+- ⚠️ **1.5.1-1.5.5**: Partial testing (Bearer token works, Cloudflare JWT testing needed)
+
+**Issues Found**:
+1. `src/config.ts` reads `process.env.API_KEY` but docker-compose likely sets `CODA_API_TOKEN`
+2. `/oauth/*` endpoints still exist (should be removed per proposal)
+3. Cloudflare Access JWT validation not implemented (only Bearer token works)
+4. Documentation bloat: 24 markdown files in root (should be archived)
+
+---
+
+---
+
 ## Phase 1: Coda MCP with Cloudflare Access + Env Var (Week 1)
 
 ### Section 1.1: Update Coda MCP Auth Middleware
 
-- [ ] 1.1.1 Read Cloudflare Access JWT header (`cf-access-jwt-assertion`)
-  - **File**: `/integrations/mcp/servers/coda/src/middleware/cloudflare-access-auth.ts`
-  - **Task**: Implement middleware to extract and validate JWT
+- [x] ⚠️ **1.1.1 Read Cloudflare Access JWT header** (`cf-access-jwt-assertion`)
+  - **File** (LOCAL): `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/middleware/cloudflare-access-auth.ts`
+  - **File** (DROPLET): `/root/portfolio/integrations/mcp/servers/coda/src/middleware/cloudflare-access-auth.ts`
+  - **Status**: Partially done - Bearer token extraction works, JWT header extraction incomplete
+  - **Remaining**: Implement middleware to extract and validate JWT
   - **Acceptance**: Middleware exports `validateCloudflareAccess()` function
 
 - [ ] 1.1.2 Validate JWT signature using Cloudflare public keys
   - **Task**: Use `@cloudflare/access` npm package (or similar) to validate signature
+  - **Status**: NOT STARTED
   - **Acceptance**: JWT validation returns user email from `cf-access-authenticated-user-email`
 
-- [ ] 1.1.3 Implement fallback for local development
+- [x] 1.1.3 Implement fallback for local development
   - **Task**: Allow Bearer token authentication when JWT not present
-  - **Acceptance**: Health check passes with Bearer token in dev mode
+  - **Status**: ✅ DONE - Bearer token fallback implemented (line 200 in http-server.ts)
+  - **Acceptance**: Health check passes with Bearer token in dev mode ✅
 
-- [ ] 1.1.4 Add middleware to HTTP server
-  - **File**: `src/http-server.ts`
-  - **Task**: Apply auth middleware to all routes except health/status
-  - **Acceptance**: Unauthenticated requests return 401
+- [x] ⚠️ **1.1.4 Add middleware to HTTP server**
+  - **File** (LOCAL): `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/http-server.ts`
+  - **File** (DROPLET): `/root/portfolio/integrations/mcp/servers/coda/src/http-server.ts`
+  - **Status**: Partially done - Bearer token middleware applied, JWT validation incomplete
+  - **Remaining**: Complete Cloudflare JWT validation
+  - **Acceptance**: Unauthenticated requests return 401 (partial - Bearer token only)
 
-- [ ] 1.1.5 Update error handling for auth failures
-  - **Task**: Return clear error messages (invalid JWT, missing header, etc.)
+- [x] ⚠️ **1.1.5 Update error handling for auth failures**
+  - **Status**: Partially done - Generic 401 returned, need specific error messages
+  - **Remaining**: Add clear error messages for each auth failure type
   - **Acceptance**: Error messages logged to stdout
 
 ### Section 1.2: Environment Variable Configuration
 
-- [ ] 1.2.1 Add `CODA_API_TOKEN` to docker-compose.yml
-  - **File**: `/infra/mcp-servers/docker-compose.yml`
-  - **Task**: Add environment variable under `coda-mcp` service
+- [x] ⚠️ **1.2.1 Add `CODA_API_TOKEN` to docker-compose.yml**
+  - **File** (LOCAL): `/Users/davidkellam/workspace/portfolio/infra/mcp-servers/docker-compose.yml`
+  - **File** (DROPLET): `/root/portfolio/infra/mcp-servers/docker-compose.yml`
+  - **Status**: ⚠️ PARTIAL - env var added as `API_KEY` but should be `CODA_API_TOKEN`
+  - **Remaining**: Rename `API_KEY` → `CODA_API_TOKEN` in docker-compose
   - **Acceptance**: Env var accessible in container via `process.env.CODA_API_TOKEN`
 
 - [ ] 1.2.2 Create .env.example template
-  - **File**: `/infra/mcp-servers/.env.example`
+  - **File** (LOCAL): `/Users/davidkellam/workspace/portfolio/infra/mcp-servers/.env.example`
+  - **File** (DROPLET): `/root/portfolio/infra/mcp-servers/.env.example`
   - **Task**: Add placeholder for `CODA_API_TOKEN`
+  - **Status**: NOT STARTED
   - **Acceptance**: File includes comment: `# Get from: https://coda.io/account/settings/api`
 
-- [ ] 1.2.3 Load token in config
-  - **File**: `src/config.ts`
-  - **Task**: Export `CODA_API_TOKEN` from environment
+- [x] ⚠️ **1.2.3 Load token in config**
+  - **File** (LOCAL): `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/config.ts`
+  - **File** (DROPLET): `/root/portfolio/integrations/mcp/servers/coda/src/config.ts`
+  - **Status**: ⚠️ WRONG - Reads `process.env.API_KEY` instead of `CODA_API_TOKEN`
+  - **Remaining**: Change `API_KEY!` → `CODA_API_TOKEN!` in config.ts
   - **Acceptance**: Config module exports token or throws error if missing
 
 - [ ] 1.2.4 Update docker-compose comments
+  - **File** (LOCAL): `/Users/davidkellam/workspace/portfolio/infra/mcp-servers/docker-compose.yml`
+  - **File** (DROPLET): `/root/portfolio/infra/mcp-servers/docker-compose.yml`
   - **Task**: Document authentication approach in compose file
+  - **Status**: NOT STARTED
   - **Acceptance**: Comments explain JWT validation flow
 
 ### Section 1.3: Remove Mock OAuth Endpoints
 
-- [ ] 1.3.1 Remove `/oauth/*` endpoints from Coda MCP
-  - **File**: `src/http-server.ts` and `src/routes/oauth-routes.ts`
+- [ ] ❌ **1.3.1 Remove `/oauth/*` endpoints from Coda MCP**
+  - **File** (LOCAL): `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/http-server.ts`
+  - **File** (LOCAL): `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/auth/oauth-routes.ts`
+  - **File** (DROPLET): `/root/portfolio/integrations/mcp/servers/coda/src/http-server.ts`
+  - **File** (DROPLET): `/root/portfolio/integrations/mcp/servers/coda/src/auth/oauth-routes.ts`
+  - **Status**: ❌ NOT DONE - All OAuth endpoints still present (lines 110-165, 342-353 in http-server.ts)
   - **Task**: Delete obsolete OAuth endpoints (register, authorize, token, userinfo, introspect)
   - **Acceptance**: Only `/mcp`, `/health`, `/status` endpoints remain
 
 - [ ] 1.3.2 Archive OAuth code
-  - **Task**: Move removed code to `/archive/mcp-servers-coda-oauth-v1.0.12/`
+  - **Location** (LOCAL): `/Users/davidkellam/workspace/portfolio/archive/mcp-servers-coda-oauth-v1.0.12/`
+  - **Location** (DROPLET): `/root/portfolio/archive/mcp-servers-coda-oauth-v1.0.12/`
+  - **Task**: Move removed code to archive
+  - **Status**: NOT STARTED
   - **Acceptance**: Archive includes commit hash reference
 
 ### Section 1.4: Update Health Check
 
-- [ ] 1.4.1 Update health endpoint to validate auth
-  - **File**: `src/http-server.ts`
+- [x] ⚠️ **1.4.1 Update health endpoint to validate auth**
+  - **File** (LOCAL): `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/http-server.ts`
+  - **File** (DROPLET): `/root/portfolio/integrations/mcp/servers/coda/src/http-server.ts`
   - **Task**: Add JWT validation test to health check
-  - **Acceptance**: Health check endpoint:
+  - **Status**: ⚠️ PARTIAL - Health endpoint exists but incomplete auth info
+  - **Remaining**: Add auth method and token storage status to response
+  - **Acceptance**: Health check endpoint returns:
     ```json
     {
       "status": "ok",
@@ -79,34 +141,45 @@
     }
     ```
 
-- [ ] 1.4.2 Test health endpoint without JWT
+- [x] ⚠️ **1.4.2 Test health endpoint without JWT**
   - **Task**: Verify returns 401 when JWT missing
-  - **Acceptance**: `curl -s https://coda.bestviable.com/health` returns 401
+  - **Status**: ⚠️ PARTIAL - Works with Bearer token, needs JWT testing
+  - **Remaining**: Test with invalid/missing Cloudflare JWT
+  - **Acceptance**: `curl -s https://coda.bestviable.com/health` returns 401 (Cloudflare JWT required)
 
 ### Section 1.5: Phase 1 Testing
 
-- [ ] 1.5.1 Test unauthenticated requests (should fail)
+- [x] ⚠️ **1.5.1 Test unauthenticated requests (should fail)**
   - **Command**: `curl -s https://coda.bestviable.com/mcp`
+  - **Status**: ⚠️ PARTIAL - Returns 401 but only tested with Bearer token absence
+  - **Remaining**: Test with missing Cloudflare JWT
   - **Acceptance**: Returns 401 Unauthorized
 
 - [ ] 1.5.2 Test authenticated requests (should succeed)
   - **Task**: Request with valid Cloudflare Access JWT
+  - **Status**: NOT STARTED
   - **Acceptance**: Request proxied through coda.io API successfully
 
-- [ ] 1.5.3 Test Bearer token fallback (dev mode)
+- [x] ✅ **1.5.3 Test Bearer token fallback (dev mode)**
   - **Command**: `curl -H "Authorization: Bearer pat_xxx" http://localhost:8085/mcp`
-  - **Acceptance**: Works without Cloudflare Access
+  - **Status**: ✅ VERIFIED - Works with Bearer token in dev/local mode
+  - **Acceptance**: Works without Cloudflare Access ✅
 
-- [ ] 1.5.4 Test health endpoint
+- [x] ⚠️ **1.5.4 Test health endpoint**
   - **Command**: `curl https://coda.bestviable.com/health`
-  - **Acceptance**: Returns 200 with auth status
+  - **Status**: ⚠️ PARTIAL - Returns 200 but incomplete auth status
+  - **Remaining**: Verify auth method field populated
+  - **Acceptance**: Returns 200 with auth status (needs verification)
 
-- [ ] 1.5.5 Verify Docker container logs
+- [x] ⚠️ **1.5.5 Verify Docker container logs**
   - **Task**: Check for auth validation messages
-  - **Acceptance**: Logs show "JWT validated" or "Bearer token authenticated"
+  - **Status**: ⚠️ PARTIAL - Generic auth logging exists, needs detail
+  - **Remaining**: Add specific "JWT validated" or "Bearer token authenticated" messages
+  - **Acceptance**: Logs show auth validation details
 
 - [ ] 1.5.6 Verify `/mcp` command recognizes Coda server
   - **Command**: `claude /mcp`
+  - **Status**: NOT STARTED (blocked on token management fix)
   - **Acceptance**: Output shows `coda: https://coda.bestviable.com/mcp - Operational ✅`
 
 ---
