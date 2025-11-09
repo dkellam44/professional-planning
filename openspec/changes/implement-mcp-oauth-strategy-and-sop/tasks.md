@@ -70,6 +70,34 @@ All tasks reference relative paths; prefix with appropriate base path above.
   - **Remaining**: Complete Cloudflare JWT validation
   - **Acceptance**: Unauthenticated requests return 401 (partial - Bearer token only)
 
+- [ ] **1.1.4a CRITICAL: Refactor middleware to separate user auth from service token**
+  - **File** (LOCAL): `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/middleware/auth-middleware.ts` (NEW)
+  - **File** (DROPLET): `/root/portfolio/integrations/mcp/servers/coda/src/middleware/auth-middleware.ts` (NEW)
+  - **Problem**: Current implementation conflates user's Bearer token with CODA_API_TOKEN
+    - User provides Bearer/JWT for authentication (proves who they are)
+    - Service needs CODA_API_TOKEN for Coda API access (what to use)
+    - These are TWO DIFFERENT tokens, not the same!
+  - **Solution**: Create unified `createAuthMiddleware()` that:
+    1. Validates user auth (JWT or Bearer) → `req.user.email`
+    2. Resolves service token (env/postgres/infisical) → `req.serviceToken`
+    3. Passes both to handlers
+  - **Status**: ✅ ARCHITECTURE DESIGNED - Code created at `/archive/integrations/mcp/servers/coda/src/middleware/auth-middleware.ts`
+  - **Remaining**:
+    - Integrate new middleware into http-server.ts
+    - Remove old `bearerTokenMiddleware` and `cloudflareAccessMiddleware`
+    - Update handlers to use `req.serviceToken` instead of user's Bearer token
+    - Test with both Bearer token and Cloudflare JWT
+  - **Why It Matters**:
+    - Phase 1 → Phase 2 migration: Change `tokenStore: 'env'` to `tokenStore: 'postgres'` (handlers unchanged)
+    - Enables encryption/decryption without handler knowledge
+    - Single point of token resolution (easier to audit, test, secure)
+  - **Reference**: `/archive/integrations/mcp/servers/coda/MIDDLEWARE_REFACTOR_NOTES.md`
+  - **Acceptance**:
+    - `req.user.email` populated from JWT/Bearer validation
+    - `req.serviceToken` resolved from env (Phase 1)
+    - Handlers use `req.serviceToken` for Coda API calls
+    - All tests pass with both auth methods
+
 - [x] ⚠️ **1.1.5 Update error handling for auth failures**
   - **Status**: Partially done - Generic 401 returned, need specific error messages
   - **Remaining**: Add clear error messages for each auth failure type
