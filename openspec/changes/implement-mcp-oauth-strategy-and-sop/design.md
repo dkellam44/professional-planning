@@ -33,14 +33,49 @@
 
 ### Primary Goals
 1. ✅ Coda MCP secured and operational (Phase 1)
-2. ✅ Reusable auth middleware package (Phase 2)
-3. ✅ Comprehensive SOP for future MCPs (Phase 3)
-4. ✅ Updated architecture documentation (Phase 4)
+2. ✅ **MCP Protocol Implementation** (Phase 1.5 - COMPLETE) - Proper JSON-RPC 2.0 MCP protocol handlers with notification support
+3. ⏳ Reusable auth middleware package (Phase 2)
+4. ⏳ Comprehensive SOP for future MCPs (Phase 3)
+5. ⏳ Updated architecture documentation (Phase 4)
 
 ### Non-Goals
 - ⚠️ Multi-user per MCP (Phase 1-2 supports single service account)
 - ⚠️ Infisical integration (Phase 3, depends on fixing broken deployment)
 - ⚠️ Database migration tooling (manual process acceptable)
+
+---
+
+## Critical Discovery: MCP Protocol Implementation Required (✅ PHASE 1.5 COMPLETE)
+
+### What We Found
+During Phase 1 testing with Claude Code MCP client, the server was receiving JSON-RPC 2.0 messages (e.g., `initialize`, `tools/call`) but the HTTP endpoint was treating them as simple Coda API proxy requests. This mismatch prevented Claude Code from connecting.
+
+### Root Cause Discovery
+The initial design assumed the `/mcp` endpoint could work as a simple HTTP proxy. However, the **Model Context Protocol specification (2025-06-18)** explicitly requires:
+- JSON-RPC 2.0 message format
+- Server capability negotiation via `initialize` method
+- Proper tool/resource discovery and invocation
+
+During Phase 1.5 implementation, a critical discovery was made: **MCP notifications (messages without `id` field) must receive empty `{}` responses, not error responses**. The protocol distinguishes between:
+- **Requests** (with `id`): Expect `{"jsonrpc": "2.0", "id": X, "result": ...}`
+- **Notifications** (without `id`): Expect `{}` or no response
+
+### Solution Implemented (Phase 1.5)
+✅ **COMPLETE** - Proper MCP protocol handler implementation:
+1. Parse incoming JSON-RPC 2.0 messages
+2. Detect notifications by checking for missing `id` field
+3. Implement core MCP methods: `initialize`, `tools/list`, `tools/call`
+4. Handle MCP notifications: `notifications/initialized`, `notifications/progress`, `notifications/resources/list_changed`
+5. Wrap existing Coda API proxy logic in MCP protocol layer
+6. Maintain backward compatibility with Bearer token authentication
+
+**Key Implementation Details**:
+- Detection: `const isNotification = id === undefined`
+- Notification handler returns empty response: `{ jsonrpc: '2.0' }`
+- Request handler returns result: `{ jsonrpc: '2.0', id, result: ... }`
+- Error responses use appropriate HTTP status codes (400 for errors, 200 for success)
+
+This ensures the server fully complies with MCP spec and works seamlessly with Claude Code and other MCP clients.
 
 ---
 
@@ -83,10 +118,22 @@
 │ └─────────────────────────────────────────────────────┘ │
 │                     │                                     │
 │                     ▼                                     │
-│ ┌─ MCP Tool Handler ──────────────────────────────────┐ │
-│ │ 1. Use resolved token to call Coda API              │ │
-│ │ 2. Return results to user                           │ │
-│ │ 3. Log operation to audit_log table                 │ │
+│ ┌─ JSON-RPC 2.0 Handler ────────────────────────────┐ │
+│ │ Parse incoming JSON-RPC message                    │ │
+│ │ Detect notifications (no id field)                 │ │
+│ │ Route to handler:                                  │ │
+│ │  • initialize → advertise capabilities             │ │
+│ │  • tools/list → list available Coda functions     │ │
+│ │  • tools/call → execute Coda API call             │ │
+│ │  • notifications/* → accept, return empty {}      │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                     │                                     │
+│                     ▼                                     │
+│ ┌─ Coda API Proxy ──────────────────────────────────┐ │
+│ │ 1. Resolve service token from env/postgres        │ │
+│ │ 2. Call Coda API with request parameters          │ │
+│ │ 3. Return Coda response in JSON-RPC format        │ │
+│ │ 4. Log operation to audit_log table                │ │
 │ └─────────────────────────────────────────────────────┘ │
 └────────────────────┬─────────────────────────────────────┘
                      │ Response
