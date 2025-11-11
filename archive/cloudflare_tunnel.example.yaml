@@ -1,2 +1,0 @@
-tunnel: your-tunnel-id
-credentials-file: /etc/cloudflared/credentials.json
