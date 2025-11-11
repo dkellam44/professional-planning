@@ -19,7 +19,7 @@ services:
 
   coda-mcp:
     build:
-      context: ../../integrations/mcp/servers/coda
+      context: ../../archive/integrations/mcp/servers/coda
       dockerfile: Dockerfile
     image: coda-mcp:v1.0.12
     container_name: coda-mcp
@@ -31,13 +31,13 @@ services:
       - NODE_ENV=production
       - PORT=8080
       - MCP_ISSUER_URL=https://coda.bestviable.com
+      - VIRTUAL_HOST=coda.bestviable.com
+      - VIRTUAL_PORT=8080
+      - LETSENCRYPT_HOST=coda.bestviable.com
+      - LETSENCRYPT_EMAIL=admin@bestviable.com
+      - CODA_API_TOKEN=${CODA_API_TOKEN}  # Coda API token for service authentication
     ports:
       - "127.0.0.1:8085:8080"
-    labels:
-      - "VIRTUAL_HOST=coda.bestviable.com"
-      - "VIRTUAL_PORT=8080"
-      - "LETSENCRYPT_HOST=coda.bestviable.com"
-      - "LETSENCRYPT_EMAIL=admin@bestviable.com"
     deploy:
       resources:
         limits:

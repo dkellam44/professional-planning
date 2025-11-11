@@ -5,7 +5,7 @@ networks:
   n8n_proxy:
     external: true
   # n8n_syncbricks:
-  #   external: true    # Uncomment if service needs database access
+  #   external: true    # Uncomment if service needs database access (postgres/qdrant)
 
 services:
   # REPLACE: "service-name" with your actual service name
@@ -21,8 +21,8 @@ services:
 
     # REQUIRED: Attach to proxy network for nginx-proxy discovery
     networks:
-      - n8n_proxy
-      # - n8n_syncbricks    # Uncomment if needs postgres/qdrant access
+      - n8n_proxy            # REQUIRED for Cloudflare tunnel discovery via nginx-proxy
+      # - n8n_syncbricks      # Uncomment if service needs database access
 
     # REQUIRED: nginx-proxy auto-discovery configuration
     environment:
@@ -37,6 +37,13 @@ services:
 
       # Email for SSL renewal notifications
       - LETSENCRYPT_EMAIL=admin@bestviable.com
+
+      # If the app sits behind nginx-proxy/Cloudflare, configure it to trust proxy headers.
+      # Example (n8n):
+      # - N8N_REVERSE_PROXY=true
+      # - N8N_PROTOCOL=https
+      # - N8N_HOST=service.bestviable.com
+      # - N8N_TRUSTED_PROXIES=["loopback","linklocal","uniquelocal","cloudflare"]
 
       # ADD: Application-specific environment variables below
       # - APP_CONFIG_VAR=value
@@ -53,9 +60,8 @@ services:
       resources:
         limits:
           # Memory limit (adjust based on app requirements)
-          # Start with 1000m (1GB) for most apps
-          # Increase to 2000m+ for ML models, data processing
-          # Decrease to 300-500m for lightweight services
+          # Start with 1000m (1GB) for most services to avoid OOM + restart loops
+          # Increase to 2000m+ for ML/data jobs; decrease to 300-500m for tiny apps
           memory: 1000m
 
     # RECOMMENDED: Application health monitoring
@@ -93,3 +99,10 @@ services:
 #   service_data:
 #     # Driver options if needed
 #     # driver: local
+
+# AFTER DEPLOYMENT CHECKLIST (manual):
+# 1. docker compose up -d
+# 2. docker logs -f service-name (watch for clean startup)
+# 3. docker compose -f infra/n8n/docker-compose.yml up -d (reload proxy stack if env changed)
+# 4. Add Cloudflare route → Domain=service.bestviable.com, URL=http://nginx-proxy:80
+# 5. curl -I https://service.bestviable.com (expect HTTP/2 200 + valid certificate)

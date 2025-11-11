@@ -3,6 +3,28 @@
 ## Objective
 Design and implement an AI-ready context system for a solo operator: plan in chat; execute with Claude Code; keep memory **portable**, **verifiable**, and **mode-aware**.
 
+---
+
+## Operational Status (Updated 2025-11-06)
+
+**Phase Status Overview**:
+- ✅ **Phase 1 (N8N Foundation)**: COMPLETE and running on droplet
+- ✅ **Phase 2A (Archon Local)**: COMPLETE - all services healthy locally
+- ⏳ **Phase 2A (Archon Droplet)**: READY FOR DEPLOYMENT - targeting week of 2025-11-10
+- ⏳ **Phase 2B (Open WebUI + n8n Integration)**: PLANNED - targeting week of 2025-11-12
+- ⏳ **Phase 2C (Custom MCP Servers)**: PLANNED - targeting week of 2025-11-15
+
+**Key Completed Milestones**:
+- Supabase database configured and migrated (ocvjzbzyvmfqixxwwqte.supabase.co)
+- Archon services validated locally: archon-server (8181), archon-mcp (8051), archon-ui (3737)
+- API endpoints tested and working
+- Knowledge ingestion (web crawl) validated
+- All health checks passing
+
+**Deployment Reference**: See `/sot/DEPLOYMENT_STATE_v0_2.md` for current operational status and `/docs/architecture/integrations/archon/ARCHON_LOCAL_SETUP_COMPLETION_v01.md` for completion details.
+
+---
+
 ## Constraints & Environment
 - Primary tools: Claude (chat + **Claude Code CLI**), GPT where helpful, Google Drive, GitHub.
 - Claude Code follows an explicit **PLAN → CONFIRM → APPLY → DIFF → TEST → COMMIT → LOG** loop.

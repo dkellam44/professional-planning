@@ -1,0 +1,185 @@
+################################################################################
+# LiteLLM Configuration for Personal AI Memory & Control Plane
+# This configuration provides BYOK (Bring Your Own Key) management for LLM providers
+################################################################################
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: os.environ/DATABASE_URL
+  log_level: info
+  proxy_budget_rescheduler_max_time: 60
+  proxy_batch_write_at: 60
+  proxy_logging_obj: True
+  proxy_debug: False
+  disable_reset_budget: False
+  disable_add_transform_inline_image_block: False
+  max_parallel_requests: 100
+  max_request_per_minute: 1000
+  max_request_per_day: 10000
+
+litellm_settings:
+  drop_params: True
+  success_callback: ["langfuse"]
+  failure_callback: ["langfuse"]
+  service_callback: ["langfuse"]
+  cache: True
+  cache_params:
+    type: redis
+    host: os.environ/REDIS_HOST
+    port: os.environ/REDIS_PORT
+    password: os.environ/REDIS_PASSWORD
+
+model_list:
+  # OpenAI Models
+  - model_name: gpt-4
+    litellm_params:
+      model: openai/gpt-4
+      api_key: os.environ/OPENAI_API_KEY
+      api_base: https://api.openai.com/v1
+    model_info:
+      mode: chat
+      max_tokens: 8192
+      input_cost_per_token: 0.00003
+      output_cost_per_token: 0.00006
+
+  - model_name: gpt-4-turbo
+    litellm_params:
+      model: openai/gpt-4-turbo-preview
+      api_key: os.environ/OPENAI_API_KEY
+      api_base: https://api.openai.com/v1
+    model_info:
+      mode: chat
+      max_tokens: 4096
+      input_cost_per_token: 0.00001
+      output_cost_per_token: 0.00003
+
+  - model_name: gpt-3.5-turbo
+    litellm_params:
+      model: openai/gpt-3.5-turbo
+      api_key: os.environ/OPENAI_API_KEY
+      api_base: https://api.openai.com/v1
+    model_info:
+      mode: chat
+      max_tokens: 4096
+      input_cost_per_token: 0.0000005
+      output_cost_per_token: 0.0000015
+
+  # Anthropic Models
+  - model_name: claude-3-5-sonnet
+    litellm_params:
+      model: anthropic/claude-3-5-sonnet-20241022
+      api_key: os.environ/ANTHROPIC_API_KEY
+      api_base: https://api.anthropic.com
+    model_info:
+      mode: chat
+      max_tokens: 4096
+      input_cost_per_token: 0.000003
+      output_cost_per_token: 0.000015
+
+  - model_name: claude-3-5-haiku
+    litellm_params:
+      model: anthropic/claude-3-5-haiku-20241022
+      api_key: os.environ/ANTHROPIC_API_KEY
+      api_base: https://api.anthropic.com
+    model_info:
+      mode: chat
+      max_tokens: 4096
+      input_cost_per_token: 0.0000008
+      output_cost_per_token: 0.000004
+
+  - model_name: claude-3-opus
+    litellm_params:
+      model: anthropic/claude-3-opus-20240229
+      api_key: os.environ/ANTHROPIC_API_KEY
+      api_base: https://api.anthropic.com
+    model_info:
+      mode: chat
+      max_tokens: 4096
+      input_cost_per_token: 0.000015
+      output_cost_per_token: 0.000075
+
+  # Google Models
+  - model_name: gemini-1.5-pro
+    litellm_params:
+      model: gemini/gemini-1.5-pro
+      api_key: os.environ/GOOGLE_API_KEY
+    model_info:
+      mode: chat
+      max_tokens: 8192
+      input_cost_per_token: 0.00000125
+      output_cost_per_token: 0.000005
+
+  - model_name: gemini-1.5-flash
+    litellm_params:
+      model: gemini/gemini-1.5-flash
+      api_key: os.environ/GOOGLE_API_KEY
+    model_info:
+      mode: chat
+      max_tokens: 8192
+      input_cost_per_token: 0.000000075
+      output_cost_per_token: 0.0000003
+
+  # Cohere Models
+  - model_name: command-r-plus
+    litellm_params:
+      model: cohere/command-r-plus
+      api_key: os.environ/COHERE_API_KEY
+    model_info:
+      mode: chat
+      max_tokens: 4096
+      input_cost_per_token: 0.000003
+      output_cost_per_token: 0.000015
+
+  - model_name: command-r
+    litellm_params:
+      model: cohere/command-r
+      api_key: os.environ/COHERE_API_KEY
+    model_info:
+      mode: chat
+      max_tokens: 4096
+      input_cost_per_token: 0.0000005
+      output_cost_per_token: 0.0000015
+
+  # Mistral Models
+  - model_name: mistral-large
+    litellm_params:
+      model: mistral/mistral-large-latest
+      api_key: os.environ/MISTRAL_API_KEY
+    model_info:
+      mode: chat
+      max_tokens: 4096
+      input_cost_per_token: 0.000002
+      output_cost_per_token: 0.000006
+
+  - model_name: mistral-medium
+    litellm_params:
+      model: mistral/mistral-medium-latest
+      api_key: os.environ/MISTRAL_API_KEY
+    model_info:
+      mode: chat
+      max_tokens: 4096
+      input_cost_per_token: 0.0000006
+      output_cost_per_token: 0.0000018
+
+router_settings:
+  routing_strategy: simple-shuffle
+  model_group_alias:
+    "gpt-4": "gpt-4"
+    "claude-3": "claude-3-5-sonnet"
+    "gemini": "gemini-1.5-pro"
+    "cohere": "command-r-plus"
+    "mistral": "mistral-large"
+
+# Budget & Rate Limiting
+budget_config:
+  budget_duration: 30d
+  budget_reset_at: 0
+  soft_budget: 100.0
+  hard_budget: 200.0
+
+# Health Check Configuration
+health_check:
+  enabled: true
+  interval: 30
+  timeout: 10
+  retries: 3

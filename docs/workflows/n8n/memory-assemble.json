@@ -1,0 +1,60 @@
+{
+  "name": "memory-assemble",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "memory/assemble",
+        "responseMode": "lastNode",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "Webhook_memory_assemble",
+      "name": "assemble_webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "memory-assemble"
+    },
+    {
+      "parameters": {
+        "functionCode": "const firstItem = Array.isArray(items) && items.length ? items[0] : {};\nconst payload = firstItem.json || {};\nconst clientId = payload.client_id ?? payload.clientId ?? 'anonymous';\nconst queryRaw = payload.query ?? '';\nconst query = typeof queryRaw === 'string' ? queryRaw : JSON.stringify(queryRaw);\nreturn [{\n  json: {\n    status: 'ok',\n    client_id: clientId,\n    query,\n    context: {\n      profile: [],\n      recent_episodes: [],\n      similar_chunks: [],\n      working_notes: ['Stub: replace with live retrieval']\n    },\n    metadata: {\n      received_at: new Date().toISOString()\n    }\n  }\n}];"
+      },
+      "id": "Function_build_context",
+      "name": "build_context",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        420,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "assemble_webhook": {
+      "main": [
+        [
+          {
+            "node": "build_context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

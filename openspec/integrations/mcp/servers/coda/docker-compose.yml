@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  coda-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: coda-mcp
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # REQUIRED: nginx-proxy auto-discovery (reads environment vars, not labels)
+      - VIRTUAL_HOST=coda.bestviable.com
+      - VIRTUAL_PORT=8080
+      - LETSENCRYPT_HOST=coda.bestviable.com
+      - LETSENCRYPT_EMAIL=admin@bestviable.com
+
+      # Coda API Configuration
+      - CODA_API_TOKEN=${CODA_API_TOKEN}
+      - CODA_API_BASE_URL=https://coda.io/apis/v1
+
+      # Server Configuration
+      - PORT=8080
+      - HOST=0.0.0.0
+      - LOG_LEVEL=info
+
+      # Authentication Configuration
+      - AUTH_MODE=both  # Options: cloudflare, bearer, both
+      - CLOUDFLARE_ACCESS_TEAM_DOMAIN=bestviable.cloudflareaccess.com
+      - CLOUDFLARE_ACCESS_AUD=bestviable
+
+      # Optional Bearer token for development (set in .env file)
+      # - BEARER_TOKEN=${BEARER_TOKEN}
+      
+    networks:
+      - n8n_proxy  # External network for nginx-proxy auto-discovery
+      - coda-mcp-internal  # Internal network for service communication
+    
+    labels:
+      # nginx-proxy auto-discovery labels
+      - "com.nginx-proxy.virtual-host=coda.bestviable.com"
+      - "com.nginx-proxy.port=8080"
+      - "com.nginx-proxy.scheme=http"
+      
+      # Health check labels
+      - "com.nginx-proxy.health-check.path=/health"
+      - "com.nginx-proxy.health-check.interval=30s"
+      
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  n8n_proxy:
+    external: true
+  coda-mcp-internal:
+    driver: bridge

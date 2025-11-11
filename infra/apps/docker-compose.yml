@@ -31,11 +31,6 @@ services:
       resources:
         limits:
           memory: 50m
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # ============================================================================
   # OPEN WEBUI - Chat Interface
@@ -96,11 +91,45 @@ services:
       resources:
         limits:
           memory: 100m
+
+  # ============================================================================
+  # LITELLM - LLM Proxy with BYOK Management
+  # ============================================================================
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: litellm
+    restart: unless-stopped
+    networks:
+      - n8n_proxy
+      - n8n_syncbricks
+    volumes:
+      - ../litellm/litellm-config.yaml:/app/config.yaml:ro
+      - ../litellm/data:/app/data
+    environment:
+      - LITELLM_CONFIG_PATH=/app/config.yaml
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-litellm-CHANGEME}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - COHERE_API_KEY=${COHERE_API_KEY:-}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - VIRTUAL_HOST=litellm.bestviable.com
+      - VIRTUAL_PORT=4000
+      - LETSENCRYPT_HOST=litellm.bestviable.com
+      - LETSENCRYPT_EMAIL=admin@bestviable.com
+    deploy:
+      resources:
+        limits:
+          memory: 500m
     healthcheck:
-      test: ["CMD", "node", "extra/healthcheck.js"]
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 60s
 
 volumes:
   openweb_data:

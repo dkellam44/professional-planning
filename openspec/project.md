@@ -318,10 +318,16 @@ Internal service-to-service calls use Docker network `app-network` (localhost-on
 
 For additional context and detailed planning, see:
 
-- **Original Vision**: [Droplet Memory Spec.md](/Users/davidkellam/workspace/portfolio/Droplet Memory Spec.md)
-  - Original architectural canvas for personal AI memory & control plane
-  - Memory types, orchestration flows, layer definitions
-  - OpenMemory + Letta + Open WebUI + n8n integration patterns
+- **Deploying Services to Droplet**: [SERVICE_DEPLOYMENT_GUIDE.md](/Users/davidkellam/workspace/portfolio/docs/sops/SERVICE_DEPLOYMENT_GUIDE.md)
+  - How to install new services to droplet
+  - Architecutre Overview
+  - How to Configure services between Cloudflare Zero Trust Tunnel, Nginx proxy, acme certs, and docker containers
+  - Troubleshooting tips
+ 
+- **Updating Services to Droplet**: [SERVICE_UPDATE_WORKFLOW.md](/Users/davidkellam/workspace/portfolio/docs/sops/SERVICE_UPDATE_WORKFLOW.md)
+  - How to safely updateservices to droplet
+  - How to Configure services between Cloudflare Zero Trust Tunnel, Nginx proxy, acme certs, and docker containers
+  - How to test services
 
 - **Integration Plan**: [ARCHON_INTEGRATION_PLAN_v01.md](/Users/davidkellam/workspace/portfolio/docs/architecture/integrations/archon/ARCHON_INTEGRATION_PLAN_v01.md)
   - Complete phased deployment plan (Phases 2A-2D)
@@ -333,3 +339,10 @@ For additional context and detailed planning, see:
   - Database size projections and growth scenarios
   - Cost analysis and upgrade triggers
   - SQL monitoring queries
+
+- **MCP Catalog**: [MCP_SERVER_CATALOG.md](/Users/davidkellam/workspace/portfolio/docs/architecture/integrations/mcp/MCP_SERVER_CATALOG.md)
+  - Inventory of Model Context Protocol servers and details
+
+- **System Architecture Spec**: [architecture-spec_v0.3.md](/Users/davidkellam/workspace/portfolio/docs/architecture/architecture-spec_v0.3.md)
+  - Overview of Design and Implementation
+

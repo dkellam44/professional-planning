@@ -1,0 +1,94 @@
+version: '3.8'
+
+networks:
+  n8n_proxy:
+    external: true
+  n8n_syncbricks:
+    external: true
+
+volumes:
+  infisical_db_data:
+  infisical_redis_data:
+
+services:
+  infisical-db:
+    image: postgres:15-alpine
+    container_name: infisical-db
+    restart: unless-stopped
+    networks:
+      - n8n_syncbricks
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_DATABASE=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - infisical_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  infisical-redis:
+    image: redis:7-alpine
+    container_name: infisical-redis
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    restart: unless-stopped
+    networks:
+      - n8n_syncbricks
+    volumes:
+      - infisical_redis_data:/data
+
+  infisical:
+    image: infisical/infisical:latest
+    container_name: infisical
+    restart: unless-stopped
+    depends_on:
+      infisical-db:
+        condition: service_healthy
+      infisical-redis:
+        condition: service_started
+    networks:
+      - n8n_proxy
+      - n8n_syncbricks
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=infisical-db
+      - POSTGRES_PORT=5432
+      - DB_HOST=infisical-db
+      - DB_PORT=5432
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_DATABASE=${POSTGRES_DB}
+      - DB_CONNECTION_URI=${DB_CONNECTION_URI:-${DATABASE_URL}}
+      - DATABASE_URL=${DATABASE_URL}
+      - POSTGRES_PRISMA_URL=${DATABASE_URL}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - AUTH_SECRET=${AUTH_SECRET:-${NEXTAUTH_SECRET}}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - SITE_URL=${SITE_URL:-${NEXTAUTH_URL}}
+      - TELEMETRY_ENABLED=${TELEMETRY_ENABLED}
+      - PORT=3000
+      - REDIS_URL=${REDIS_URL}
+      - REDIS_TLS=${REDIS_TLS}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM_ADDRESS=${SMTP_FROM_ADDRESS}
+      - VIRTUAL_HOST=infisical.bestviable.com
+      - VIRTUAL_PORT=3000
+      - LETSENCRYPT_HOST=infisical.bestviable.com
+      - LETSENCRYPT_EMAIL=admin@bestviable.com
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s

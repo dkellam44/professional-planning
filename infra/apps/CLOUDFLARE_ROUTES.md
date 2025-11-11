@@ -22,6 +22,21 @@ Phase 1 apps are deployed and running on the droplet with nginx-proxy labels con
 
 ---
 
+## Proxy Stack Checklist (do this before adding routes)
+
+1. **Proxy services running with shared volumes** – confirm both `nginx-proxy` and `nginx-proxy-acme` mount `/etc/nginx/vhost.d` and `/usr/share/nginx/html` (see `infra/n8n/docker-compose.yml`). Without these, ACME challenges fail.
+2. **Service metadata exported as environment variables** – every container on the tunnel must define `VIRTUAL_HOST`, `VIRTUAL_PORT`, `LETSENCRYPT_HOST`, `LETSENCRYPT_EMAIL` in its compose `environment:` block. jwilder ignores pure labels.
+3. **Reload after config changes** – whenever you touch proxy env/volumes or service VIRTUAL_* values, rerun:
+   ```bash
+   docker compose -f infra/n8n/docker-compose.yml up -d
+   docker compose -f infra/apps/<service>/docker-compose.yml up -d
+   ```
+   This regenerates nginx config and lets acme-companion retry HTTP-01 challenges.
+
+When the checklist is green, continue with the Cloudflare steps below.
+
+---
+
 ## Step 1: Access Cloudflare Zero Trust Dashboard
 
 1. Go to: https://one.dash.cloudflare.com/
@@ -174,6 +189,11 @@ If Cloudflare shows `Invalid response from /.well-known/acme-challenge/... 404`,
       - html:/usr/share/nginx/html
   ```
 - **Recreate the app stack after updating env/volumes:** `ssh tools-droplet-agents "cd /root/portfolio/infra/apps && docker compose up -d"` so nginx-proxy regenerates configs and acme-companion retries issuance.
+- **Confirm challenge files exist while validation runs:**
+  ```bash
+  ssh tools-droplet-agents "docker exec nginx-proxy ls /usr/share/nginx/html/.well-known/acme-challenge"
+  ```
+  You should see short-lived token files appear for each domain being validated.
 
 ### Local curl Can’t Resolve the Hostname
 
@@ -184,6 +204,21 @@ ssh tools-droplet-agents "curl -I https://openweb.bestviable.com"
 ```
 
 You should receive an `HTTP/2 200/301` with a valid Let’s Encrypt certificate once routes are live.
+
+### Webhook 404 After Importing n8n Workflows
+
+If a newly activated workflow returns `404 The requested webhook ... is not registered`:
+
+1. **Check the registration table:**
+   ```bash
+   ssh tools-droplet-agents "docker exec postgres psql -U n8n -d n8ndb -c 'select \"webhookPath\", \"workflowId\" from "webhook_entity";'"
+   ```
+2. **If the path is missing, restart n8n:**
+   ```bash
+   ssh tools-droplet-agents "docker compose -f /root/portfolio/infra/n8n/docker-compose.yml restart n8n"
+   ```
+   Production webhooks are only registered on startup.
+3. **After CLI imports/activations**, always restart n8n so the public URL picks up the new workflow.
 
 ### SSL Certificate Not Generated
 

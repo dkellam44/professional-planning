@@ -207,7 +207,7 @@ services:
       - N8N_HOST=n8n.bestviable.com
       - N8N_EDITOR_BASE_URL=https://n8n.bestviable.com
       - N8N_API_BASE_URL=https://n8n.bestviable.com/api
-      - N8N_TRUSTED_PROXIES=loopback,linklocal,uniquelocal,cloudflare
+      - N8N_TRUSTED_PROXIES=["loopback","linklocal","uniquelocal","cloudflare"]
 
       # Webhook URLs
       - WEBHOOK_URL=https://n8n.bestviable.com/
