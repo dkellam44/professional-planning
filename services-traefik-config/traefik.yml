@@ -1,0 +1,63 @@
+################################################################################
+# Traefik Configuration - Static Config (v3.0)
+#
+# Key settings:
+# - Entry points: web (80), websecure (443), traefik (8080 for API)
+# - Certificate resolver: Let's Encrypt with HTTP challenge
+# - Docker provider: Auto-discovery via labels
+# - Dashboard: http://localhost:8080/dashboard
+################################################################################
+
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+# Entry Points - Define what ports Traefik listens on
+entrypoints:
+  # API/Dashboard
+  traefik:
+    address: ":8080"
+
+  # HTTP - automatically redirects to HTTPS
+  web:
+    address: :80
+
+  # HTTPS - main service entry point
+  websecure:
+    address: :443
+
+# TLS Configuration
+tls:
+  options:
+    default:
+      minVersion: VersionTLS12
+
+# Certificate Resolvers - Let's Encrypt configuration
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: admin@bestviable.com
+      storage: /letsencrypt/acme.json
+      httpChallenge:
+        entrypoint: web
+
+# Providers - How Traefik discovers services
+providers:
+  docker:
+    endpoint: unix:///var/run/docker.sock
+    network: docker_proxy
+    exposedByDefault: false
+    watch: true
+
+# API & Dashboard
+api:
+  dashboard: true
+  insecure: true
+
+# Logging
+log:
+  level: INFO
+  format: common
+
+accessLog:
+  filePath: /var/log/traefik/access.log

@@ -27,6 +27,12 @@ services:
       - VIRTUAL_PORT=8080
       - LETSENCRYPT_HOST=logs.bestviable.com
       - LETSENCRYPT_EMAIL=admin@bestviable.com
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dozzle.rule=Host(`logs.bestviable.com`)"
+      - "traefik.http.routers.dozzle.entrypoints=websecure"
+      - "traefik.http.routers.dozzle.tls.certresolver=letsencrypt"
+      - "traefik.http.services.dozzle.loadbalancer.server.port=8080"
     deploy:
       resources:
         limits:
@@ -53,6 +59,12 @@ services:
       - VIRTUAL_PORT=8080
       - LETSENCRYPT_HOST=openweb.bestviable.com
       - LETSENCRYPT_EMAIL=admin@bestviable.com
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.openweb.rule=Host(`openweb.bestviable.com`)"
+      - "traefik.http.routers.openweb.entrypoints=websecure"
+      - "traefik.http.routers.openweb.tls.certresolver=letsencrypt"
+      - "traefik.http.services.openweb.loadbalancer.server.port=8080"
     volumes:
       - openweb_data:/app/backend/data
     deploy:
@@ -87,6 +99,12 @@ services:
       - VIRTUAL_PORT=3001
       - LETSENCRYPT_HOST=kuma.bestviable.com
       - LETSENCRYPT_EMAIL=admin@bestviable.com
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.uptime-kuma.rule=Host(`kuma.bestviable.com`)"
+      - "traefik.http.routers.uptime-kuma.entrypoints=websecure"
+      - "traefik.http.routers.uptime-kuma.tls.certresolver=letsencrypt"
+      - "traefik.http.services.uptime-kuma.loadbalancer.server.port=3001"
     deploy:
       resources:
         limits:
@@ -120,6 +138,12 @@ services:
       - VIRTUAL_PORT=4000
       - LETSENCRYPT_HOST=litellm.bestviable.com
       - LETSENCRYPT_EMAIL=admin@bestviable.com
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.litellm.rule=Host(`litellm.bestviable.com`)"
+      - "traefik.http.routers.litellm.entrypoints=websecure"
+      - "traefik.http.routers.litellm.tls.certresolver=letsencrypt"
+      - "traefik.http.services.litellm.loadbalancer.server.port=4000"
     deploy:
       resources:
         limits:

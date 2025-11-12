@@ -1,0 +1,176 @@
+################################################################################
+# Traefik Compose File
+#
+# Deploys Traefik reverse proxy alongside nginx-proxy
+# Can be deployed independently without affecting existing services
+#
+# Usage:
+#   docker compose -f docker-compose.traefik.yml up -d
+#
+# Access:
+#   - Dashboard: http://localhost:8080/dashboard
+#   - API: http://localhost:8080/api/entrypoints
+#
+# Rollback:
+#   docker compose -f docker-compose.traefik.yml down
+################################################################################
+
+version: '3.8'
+
+services:
+  ################################################################################
+  # Traefik Reverse Proxy
+  #
+  # Modern, cloud-native reverse proxy
+  # - Watches Docker API for service discovery
+  # - Auto-renews Let's Encrypt certificates
+  # - Built-in dashboard for routing visibility
+  # - Zero-downtime service updates
+  ################################################################################
+  traefik:
+    image: traefik:v3.0.0
+    container_name: traefik
+    restart: unless-stopped
+
+    # Networks
+    networks:
+      - docker_proxy        # External-facing network (same as nginx-proxy)
+      - docker_syncbricks   # Internal communication
+
+    # Ports
+    ports:
+      # HTTP (redirects to HTTPS) - Use 8000 for testing (nginx-proxy has 80)
+      - "8000:80"
+
+      # HTTPS (main service port) - Use 8443 for testing (nginx-proxy has 443)
+      - "8443:443"
+
+      # Dashboard & API (internal only)
+      - "127.0.0.1:8080:8080"
+
+    # Docker Socket (for service discovery)
+    volumes:
+      # Docker socket (read-only) - allows Traefik to watch containers
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+      # Config file (static configuration)
+      - ./traefik.yml:/traefik.yml:ro
+
+      # Let's Encrypt certificates directory
+      # Must be persistent across restarts
+      - traefik-letsencrypt:/letsencrypt
+
+      # Log files
+      - traefik-logs:/var/log/traefik
+
+    # Environment Variables
+    environment:
+      # No environment variables needed - all config in traefik.yml
+      - TZ=UTC
+
+    # Security: Drop unnecessary capabilities
+    security_opt:
+      - no-new-privileges:true
+
+    # Resource Limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+    # Health Check
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    # Labels (Traefik routing for its own dashboard)
+    labels:
+      # Enable Traefik to route its own dashboard
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.bestviable.com`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.services.traefik-dashboard.loadbalancer.server.port=8080"
+
+      # Protect dashboard with Basic Auth (optional - disabled for testing)
+      # To enable, uncomment and set credentials:
+      # - "traefik.http.routers.traefik-dashboard.middlewares=auth"
+      # - "traefik.http.middlewares.auth.basicauth.users=admin:hashed_password"
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+################################################################################
+# Networks
+################################################################################
+networks:
+  # External-facing network (same as nginx-proxy)
+  # Allows Traefik to route external traffic
+  docker_proxy:
+    external: true
+
+  # Internal communication network
+  # Optional - allows internal service-to-service routing
+  docker_syncbricks:
+    external: true
+
+################################################################################
+# Volumes
+################################################################################
+volumes:
+  # Let's Encrypt certificate storage
+  # MUST be persistent across restarts
+  traefik-letsencrypt:
+    driver: local
+
+  # Traefik logs
+  traefik-logs:
+    driver: local
+
+################################################################################
+# Notes
+#
+# 1. SSL Certificates
+#    - Traefik stores certificates in /letsencrypt/acme.json
+#    - First certificate request takes 20-30 seconds
+#    - Subsequent certificates cached locally
+#    - Volume must be persistent
+#
+# 2. Service Discovery
+#    - Traefik watches docker_proxy network
+#    - Services MUST be on docker_proxy to be discovered
+#    - Services MUST have traefik.enable=true label
+#    - Router name MUST be unique across all services
+#
+# 3. Dashboard
+#    - Internal only on 127.0.0.1:8080
+#    - Can be exposed via labels (see above)
+#    - Shows all routers, services, middlewares
+#
+# 4. Port Binding
+#    - Port 80: HTTP (auto-redirects to 443)
+#    - Port 443: HTTPS (main traffic)
+#    - Port 8080: API/Dashboard (localhost only)
+#
+# 5. Coexistence with nginx-proxy
+#    - Both can run simultaneously
+#    - nginx-proxy still handles all traffic initially
+#    - Gradually migrate services via labels
+#    - Rollback: Stop Traefik, traffic reverts to nginx-proxy
+#
+# 6. Performance
+#    - Memory usage: ~100-150MB
+#    - CPU usage: <5% idle, scales with traffic
+#    - Startup time: ~5 seconds
+################################################################################
