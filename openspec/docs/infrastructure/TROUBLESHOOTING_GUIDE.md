@@ -1,6 +1,10 @@
 # Troubleshooting Guide
 
-Comprehensive troubleshooting guide for the SyncBricks infrastructure deployment. This guide covers common issues, diagnostic procedures, and resolution steps for all 14 running services.
+Comprehensive troubleshooting guide for the SyncBricks infrastructure deployment. This guide covers common issues, diagnostic procedures, and resolution steps for all currently running services.
+
+**Updated**: 2025-11-12 (Post-user-hierarchy-refactor)
+**Services**: Now 10 core services (migrated from 14 previous)
+**Note**: All paths updated from `/root/infra/` to `/home/david/services/`. Network names updated from `n8n_*` to `docker_*` pattern. All critical issues resolved post-migration.
 
 ## Quick Diagnostic Commands
 
@@ -33,50 +37,50 @@ docker exec nginx-proxy cat /etc/nginx/conf.d/default.conf | grep server_name
 
 ## Service-Specific Issues
 
-### 1. Coda MCP Authentication Issues (401 Errors)
+**Note**: Services are arranged by category. Optional services (Archon, Infisical) have been removed from this guide. See SERVICE_INVENTORY.md for deployment status.
 
-**Symptoms**:
-- MCP server returns 401 Unauthorized
-- Health check passes but API calls fail
-- Logs show "Missing CODA_API_TOKEN" errors
+---
 
-**Root Cause**: Missing `CODA_API_TOKEN` environment variable
+### 1. Coda MCP Authentication Issues (401 Errors) - RESOLVED ✅
 
-**Diagnostic Steps**:
+**Status**: Fixed in post-migration deployment
+
+**Previously**: Missing `CODA_API_TOKEN` environment variable
+
+**Current Status**: ✅ CODA_API_TOKEN now configured in `/home/david/services/docker/.env`
+
+**If Issues Recur**:
 ```bash
 # Check environment variables
 docker exec coda-mcp env | grep CODA
 
 # Test health endpoint
-curl http://localhost:8080/health
-
-# Test with Bearer token
-curl -H "Authorization: Bearer test_token" http://localhost:8080/mcp
+curl https://coda.bestviable.com
 
 # Check container logs
-docker logs coda-mcp --tail 50 | grep -i "token\|auth\|401"
+docker logs coda-mcp --tail 50 | grep -i "token\|auth\|error"
 ```
 
-**Resolution**:
+**Resolution** (if needed):
 ```bash
-# 1. Add Coda API token to environment file
-echo "CODA_API_TOKEN=your_coda_api_token_here" >> infra/mcp-servers/.env
+# 1. Verify .env file has CODA_API_TOKEN
+cat ~/services/docker/.env | grep CODA
 
 # 2. Restart the service
-docker-compose -f infra/mcp-servers/docker-compose.yml restart coda-mcp
+cd ~/services/mcp-servers && docker-compose -f docker-compose.yml restart coda-mcp
 
 # 3. Verify fix
 docker exec coda-mcp env | grep CODA_API_TOKEN
-curl -H "Authorization: Bearer test_token" http://localhost:8080/mcp
+curl https://coda.bestviable.com/health
 ```
-
-**Prevention**: Always validate environment variables before deployment
 
 ---
 
-### 2. Uptime-Kuma Restart Loop (Exit 137)
+### 2. Uptime-Kuma Restart Loop (Exit 137) - RESOLVED ✅
 
-**Symptoms**:
+**Status**: Fixed in post-migration deployment (memory limit increased to 256MB)
+
+**Symptoms** (if recurs):
 - Container continuously restarting
 - Exit code 137 (SIGKILL, typically memory-related)
 - No uptime monitoring available
@@ -116,8 +120,8 @@ services:
 **Option 2: Disable Service (Temporary)**
 ```bash
 # Stop and remove the service
-docker-compose -f infra/monitoring/docker-compose.yml stop uptime-kuma
-docker-compose -f infra/monitoring/docker-compose.yml rm uptime-kuma
+docker-compose -f ~/services/apps/docker-compose.yml stop uptime-kuma
+docker-compose -f ~/services/apps/docker-compose.yml rm uptime-kuma
 ```
 
 **Option 3: Optimize Configuration**
@@ -351,7 +355,7 @@ docker exec postgres pg_isready -U postgres
 docker exec app-container pg_isready -h postgres -U postgres
 
 # Check network connectivity
-docker network inspect n8n_syncbricks | jq '.[0].Containers'
+docker network inspect docker_syncbricks | jq '.[0].Containers'
 
 # Check database logs
 docker logs postgres --tail 50 | grep -i "error\|connection\|startup"
@@ -476,18 +480,21 @@ docker restart nginx-proxy
 ### Complete System Restart
 ```bash
 # 1. Stop all services gracefully
-docker-compose -f infra/docker-compose.yml down
+cd ~/services/docker && docker-compose down
 
 # 2. Clean up Docker system
 docker system prune -f
 
 # 3. Restart infrastructure services first
-docker-compose -f infra/docker-compose.yml up -d nginx-proxy postgres
+docker-compose up -d nginx-proxy postgres
 
 # 4. Restart application services
-docker-compose -f infra/docker-compose.yml up -d
+cd ~/services/apps && docker-compose up -d
 
-# 5. Verify all services are running
+# 5. Restart MCP services
+cd ~/services/mcp-servers && docker-compose up -d
+
+# 6. Verify all services are running
 docker ps --format "table {{.Names}}\t{{.Status}}"
 ```
 

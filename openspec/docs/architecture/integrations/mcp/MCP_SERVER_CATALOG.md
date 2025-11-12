@@ -2,6 +2,9 @@
 
 This document catalogs all Model Context Protocol (MCP) servers deployed in the infrastructure, their authentication mechanisms, health status, and operational details.
 
+**Updated**: 2025-11-12 (Post-user-hierarchy-refactor)
+**Note**: All paths updated from `/infra/mcp-servers/` to `/home/david/services/mcp-servers/`. Network names updated from `n8n_*` to `docker_*` pattern.
+
 ## Service Overview
 
 | Server | Status | Port | Authentication | Health | Issues |
@@ -13,9 +16,10 @@ This document catalogs all Model Context Protocol (MCP) servers deployed in the 
 
 **Service Name**: `coda-mcp`
 **Container**: `coda-mcp`
-**Image**: Built from [`integrations/mcp/servers/coda/Dockerfile`](integrations/mcp/servers/coda/Dockerfile:1)
-**Networks**: `n8n_proxy` (external), `mcp-servers-internal` (internal)
-**Authentication Package**: [`@bestviable/mcp-auth-middleware`](integrations/npm-packages/mcp-auth-middleware/README.md:1)
+**Image**: coda-mcp:v1.0.12 (built from `portfolio/integrations/mcp/servers/coda/Dockerfile`)
+**Location**: `/home/david/services/mcp-servers/`
+**Networks**: `docker_proxy` (external), `docker_syncbricks` (internal)
+**Authentication Package**: `@bestviable/mcp-auth-middleware`
 
 ### Authentication Implementation
 
@@ -57,26 +61,37 @@ BEARER_TOKEN=your_dev_token_here  # Optional for development
 
 ### Coda API Integration
 
-**API Base URL**: `https://coda.io/apis/v1`  
+**API Base URL**: `https://coda.io/apis/v1`
 **Authentication**: Bearer token via `CODA_API_TOKEN` environment variable
 
-**Current Issue**: The server is missing the `CODA_API_TOKEN` environment variable, causing 401 authentication errors when attempting to call Coda API endpoints.
+**Status**: ✅ CONFIGURED - Token is now set in `/home/david/services/docker/.env`
 
-**Required Fix**: Add valid Coda API token to the deployment environment:
+**Token Source**: https://coda.io/account/settings/api (personal access tokens)
+
+**Verification**:
 ```bash
-# In infra/mcp-servers/.env
-CODA_API_TOKEN=your_coda_api_token_here
-```
+# Verify token is loaded
+docker exec coda-mcp env | grep CODA_API_TOKEN
 
-**Token Source**: https://coda.io/account/settings/api
+# Test API access
+curl -H "Authorization: Bearer $(docker exec coda-mcp env | grep CODA_API_TOKEN)" \
+  https://coda.io/apis/v1/whoami
+```
 
 ### Deployment Configuration
 
-**Docker Compose**: [`infra/mcp-servers/docker-compose.yml`](infra/mcp-servers/docker-compose.yml:1)
+**Docker Compose**: `/home/david/services/mcp-servers/docker-compose.yml`
 
 ```yaml
+# Updated network references (post-migration)
+networks:
+  docker_proxy:          # External network for reverse proxy
+    external: true
+  docker_syncbricks:     # Internal network for backend services
+    external: true
+
 environment:
-  - CODA_API_TOKEN=${CODA_API_TOKEN}  # Required: Coda API token
+  - CODA_API_TOKEN=${CODA_API_TOKEN}  # Required: Coda API token ✅ Configured
   - AUTH_MODE=both                    # Dual authentication mode
   - CLOUDFLARE_ACCESS_TEAM_DOMAIN=bestviable.cloudflareaccess.com
   - CLOUDFLARE_ACCESS_AUD=bestviable
@@ -150,7 +165,7 @@ curl http://localhost:8051/health
 docker restart coda-mcp
 
 # Restart all MCP servers
-cd infra/mcp-servers && docker-compose restart
+cd ~/services/mcp-servers && docker-compose restart
 ```
 
 ### Log Access
@@ -167,17 +182,18 @@ docker logs archon-mcp -f
 
 ### Critical Issues
 
-1. **Coda MCP Authentication Failure (401)**
-   - **Root Cause**: Missing `CODA_API_TOKEN` environment variable
-   - **Impact**: MCP server cannot access Coda API
-   - **Fix**: Add valid Coda API token to `infra/mcp-servers/.env`
-   - **Priority**: High - Blocks Coda MCP functionality
+1. **Coda MCP Authentication Failure (401)** - RESOLVED ✅
+   - **Previous Root Cause**: Missing `CODA_API_TOKEN` environment variable
+   - **Current Status**: ✅ CODA_API_TOKEN configured in `/home/david/services/docker/.env`
+   - **Impact**: None - MCP server can access Coda API successfully
+   - **Reference**: See SERVICE_INVENTORY.md Coda MCP section for current status
+   - **Priority**: Resolved
 
 ### Monitoring Status
 
-- **Coda MCP**: Healthy container, but API calls fail due to missing token
-- **Archon MCP**: Healthy and fully operational
-- **Network Connectivity**: Both services accessible via Cloudflare Tunnel
+- **Coda MCP**: ✅ Healthy container with functional API access (token configured)
+- **Archon MCP**: Optional service - not currently deployed
+- **Network Connectivity**: Coda MCP accessible via Cloudflare Tunnel and nginx-proxy
 
 ## Security Considerations
 

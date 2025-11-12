@@ -2,6 +2,8 @@
 
 Comprehensive health check procedures for all services in the SyncBricks infrastructure. This document provides copy-paste ready commands for validating service health and functionality.
 
+**Note**: Updated for post-user-hierarchy-refactor deployment. All services now located in `/home/david/services/` (migrated from `/root/infra/`). Network names updated from `n8n_*` to `docker_*` pattern.
+
 ## Quick Health Assessment
 
 ### Overall System Health (30-second check)
@@ -196,89 +198,7 @@ docker logs postgres --tail 20 | grep -i "error\|panic\|fatal"
 
 ---
 
-## Archon Services
-
-### 6. archon-server Health Check
-
-**Service Availability**:
-```bash
-# Test health endpoint
-curl -s http://localhost:8181/health | jq .
-
-# Test direct connection
-docker exec archon-server curl -I http://localhost:8181/health
-
-# Check service logs for errors
-docker logs archon-server --tail 20 | grep -i "error\|exception\|failed"
-```
-
-**Database Connectivity**:
-```bash
-# Test database connection
-docker exec archon-server pg_isready -h postgres -U postgres
-
-# Check service configuration
-docker exec archon-server env | grep -E "(DB|DATABASE|POSTGRES)"
-```
-
-**Expected Results**:
-- ✅ Health endpoint returns success status
-- ✅ Database connection successful
-- ✅ No recent error messages
-
----
-
-### 7. archon-mcp Health Check
-
-**MCP Endpoint Test**:
-```bash
-# Test MCP health endpoint
-curl -s http://localhost:8051/health | jq .
-
-# Test with authentication
-curl -s -H "Authorization: Bearer test_token" http://localhost:8051/health | jq .
-
-# Check MCP-specific functionality
-curl -s -X POST -H "Authorization: Bearer test_token" \
-  -H "Content-Type: application/json" \
-  -d '{"method": "GET", "path": "/status"}' \
-  http://localhost:8051/mcp | jq .
-```
-
-**Service Dependencies**:
-```bash
-# Test connection to archon-server
-docker exec archon-mcp curl -I http://archon-server:8181/health
-
-# Check service logs
-docker logs archon-mcp --tail 20 | grep -i "error\|mcp\|auth"
-```
-
-**Expected Results**:
-- ✅ Health endpoint accessible
-- ✅ Authentication working (when configured)
-- ✅ MCP protocol functional
-
----
-
-### 8. archon-ui Health Check
-
-**Web Interface Test**:
-```bash
-# Test UI accessibility
-curl -I http://localhost:3737
-
-# Check if UI can reach backend
-docker exec archon-ui curl -I http://archon-server:8181/health
-
-# Test static file serving
-curl -s http://localhost:3737 | grep -i "archon\|loading" | head -5
-```
-
-**Expected Results**:
-- ✅ Web server responding (HTTP 200)
-- ✅ Backend connectivity working
-- ✅ Static content being served
+**Note**: Archon services (archon-server, archon-mcp, archon-ui) are optional advanced features not deployed in the current configuration. Health check procedures for these services have been archived. Deploy from optional services if needed.
 
 ---
 
@@ -357,86 +277,13 @@ curl -s http://localhost:8080 | head -20
 
 ---
 
-## Infrastructure Management Services
-
-### 11. infisical Health Check
-
-**Service Health Test**:
-```bash
-# Test web interface
-curl -I http://localhost:3000
-
-# Test health endpoint (if available)
-docker exec infisical curl -f http://localhost:3000/health || echo "Health endpoint not available"
-
-# Check database connectivity
-docker exec infisical pg_isready -h infisical-db -U postgres
-
-# Verify service is listening
-docker exec infisical netstat -tlnp | grep :3000
-```
-
-**Dependencies Check**:
-```bash
-# Test Redis connection
-docker exec infisical redis-cli -h infisical-redis ping
-
-# Check environment variables
-docker exec infisical env | grep -E "(DB|REDIS|SECRET)"
-```
-
-**Expected Results**:
-- ✅ Web interface accessible
-- ✅ Database connection successful
-- ✅ Redis connection working
-
----
-
-### 12. infisical-db Health Check
-
-**Database Health**:
-```bash
-# Test PostgreSQL readiness
-docker exec infisical-db pg_isready -U postgres
-
-# Check database status
-docker exec infisical-db psql -U postgres -c "SELECT datname, pg_database_size(datname)/1024/1024 || ' MB' as size FROM pg_database WHERE datname = 'infisical';"
-
-# Test authentication
-docker exec infisical-db psql -U postgres -d infisical -c "SELECT current_user;"
-```
-
-**Expected Results**:
-- ✅ PostgreSQL reports ready
-- ✅ Infisical database exists and is accessible
-- ✅ Authentication working
-
----
-
-### 13. infisical-redis Health Check
-
-**Redis Connectivity**:
-```bash
-# Test Redis ping
-docker exec infisical-redis redis-cli ping
-
-# Check Redis info
-docker exec infisical-redis redis-cli info | grep -E "(redis_version|used_memory|connected_clients)"
-
-# Test from infisical container
-docker exec infisical redis-cli -h infisical-redis ping
-```
-
-**Expected Results**:
-- ✅ Redis responds to PING command
-- ✅ Memory usage reasonable
-- ✅ Connection from infisical container working
+**Note**: Infisical services (infisical, infisical-db, infisical-redis) are optional secrets management features not deployed in the current configuration. Health check procedures for these services have been archived. Deploy from optional services if needed.
 
 ---
 
 ## Monitoring Services
 
-### 14. dozzle Health Check
+### 11. dozzle Health Check
 
 **Service Availability**:
 ```bash
@@ -457,23 +304,26 @@ docker exec dozzle docker ps --format "table {{.Names}}\t{{.Status}}" | head -5
 
 ---
 
-### 15. uptime-kuma Health Check
+### 12. uptime-kuma Health Check
 
-**Note**: This service is currently in restart loop due to memory issues
+**Status**: ✅ Healthy - Memory limits increased to 256MB (fully operational post-migration)
 
 **Status Check**:
 ```bash
 # Check if service is running
 docker ps --filter "name=uptime-kuma" --format "table {{.Names}}\t{{.Status}}"
 
-# Check restart count
-docker inspect uptime-kuma --format='{{.RestartCount}}'
+# Check memory allocation
+docker inspect uptime-kuma --format='{{json .HostConfig.Memory}}' | jq . # Should show 268435456 (256MB)
 
-# Check logs for memory errors
-docker logs uptime-kuma --tail 20 | grep -i "memory\|oom\|killed"
+# Check service logs
+docker logs uptime-kuma --tail 20 | grep -E "(listening|started|error)"
 ```
 
-**Expected Results**: Service should be stable and responding (currently compromised)
+**Expected Results**:
+- ✅ Service running and stable
+- ✅ Memory limit set to 256MB
+- ✅ No restart errors in logs
 
 ---
 
