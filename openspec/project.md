@@ -318,13 +318,15 @@ Internal service-to-service calls use Docker network `app-network` (localhost-on
 
 For additional context and detailed planning, see:
 
-- **Deploying Services to Droplet**: [SERVICE_DEPLOYMENT_GUIDE.md](/Users/davidkellam/workspace/portfolio/docs/sops/SERVICE_DEPLOYMENT_GUIDE.md)
+- **Service Specifications**: [SERVICE_INVENTORY.md](/Users/davidkellam/workspace/portfolio/docs/system/architecture/SERVICE_INVENTORY.md)
+
+- **Deploying Services to Droplet**: [SERVICE_DEPLOYMENT_GUIDE.md](/Users/davidkellam/workspace/portfolio/docs/system/sops/SERVICE_DEPLOYMENT_GUIDE.md)
   - How to install new services to droplet
   - Architecutre Overview
   - How to Configure services between Cloudflare Zero Trust Tunnel, Nginx proxy, acme certs, and docker containers
   - Troubleshooting tips
  
-- **Updating Services to Droplet**: [SERVICE_UPDATE_WORKFLOW.md](/Users/davidkellam/workspace/portfolio/docs/sops/SERVICE_UPDATE_WORKFLOW.md)
+- **Updating Services to Droplet**: [SERVICE_UPDATE_WORKFLOW.md](/Users/davidkellam/workspace/portfolio/docs/system/sops/SERVICE_UPDATE_WORKFLOW.md)
   - How to safely updateservices to droplet
   - How to Configure services between Cloudflare Zero Trust Tunnel, Nginx proxy, acme certs, and docker containers
   - How to test services
@@ -335,12 +337,12 @@ For additional context and detailed planning, see:
   - n8n workflow templates
   - Monitoring strategies and success criteria
 
-- **Capacity Planning**: [SUPABASE_CAPACITY_PLANNING_v01.md](/Users/davidkellam/workspace/portfolio/docs/architecture/integrations/archon/SUPABASE_CAPACITY_PLANNING_v01.md)
+- **Capacity Planning**: [CAPACITY_PLANNING.md](/Users/davidkellam/workspace/portfolio/docs/system/architecture/CAPACITY_PLANNING.md)
   - Database size projections and growth scenarios
   - Cost analysis and upgrade triggers
   - SQL monitoring queries
 
-- **MCP Catalog**: [MCP_SERVER_CATALOG.md](/Users/davidkellam/workspace/portfolio/docs/architecture/integrations/mcp/MCP_SERVER_CATALOG.md)
+- **MCP Catalog**: [MCP_SERVER_CATALOG.md](/Users/davidkellam/workspace/portfolio/docs/system/architecture/MCP_SERVER_CATALOG.md)
   - Inventory of Model Context Protocol servers and details
 
 - **System Architecture Spec**: [architecture-spec_v0.3.md](/Users/davidkellam/workspace/portfolio/docs/architecture/architecture-spec_v0.3.md)

@@ -37,3 +37,4 @@ infra/config/.env.local
 infra/config/.env.*
 docs/ops/.env
 docs/ops/.env.*
+Portfolio/.env.*
