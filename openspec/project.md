@@ -7,17 +7,20 @@
 ### Key Goals
 - Centralize memory & context across all AI interactions (chat, agents, IDE tools)
 - Maintain persistent, composable, contextual memory (profile, knowledge, episodic, working)
-- Keep infrastructure lean on a 2GB DigitalOcean droplet via managed services
+- Keep infrastructure lean on a 4GB DigitalOcean droplet ($24/mo) via managed services
 - Enable agent workflows with tool access via MCP servers
 - Provide secure external access via Cloudflare Zero Trust
 
 ## Tech Stack
 
 ### Infrastructure & Platform
-- **Platform**: DigitalOcean Droplet (2GB, Ubuntu)
+- **Platform**: DigitalOcean Droplet (4GB RAM, 80GB SSD, 2vCPU, Ubuntu, $24/mo)
+- **User**: `david` (non-root, sudo access) - upgraded from root on 2025-11-12
 - **Container Orchestration**: Docker Compose
-- **Reverse Proxy**: nginx-proxy (jwilder/nginx-proxy) with auto-discovery
-- **SSL/TLS**: acme-companion + Let's Encrypt (automatic certificate renewal)
+- **Reverse Proxy**: Traefik v3.0 (deployed 2025-11-13, replaced nginx-proxy)
+  - Auto-discovery via Docker labels
+  - HTTP-only routing (port 80, SSL via Cloudflare)
+  - No external certificates needed
 - **External Access**: Cloudflare Tunnel (token-based, zero IP exposure)
 - **Secrets Management**: Environment variables, never committed to git
 
@@ -248,49 +251,52 @@ Internal service-to-service calls use Docker network `app-network` (localhost-on
 ## Phase Context
 
 ### Current Status
-- **Phase 1**: n8n foundation (COMPLETE ✅)
+- **Phase 1**: n8n foundation + Infrastructure (COMPLETE ✅)
   - n8n 1.117.3 deployed with PostgreSQL + Qdrant
-  - nginx-proxy, acme-companion, cloudflared operational
-  - All services running, external HTTPS working
+  - ~~nginx-proxy, acme-companion~~ → **Traefik v3.0** (deployed 2025-11-13)
+  - Cloudflared operational
+  - Droplet migrated from /root to /home/david (2025-11-12)
+  - All services running, external HTTPS working via Cloudflare
   - Legacy MCP gateways deprecated (to be removed Phase 2)
 
 - **Phase 2**: Archon + MCP Integration (IN PROGRESS 📋)
-  - **Phase 2A**: Archon deployment (Week 1-2) - **BLOCKED** ⚠️
+  - **Phase 2A**: Archon deployment - **COMPLETE ✅** (2025-11-12)
     - Docker images built ✅, source code deployed ✅
-    - Health check blocker: archon-server health check failing → blocking docker compose dependency chain
-    - See: `/portfolio/sot/DEPLOYMENT_STATE_v0_2.md` for root cause analysis and recovery plan
-    - SSH unreachable (droplet under load from failed restart cycles)
-    - Next: Wait for SSH stabilization, diagnose archon-server logs, resolve health check issue
-  - **Phase 2B**: Open WebUI + n8n integration (Week 3-4) - Pending Phase 2A
-  - **Phase 2C**: Custom MCP servers (Week 4-5) - Pending Phase 2A
+    - archon-server running and healthy ✅
+    - archon-ui (port 3737) running and healthy ✅
+    - archon-mcp (port 8051) running and healthy ✅
+    - SSH accessible ✅
+  - **Phase 2B**: Open WebUI + n8n integration (Week 3-4) - Ready to proceed
+    - OpenWebUI deployed (0.5.0), accessible at https://openweb.bestviable.com
+    - Uptime Kuma deployed for monitoring
+    - Dozzle deployed for log viewing
+  - **Phase 2C**: Custom MCP servers (Week 4-5) - Ready to proceed
+    - Coda MCP deployed (v1.0.12), operational with Cloudflare Access auth
   - **Phase 2D**: Letta integration (Future)
 
 ### Next Actions
-1. ⏳ **BLOCKING**: Wait for droplet SSH stabilization and diagnose archon-server health check failure
-   - See `/portfolio/sot/DEPLOYMENT_STATE_v0_2.md` "Next Steps (BLOCKING ISSUE RESOLUTION)" section
-   - Likely causes: Supabase connection timeout, slow startup beyond 60s grace period, or missing dependencies
-2. Resolve health check issue (increase start_period, verify Supabase credentials, check dependencies)
-3. Once archon-server healthy: Execute nginx-proxy configuration switch
-4. Verify services with nginx-proxy config and test external HTTPS access
-5. Configure n8n memory orchestration workflows (Phase 2B)
+1. ✅ **INFRASTRUCTURE COMPLETE**: Traefik migration done, droplet cleaned up
+2. ⏳ **DOCUMENTATION**: Update docs to reflect current state (in progress)
+3. Document memory orchestration workflows (Phase 2B prep)
+4. Begin Phase 2B: n8n → Archon integration for memory assembly/writeback
 
 ## Cost Summary
 
-### Year 1 (Current)
-- DigitalOcean Droplet: $72/yr ($6/mo)
+### Year 1 (Current) - Updated 2025-11-13
+- DigitalOcean Droplet (4GB): $288/yr ($24/mo) - upgraded from 2GB ($6/mo) on 2025-11-06
 - Domain (bestviable.com): $12/yr
 - Supabase: Free tier
 - Redis Cloud: Free tier
 - Cloudflare: Free tier
-- **Total Year 1**: $84/yr (~$7/mo)
+- **Total Year 1**: $300/yr (~$25/mo)
 
 ### Year 2+ (Scaled)
-- DigitalOcean Droplet: $72/yr
+- DigitalOcean Droplet (4GB): $288/yr ($24/mo)
 - Domain: $12/yr
 - Supabase Pro: $300/yr ($25/mo) - when database >450 MB
 - Redis Cloud: Free or $60/yr ($5/mo) if needed
 - Cloudflare: Free
-- **Total Year 2+**: $384-444/yr (~$32-37/mo)
+- **Total Year 2+**: $600-660/yr (~$50-55/mo)
 
 ## Key Decisions & Trade-offs
 

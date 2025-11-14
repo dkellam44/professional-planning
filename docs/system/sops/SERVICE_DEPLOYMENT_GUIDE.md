@@ -1,27 +1,131 @@
-# Service Deployment Guide: nginx-proxy + Cloudflare Tunnel
+# Service Deployment Guide: Traefik + Cloudflare Tunnel
 
 - entity: deployment_guide
 - level: operational
 - zone: internal
-- version: v01
-- tags: [infrastructure, deployment, nginx-proxy, cloudflare, troubleshooting]
-- source_path: /infra/apps/SERVICE_DEPLOYMENT_GUIDE.md
-- date: 2025-11-05
+- version: v02-traefik
+- tags: [infrastructure, deployment, traefik, cloudflare, troubleshooting]
+- source_path: /docs/system/sops/SERVICE_DEPLOYMENT_GUIDE.md
+- date: 2025-11-14
+- updated: 2025-11-14 (Migrated from nginx-proxy to Traefik v3.0)
+
+> **⚠️ UPDATED (2025-11-13)**: This guide now covers **Traefik v3.0** (current). See [Traefik Migration Summary](#traefik-migration) for details about the nginx-proxy → Traefik migration completed 2025-11-13.
 
 ---
 
 ## Table of Contents
 
-1. [Quick Start (5 Minutes)](#quick-start)
-2. [Architecture Overview](#architecture)
-3. [Complete Deployment Guide](#deployment)
-4. [Configuration Reference](#reference)
-5. [Troubleshooting Guide](#troubleshooting)
-6. [Templates & Commands](#templates)
+1. [Traefik Quick Start (CURRENT)](#traefik-quick-start)
+2. [Traefik Label Reference](#traefik-labels)
+3. [Quick Start (nginx-proxy, DEPRECATED)](#quick-start)
+4. [Architecture Overview](#architecture)
+5. [Complete Deployment Guide](#deployment)
+6. [Configuration Reference](#reference)
+7. [Troubleshooting Guide](#troubleshooting)
+8. [Templates & Commands](#templates)
 
 ---
 
-## Quick Start
+## Traefik Quick Start (CURRENT)
+
+**Status**: Traefik v3.0 has been deployed (2025-11-13). Use this guide for new services.
+
+### 5-Minute Traefik Deployment
+
+1. **Copy template** from Section 2 below
+2. **Replace 3 fields:**
+   - Service name (e.g., `my-service`)
+   - Docker image with version (stable, not `:latest`)
+   - Domain name (e.g., `service.bestviable.com`)
+   - Container port (e.g., `8080`)
+3. **Add to docker-compose.yml:**
+   ```yaml
+   services:
+     my-service:
+       image: myimage:v1.0
+       container_name: my-service
+       restart: unless-stopped
+       networks:
+         - docker_proxy
+       labels:
+         - "traefik.enable=true"
+         - "traefik.http.routers.my-service.rule=Host(`service.bestviable.com`)"
+         - "traefik.http.routers.my-service.entrypoints=web"
+         - "traefik.http.services.my-service.loadbalancer.server.port=8080"
+   ```
+4. **Deploy:** `docker-compose up -d`
+5. **Add Cloudflare route** (manual, 3 steps - see below)
+6. **Verify:** Access `https://service.bestviable.com` (HTTP/2 200 expected)
+
+### Cloudflare Route Setup (Manual)
+
+1. Go to: https://one.dash.cloudflare.com/
+2. Navigate: **Access → Tunnels → [your-tunnel-name]**
+3. Click **Public Hostname**, add:
+   - **Domain:** `service.bestviable.com`
+   - **Service Type:** HTTP
+   - **URL:** `http://traefik:80` (or `http://nginx-proxy:80` - both work via network alias)
+4. **Save** (takes 30 seconds to propagate)
+
+### Key Differences from nginx-proxy
+
+| Feature | nginx-proxy | Traefik |
+|---------|-------------|---------|
+| **Config method** | `VIRTUAL_HOST` env var | Docker labels |
+| **SSL/TLS** | acme-companion container | Built-in ACME (disabled, CF handles SSL) |
+| **Reload** | Requires restart | Auto-discovers labels |
+| **Entrypoint** | Port 80/443 | Port 80 (HTTP-only, CF handles HTTPS) |
+| **Networks** | `n8n_proxy` | `docker_proxy` |
+
+### Verification Commands
+
+```bash
+# 1. Is container running and healthy?
+docker ps | grep my-service
+
+# 2. Did Traefik discover it?
+docker logs traefik | grep my-service
+
+# 3. Is it on the correct network?
+docker network inspect docker_proxy | grep my-service
+
+# 4. Can it be reached internally?
+docker exec traefik curl -I http://my-service:8080
+
+# 5. Can it be reached externally (via Cloudflare)?
+curl -I https://service.bestviable.com
+# Expected: HTTP/2 200 (from Cloudflare) + valid SSL cert
+```
+
+---
+
+## Traefik Label Reference {#traefik-labels}
+
+All Traefik services use these label patterns:
+
+```yaml
+labels:
+  - "traefik.enable=true"                                          # Enable routing for this service
+  - "traefik.http.routers.SERVICE.rule=Host(`domain.com`)"         # Host-based routing
+  - "traefik.http.routers.SERVICE.entrypoints=web"                # Use HTTP entrypoint (80)
+  - "traefik.http.services.SERVICE.loadbalancer.server.port=PORT"  # Backend port
+```
+
+**Replace**:
+- `SERVICE` = container name (e.g., `my-service`)
+- `domain.com` = your domain (e.g., `service.bestviable.com`)
+- `PORT` = container's listening port (e.g., `8080`)
+
+**No longer needed:**
+- ❌ `VIRTUAL_HOST` environment variable
+- ❌ `VIRTUAL_PORT` environment variable
+- ❌ `LETSENCRYPT_HOST` environment variable
+- ❌ `LETSENCRYPT_EMAIL` environment variable
+- ❌ `traefik.http.routers.SERVICE.tls.certresolver` (SSL handled by Cloudflare)
+
+---
+
+## Quick Start (nginx-proxy, DEPRECATED)
 
 For experienced users who know the pattern.
 
