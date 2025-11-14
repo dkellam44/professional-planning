@@ -1,6 +1,8 @@
-# Architecture Diagrams: Coda MCP System
+# Architecture Diagrams: System Architecture
 
-Visual reference for understanding the complete system architecture.
+Visual reference for understanding the complete system architecture including MCP servers, Archon workflows, and data persistence.
+
+**Last Updated**: 2025-11-14 (Updated to Traefik v3.0, docker_proxy/docker_syncbricks networks, Archon services)
 
 ---
 
@@ -28,10 +30,10 @@ Visual reference for understanding the complete system architecture.
 │                      DROPLET (DigitalOcean)                        │
 │                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐ │
-│  │  Docker Compose Network: n8n_proxy                           │ │
+│  │  Docker Compose Network: docker_proxy                           │ │
 │  │                                                              │ │
 │  │  ┌─────────────────────┐  ┌──────────────────────────────┐  │ │
-│  │  │  nginx-proxy        │  │  Coda MCP Container          │  │ │
+│  │  │  Traefik v3.0        │  │  Coda MCP Container          │  │ │
 │  │  │  (reverse proxy)    │  │                              │  │ │
 │  │  │                     │  │  Port: 8080                  │  │ │
 │  │  │  ┌──────────────┐   │  │  ┌──────────────────────────┐│  │ │
@@ -103,9 +105,9 @@ T2    Cloudflare receives
 T3    cloudflared daemon
       ┌─ Receives tunneled request
       ├─ Decrypts Cloudflare tunnel communication
-      └─ Routes to: http://nginx-proxy/mcp
+      └─ Routes to: http://Traefik v3.0/mcp
 
-T4    nginx-proxy
+T4    Traefik v3.0
       ┌─ Receives: POST /mcp
       ├─ Looks up: VIRTUAL_HOST label for coda.bestviable.com
       ├─ Finds: Docker service = coda-mcp
@@ -205,8 +207,8 @@ T12   Express sends response
       └─ res.json(jsonRpcResponse)
 
 T13   Response travels back
-      ┌─ Express → nginx-proxy
-      ├─ nginx-proxy → cloudflared
+      ┌─ Express → Traefik v3.0
+      ├─ Traefik v3.0 → cloudflared
       ├─ cloudflared → Cloudflare edge (encrypted tunnel)
       └─ Cloudflare → User's Claude Code client
 
@@ -288,7 +290,7 @@ FALLBACK LOGIC:
 ```
 ┌─ Docker Host Network
 │
-├─ docker-compose.yml network: "n8n_proxy" (external)
+├─ docker-compose.yml network: "docker_proxy" (external)
 │  │
 │  ├─ Service: coda-mcp
 │  │  ├─ Container name: coda-mcp
@@ -304,22 +306,22 @@ FALLBACK LOGIC:
 │  │     - http://coda-mcp:8080 (from other containers)
 │  │     - http://localhost:8080 (from droplet host)
 │  │
-│  └─ Service: nginx-proxy
-│     ├─ Image: jwilder/nginx-proxy
-│     ├─ Port mapping: 80:80, 443:443
-│     ├─ Volume mount: /var/run/docker.sock
-│     ├─ Auto-discovers: Containers with VIRTUAL_HOST label
+│  └─ Service: Traefik v3.0
+│     ├─ Image: traefik:v3.0.0
+│     ├─ Port mapping: 80:80 (HTTP only, HTTPS listener unused)
+│     ├─ Volume mount: /var/run/docker.sock (service discovery)
+│     ├─ Auto-discovers: Containers with traefik.enable=true labels
 │     │
 │     └─ Routing rules:
-│        ├─ Header Host: coda.bestviable.com
-│        ├─ Label VIRTUAL_HOST: coda.bestviable.com
-│        └─ Route to: http://coda-mcp:8080
+│        ├─ traefik.http.routers.{service}.rule=Host(`domain.bestviable.com`)
+│        ├─ traefik.http.services.{service}.loadbalancer.server.port={port}
+│        └─ Route to: http://{service}:{port}
 │
 │
 └─ External: Cloudflare Tunnel (cloudflared)
    ├─ Connects to: Cloudflare Global Network
    ├─ Listens on: Public domain coda.bestviable.com
-   └─ Routes to: http://nginx-proxy:80 (internal)
+   └─ Routes to: http://Traefik v3.0:80 (internal)
 ```
 
 ---
@@ -435,9 +437,9 @@ AUTHENTICATION TOKEN (Bearer from User)
 
 ---
 
-**Last Updated**: 2025-11-10
-**Status**: ✅ Phase 1.5 COMPLETE - All diagrams reflect production-ready system
-**Audience**: Developers maintaining the MCP server or building similar systems
+**Last Updated**: 2025-11-14
+**Status**: ✅ Current - Updated for Traefik v3.0, docker_proxy/docker_syncbricks networks
+**Audience**: Developers maintaining MCP servers, Archon workflows, understanding system architecture
 **Related Files**:
 - MCP_IMPLEMENTATION_GUIDE.md (text reference)
 - design.md (technical design decisions)
