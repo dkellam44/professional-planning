@@ -1,7 +1,7 @@
-# Technical Design: MCP OAuth Strategy & Middleware
+# Technical Design: MCP OAuth Strategy with Stytch
 
 **Change ID**: `implement-mcp-oauth-strategy-and-sop`
-**Date**: 2025-11-08
+**Date**: 2025-11-14 (Updated with Stytch decision)
 **Author**: David Kellam
 
 ---
@@ -9,549 +9,592 @@
 ## Context
 
 ### Current State
-- **Coda MCP**: Running on droplet but returns 401 (no real authentication)
-- **GitHub/Memory/Context7**: Deployed on Workers with Cloudflare Access but no per-user token management
-- **Token Storage**: Ad-hoc (env vars, in-memory, unencrypted)
-- **Documentation**: Scattered and outdated
+- **Coda MCP**: Running on droplet with Phase 1 & 1.5 complete
+  - Phase 1: Cloudflare Access JWT + Bearer token auth ✅
+  - Phase 1.5: MCP JSON-RPC 2.0 protocol implementation ✅
+- **Problem**: ChatGPT and Claude.ai web reject connections ❌
+- **Root Cause**: Current auth is NOT OAuth 2.1 compliant (MCP spec 2025-06-18)
 
 ### Requirements
-1. **Secure**: Tokens encrypted at rest, JWT validation on requests
+1. **OAuth 2.1 Compliance**: Full implementation per MCP spec 2025-06-18
 2. **Scalable**: Pattern works for all future MCPs
-3. **Simple**: Minimal code changes per new MCP
-4. **Maintainable**: Reusable middleware, clear SOP
-5. **Flexible**: Support migration (env → postgres → infisical)
+3. **Simple**: Minimal code changes, beginner-friendly
+4. **Zero Memory Overhead**: Droplet at 87% utilization (3.3GB/3.8GB)
+5. **Production-Ready**: Enterprise-grade for future client services
 
 ### Stakeholders
-- **New MCP Authors**: Need clear template and SOP
-- **Security**: Require encryption and audit logging
-- **Operations**: Need troubleshooting guide and monitoring
-- **Users**: Expect secure, seamless authentication
+- **Personal Use**: David (needs ChatGPT/Claude.ai connectivity now)
+- **Future Clients**: Businesses purchasing agentic services
+- **Compliance**: SOC 2, GDPR requirements for client data
 
 ---
 
 ## Goals
 
 ### Primary Goals
-1. ✅ Coda MCP secured and operational (Phase 1)
-2. ✅ **MCP Protocol Implementation** (Phase 1.5 - COMPLETE) - Proper JSON-RPC 2.0 MCP protocol handlers with notification support
-3. ⏳ Reusable auth middleware package (Phase 2)
+1. ✅ Coda MCP secured and operational (Phase 1 - COMPLETE)
+2. ✅ **MCP Protocol Implementation** (Phase 1.5 - COMPLETE)
+3. ⏳ **OAuth 2.1 Compliance via Stytch** (Phase 2) - Replace Cloudflare Access with spec-compliant OAuth
 4. ⏳ Comprehensive SOP for future MCPs (Phase 3)
 5. ⏳ Updated architecture documentation (Phase 4)
 
-### Non-Goals
-- ⚠️ Multi-user per MCP (Phase 1-2 supports single service account)
-- ⚠️ Infisical integration (Phase 3, depends on fixing broken deployment)
-- ⚠️ Database migration tooling (manual process acceptable)
+### Non-Goals (Deferred)
+- ⚠️ Multi-user per MCP (Stytch handles per-user, but not priority)
+- ⚠️ Infisical integration (deferred until Infisical deployment fixed)
+- ⚠️ PostgreSQL token storage (Stytch SDK manages tokens)
+- ⚠️ Custom auth middleware package (Stytch SDK replaces need)
 
 ---
 
-## Critical Discovery: MCP Protocol Implementation Required (✅ PHASE 1.5 COMPLETE)
+## Critical Discoveries
 
-### What We Found
-During Phase 1 testing with Claude Code MCP client, the server was receiving JSON-RPC 2.0 messages (e.g., `initialize`, `tools/call`) but the HTTP endpoint was treating them as simple Coda API proxy requests. This mismatch prevented Claude Code from connecting.
+### Discovery #1: MCP Protocol Implementation Required (✅ PHASE 1.5 COMPLETE)
 
-### Root Cause Discovery
-The initial design assumed the `/mcp` endpoint could work as a simple HTTP proxy. However, the **Model Context Protocol specification (2025-06-18)** explicitly requires:
-- JSON-RPC 2.0 message format
-- Server capability negotiation via `initialize` method
-- Proper tool/resource discovery and invocation
+**What We Found**: During Phase 1 testing with Claude Code MCP client, the server was receiving JSON-RPC 2.0 messages but treating them as simple HTTP proxy requests.
 
-During Phase 1.5 implementation, a critical discovery was made: **MCP notifications (messages without `id` field) must receive empty `{}` responses, not error responses**. The protocol distinguishes between:
-- **Requests** (with `id`): Expect `{"jsonrpc": "2.0", "id": X, "result": ...}`
-- **Notifications** (without `id`): Expect `{}` or no response
+**Solution Implemented**:
+- JSON-RPC 2.0 protocol handler with notification support
+- Core MCP methods: `initialize`, `tools/list`, `tools/call`
+- Proper handling of notifications (messages without `id` field)
+- Backward compatibility with Bearer token auth
 
-### Solution Implemented (Phase 1.5)
-✅ **COMPLETE** - Proper MCP protocol handler implementation:
-1. Parse incoming JSON-RPC 2.0 messages
-2. Detect notifications by checking for missing `id` field
-3. Implement core MCP methods: `initialize`, `tools/list`, `tools/call`
-4. Handle MCP notifications: `notifications/initialized`, `notifications/progress`, `notifications/resources/list_changed`
-5. Wrap existing Coda API proxy logic in MCP protocol layer
-6. Maintain backward compatibility with Bearer token authentication
-
-**Key Implementation Details**:
-- Detection: `const isNotification = id === undefined`
-- Notification handler returns empty response: `{ jsonrpc: '2.0' }`
-- Request handler returns result: `{ jsonrpc: '2.0', id, result: ... }`
-- Error responses use appropriate HTTP status codes (400 for errors, 200 for success)
-
-This ensures the server fully complies with MCP spec and works seamlessly with Claude Code and other MCP clients.
+**Status**: ✅ Complete and working with Claude Code
 
 ---
 
-## Architecture
+### Discovery #2: OAuth 2.1 Compliance Gap (⚠️ BLOCKING ChatGPT/Claude.ai)
 
-### Authentication Flow
+**What We Found**: Current implementation (Cloudflare Access JWT + Bearer fallback) is **NOT compliant with MCP Specification 2025-06-18**, which explains why ChatGPT and Claude.ai web reject connections.
+
+**MCP Spec Requirements (2025-06-18)**:
+- ✅ **OAuth 2.1** with PKCE (mandatory for all clients)
+- ✅ **RFC 8414**: Authorization Server Metadata (MUST implement)
+- ✅ **RFC 9728**: Protected Resource Metadata (MUST implement, added June 2025)
+- ✅ **RFC 8707**: Resource Indicators (MUST implement to prevent token theft)
+- ✅ **RFC 7591**: Dynamic Client Registration (SHOULD support)
+
+**What We Currently Have**:
+- ✅ Cloudflare Access JWT validation (but not OAuth 2.1)
+- ✅ Bearer token fallback (but not OAuth 2.1)
+- ❌ **Missing**: Authorization server metadata endpoints
+- ❌ **Missing**: Protected resource metadata
+- ❌ **Missing**: Resource indicators
+- ❌ **Missing**: PKCE flow
+- ❌ **Missing**: Dynamic client registration
+
+**This gap prevents ChatGPT and Claude.ai from connecting** - they expect full OAuth 2.1 flows.
+
+---
+
+## Solution: Stytch OAuth 2.1 Implementation
+
+### Decision Rationale
+
+**Selected**: **Stytch** managed OAuth 2.1 service
+
+**Why Stytch**:
+1. **Full OAuth 2.1 compliance out-of-box** (all required RFCs implemented)
+2. **MCP-specific documentation** (published MCP integration guides)
+3. **Free tier: 10,000 MAUs** (personal use covered indefinitely)
+4. **Zero droplet memory overhead** (fully managed service)
+5. **All features on free tier**: MFA, RBAC, SSO included
+6. **Beginner-friendly**: Dashboard, SDK, examples, support
+7. **Production-ready**: Used by enterprise SaaS products
+8. **Clear migration path**: Can scale to WorkOS (1M MAUs free) if needed
+
+### Alternatives Considered
+
+| Solution | Personal Use | Client SaaS | Memory | Complexity | Decision |
+|----------|--------------|-------------|--------|------------|----------|
+| **Stytch** | ✅ Best | ✅ Great | 0 MB | Low | ✅ **SELECTED** |
+| WorkOS | ✅ Good | ✅ Best | 0 MB | Medium | ⏳ Future migration |
+| Auth0 | ✅ Good | ✅ Good | 0 MB | Medium | ❌ Less generous |
+| Keycloak | ❌ No RAM | ✅ Cost-effective | **2 GB** | Very High | ❌ Blocks droplet |
+| Better-Auth | ⚠️ Risky | ❌ Immature | 50 MB | Low | ❌ OAuth 2.1 incomplete |
+
+**Keycloak Blocker**: Requires 2 GB minimum RAM. Current droplet: 87% utilized (3.3GB/3.8GB). Adding Keycloak would require upgrading to 8GB droplet ($48/mo).
+
+**Better-Auth Blocker**: OAuth 2.1 compliance incomplete (GitHub Issue #5459). May not satisfy ChatGPT/Claude.ai.
+
+---
+
+## Architecture with Stytch
+
+### High-Level Flow
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│ User Client (Claude Code, Manual Request, etc.)          │
-└────────────────────┬─────────────────────────────────────┘
-                     │ HTTPS Request
-                     ▼
-┌──────────────────────────────────────────────────────────┐
-│ Cloudflare Tunnel + Access Control                       │
-│ (User already authenticated by CF Access)                │
-└────────────────────┬─────────────────────────────────────┘
-                     │ Forwards Headers:
-                     │ - cf-access-jwt-assertion
-                     │ - cf-access-authenticated-user-email
-                     ▼
-┌──────────────────────────────────────────────────────────┐
-│ MCP Endpoint (Coda, GitHub, etc.)                        │
-│                                                          │
-│ ┌─ Express Middleware ─────────────────────────────────┐ │
-│ │ 1. Validate JWT signature                           │ │
-│ │    (Use Cloudflare public keys, cache locally)      │ │
-│ │ 2. Extract user email from JWT payload              │ │
-│ │ 3. Fallback to Bearer token (dev mode)              │ │
-│ │ 4. Pass user context to handlers                    │ │
-│ └─────────────────────────────────────────────────────┘ │
-│                     │                                     │
-│                     ▼                                     │
-│ ┌─ Token Resolution ───────────────────────────────────┐ │
-│ │ mode: 'env' | 'postgres' | 'infisical'              │ │
-│ │ Phase 1: Get CODA_API_TOKEN from process.env        │ │
-│ │ Phase 2: Query postgres.tokens table                │ │
-│ │ Phase 3: Fetch from Infisical API                   │ │
-│ │ Return: Decrypted token (AES-256-GCM)               │ │
-│ └─────────────────────────────────────────────────────┘ │
-│                     │                                     │
-│                     ▼                                     │
-│ ┌─ JSON-RPC 2.0 Handler ────────────────────────────┐ │
-│ │ Parse incoming JSON-RPC message                    │ │
-│ │ Detect notifications (no id field)                 │ │
-│ │ Route to handler:                                  │ │
-│ │  • initialize → advertise capabilities             │ │
-│ │  • tools/list → list available Coda functions     │ │
-│ │  • tools/call → execute Coda API call             │ │
-│ │  • notifications/* → accept, return empty {}      │ │
-│ └─────────────────────────────────────────────────────┘ │
-│                     │                                     │
-│                     ▼                                     │
-│ ┌─ Coda API Proxy ──────────────────────────────────┐ │
-│ │ 1. Resolve service token from env/postgres        │ │
-│ │ 2. Call Coda API with request parameters          │ │
-│ │ 3. Return Coda response in JSON-RPC format        │ │
-│ │ 4. Log operation to audit_log table                │ │
-│ └─────────────────────────────────────────────────────┘ │
-└────────────────────┬─────────────────────────────────────┘
-                     │ Response
-                     ▼
-┌──────────────────────────────────────────────────────────┐
-│ User Client Receives Result                              │
-└──────────────────────────────────────────────────────────┘
+ChatGPT/Claude.ai Web
+      ↓ (Initiates OAuth 2.1 + PKCE flow)
+Stytch Authorization Server
+      ├─ User authenticates (email/social/SSO)
+      ├─ Issues authorization code
+      ├─ Exchanges for access token (with PKCE)
+      └─ Returns token to client
+
+Client (ChatGPT/Claude.ai)
+      ↓ (MCP request + access token)
+Cloudflare Tunnel
+      ↓
+Traefik (HTTP routing)
+      ↓
+Coda MCP Server (Node.js/Express)
+      ├─ Validates token with Stytch (JWT signature)
+      ├─ Extracts user identity
+      ├─ Retrieves Coda API token (from env)
+      └─ Calls Coda API
+            ↓
+      Returns result in JSON-RPC 2.0 format
 ```
 
-### Middleware Stack
+### Detailed Request Flow
+
+```
+1. OAuth Authorization (One-Time Setup per User)
+   ─────────────────────────────────────────────────
+   User clicks "Connect MCP" in ChatGPT/Claude.ai
+      ↓
+   Client redirects to Stytch authorization endpoint
+      → https://api.stytch.com/v1/public/oauth/authorize
+      → Params: client_id, redirect_uri, code_challenge (PKCE)
+      ↓
+   User authenticates (email, Google, GitHub, etc.)
+      ↓
+   Stytch redirects back with authorization code
+      → https://chatgpt.com/callback?code=...
+      ↓
+   Client exchanges code for access token
+      → POST https://api.stytch.com/v1/public/oauth/token
+      → Body: code, code_verifier (PKCE), client_id
+      ↓
+   Stytch returns: { access_token, refresh_token, expires_in }
+
+2. MCP Tool Call (Every Request)
+   ─────────────────────────────
+   Client sends MCP request with access token
+      → POST https://coda.bestviable.com/mcp
+      → Headers: Authorization: Bearer stk_...
+      → Body: {"jsonrpc":"2.0","id":1,"method":"tools/call",...}
+      ↓
+   Cloudflare Tunnel → Traefik → Coda MCP Server
+      ↓
+   Stytch Middleware validates access token
+      → Verify JWT signature using Stytch public keys
+      → Check expiration, audience, issuer
+      → Extract user: { user_id, email }
+      ↓
+   MCP Handler processes request
+      → Get Coda API token from env (CODA_API_TOKEN)
+      → Call Coda API
+      → Return result in JSON-RPC format
+```
+
+### Authentication Endpoints
+
+#### Required by MCP Spec
+
+1. **Authorization Server Metadata** (RFC 8414)
+   ```
+   GET /.well-known/oauth-authorization-server
+
+   Response:
+   {
+     "issuer": "https://api.stytch.com",
+     "authorization_endpoint": "https://api.stytch.com/v1/public/oauth/authorize",
+     "token_endpoint": "https://api.stytch.com/v1/public/oauth/token",
+     "jwks_uri": "https://api.stytch.com/v1/public/keys",
+     "response_types_supported": ["code"],
+     "grant_types_supported": ["authorization_code", "refresh_token"],
+     "code_challenge_methods_supported": ["S256"],
+     ...
+   }
+   ```
+
+2. **Protected Resource Metadata** (RFC 9728)
+   ```
+   GET /.well-known/oauth-protected-resource
+
+   Response:
+   {
+     "resource": "https://coda.bestviable.com",
+     "authorization_servers": ["https://api.stytch.com"],
+     "scopes_supported": ["mcp.read", "mcp.write"],
+     "bearer_methods_supported": ["header"],
+     ...
+   }
+   ```
+
+3. **JWKS Endpoint** (for token validation)
+   ```
+   GET /.well-known/jwks.json
+
+   Response:
+   {
+     "keys": [
+       {
+         "kty": "RSA",
+         "kid": "...",
+         "n": "...",
+         "e": "AQAB"
+       }
+     ]
+   }
+   ```
+
+---
+
+## Implementation Details
+
+### Stytch SDK Integration
 
 ```typescript
-// Express middleware stack (in order)
-app.use(express.json());
-app.use(createAuthMiddleware({
-  mode: 'cloudflare', // Validates JWT OR Bearer token
-  tokenStore: 'env',  // Phase 1: env, Phase 2: postgres
-  serviceName: 'coda-mcp',
-  encryptionKey: process.env.MCP_AUTH_ENCRYPTION_KEY
-}));
+// package.json additions
+{
+  "dependencies": {
+    "stytch": "^27.0.0",  // Stytch Node.js SDK
+    // Remove: "jsonwebtoken", "jwks-rsa" (Stytch SDK handles)
+  }
+}
+```
 
-// After middleware:
-// req.user = { email: 'user@example.com' }
-// req.serviceToken = 'pat_xxxxx' (decrypted if encrypted)
+### Updated Middleware
 
-app.post('/mcp', (req, res) => {
-  const token = req.serviceToken;
-  const email = req.user.email;
-  // Use token to call Coda API
+```typescript
+// src/middleware/stytch-auth.ts
+import { StytchB2BClient } from 'stytch';
+import { Request, Response, NextFunction } from 'express';
+
+const stytchClient = new StytchB2BClient({
+  project_id: process.env.STYTCH_PROJECT_ID!,
+  secret: process.env.STYTCH_SECRET!,
 });
-```
 
-### Token Storage Evolution
-
-#### Phase 1: Environment Variable (Simplest)
-```yaml
-# docker-compose.yml
-environment:
-  - CODA_API_TOKEN=pat_xxxxx
-```
-
-**Pros**: No code, works immediately, same as other MCPs
-**Cons**: Visible in docker inspect, no encryption, single user
-
-**Migration**: Transparent to application code. `createAuthMiddleware({ tokenStore: 'env' })`
-
-#### Phase 2: PostgreSQL with Encryption
-```sql
--- Database schema
-CREATE TABLE tokens (
-  id SERIAL PRIMARY KEY,
-  service_id INT REFERENCES services(id),
-  key VARCHAR(255) NOT NULL,
-  encrypted_value TEXT NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(service_id, key)
-);
-
--- Example data (encrypted)
-INSERT INTO tokens (service_id, key, encrypted_value)
-VALUES (1, 'CODA_API_TOKEN', 'U2FsdGVkX1...');
-```
-
-**Pros**: Encrypted at rest, persists across restarts, supports rotation, audit logging
-**Cons**: Requires PostgreSQL connection, more code
-
-**Migration**: `migrate-env-to-postgres.sh` reads env, encrypts, inserts into DB
-
-**Encryption**: AES-256-GCM
-```typescript
-function encrypt(plaintext: string, key: Buffer): { iv: string, ciphertext: string, authTag: string } {
-  const iv = randomBytes(16);
-  const cipher = createCipheriv('aes-256-gcm', key, iv);
-  const ciphertext = Buffer.concat([
-    cipher.update(plaintext, 'utf8'),
-    cipher.final()
-  ]);
-  const authTag = cipher.getAuthTag();
-  return {
-    iv: iv.toString('hex'),
-    ciphertext: ciphertext.toString('hex'),
-    authTag: authTag.toString('hex')
+export interface AuthenticatedRequest extends Request {
+  user?: {
+    user_id: string;
+    email: string;
+    session_id: string;
   };
+  serviceToken?: string;
 }
 
-function decrypt(encrypted: { iv, ciphertext, authTag }, key: Buffer): string {
-  const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(encrypted.iv, 'hex'));
-  decipher.setAuthTag(Buffer.from(encrypted.authTag, 'hex'));
-  const plaintext = Buffer.concat([
-    decipher.update(encrypted.ciphertext, 'hex'),
-    decipher.final()
-  ]);
-  return plaintext.toString('utf8');
+export async function authenticate(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    // Skip auth for health/metadata endpoints
+    if (req.path === '/health' || req.path.startsWith('/.well-known/')) {
+      return next();
+    }
+
+    // Extract access token from Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        error: 'unauthorized',
+        message: 'Missing or invalid Authorization header',
+      });
+    }
+
+    const accessToken = authHeader.substring(7);
+
+    // Validate access token with Stytch
+    const response = await stytchClient.sessions.authenticate({
+      session_token: accessToken,
+    });
+
+    // Extract user info
+    req.user = {
+      user_id: response.member.member_id,
+      email: response.member.email_address,
+      session_id: response.session.session_id,
+    };
+
+    // Set Coda service token (from env)
+    req.serviceToken = process.env.CODA_API_TOKEN;
+
+    next();
+  } catch (error) {
+    console.error('[AUTH] Stytch validation failed:', error);
+    res.status(401).json({
+      error: 'unauthorized',
+      message: 'Invalid or expired access token',
+    });
+  }
 }
 ```
 
-**Encryption Key**: `MCP_AUTH_ENCRYPTION_KEY` env var
-- Generated once, stored securely
-- Used for all token encryption in that MCP
-- Can be rotated via `rotateKey()` function
+### OAuth Metadata Endpoints
 
-#### Phase 3: Infisical (Centralized Secrets)
 ```typescript
-const infisical = new InfisicalClient({
-  apiKey: process.env.INFISICAL_API_KEY,
-  workspaceId: process.env.INFISICAL_WORKSPACE_ID,
-  environment: 'production'
+// src/routes/oauth-metadata.ts
+import { Router } from 'express';
+
+const router = Router();
+
+// Authorization Server Metadata (RFC 8414)
+router.get('/.well-known/oauth-authorization-server', (req, res) => {
+  res.json({
+    issuer: 'https://api.stytch.com',
+    authorization_endpoint: 'https://api.stytch.com/v1/public/oauth/authorize',
+    token_endpoint: 'https://api.stytch.com/v1/public/oauth/token',
+    jwks_uri: 'https://api.stytch.com/v1/public/keys',
+    response_types_supported: ['code'],
+    grant_types_supported: ['authorization_code', 'refresh_token'],
+    code_challenge_methods_supported': ['S256'],
+    token_endpoint_auth_methods_supported: ['client_secret_post'],
+  });
 });
 
-const token = await infisical.getSecret('CODA_API_TOKEN');
+// Protected Resource Metadata (RFC 9728)
+router.get('/.well-known/oauth-protected-resource', (req, res) => {
+  res.json({
+    resource: 'https://coda.bestviable.com',
+    authorization_servers: ['https://api.stytch.com'],
+    scopes_supported: ['mcp.read', 'mcp.write'],
+    bearer_methods_supported: ['header'],
+  });
+});
+
+// JWKS Endpoint (proxies to Stytch)
+router.get('/.well-known/jwks.json', async (req, res) => {
+  // Proxy to Stytch JWKS endpoint
+  const response = await fetch('https://api.stytch.com/v1/public/keys');
+  const keys = await response.json();
+  res.json(keys);
+});
+
+export default router;
 ```
 
-**Pros**: Centralized, versioned, audit trail, no local key management
-**Cons**: External dependency, API calls per request (slower)
+### Environment Variables
 
-**Migration**: Export postgres → Import to Infisical via API
+```bash
+# Stytch Configuration
+STYTCH_PROJECT_ID=project-test-...
+STYTCH_SECRET=secret-test-...
 
----
+# Coda API (unchanged)
+CODA_API_TOKEN=pat_xxxxx
+CODA_API_BASE_URL=https://coda.io/apis/v1
 
-## Key Design Decisions
+# Server Configuration (unchanged)
+PORT=8080
+HOST=0.0.0.0
+LOG_LEVEL=info
+```
 
-### 1. Cloudflare Access (Not GitHub OAuth or Direct OAuth)
+### Docker Compose Updates
 
-**Decision**: Use Cloudflare Access JWT validation instead of custom OAuth server
+```yaml
+version: '3.8'
 
-**Rationale**:
-- ✅ Already deployed and working (zero setup)
-- ✅ JWT validation simple (~50 lines of code)
-- ✅ No database or session state needed (stateless)
-- ✅ Free (included with tunnel)
-- ✅ Per-request validation (no cookie/session overhead)
+services:
+  coda-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: coda-mcp
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Stytch OAuth Configuration
+      - STYTCH_PROJECT_ID=${STYTCH_PROJECT_ID}
+      - STYTCH_SECRET=${STYTCH_SECRET}
 
-**Alternative Rejected: GitHub OAuth**
-- ❌ Requires GitHub app registration
-- ❌ More complex implementation
-- ❌ Overkill for personal/team use
-- ✅ Better for public, multi-organization MCPs
+      # Coda API Configuration
+      - CODA_API_TOKEN=${CODA_API_TOKEN}
+      - CODA_API_BASE_URL=https://coda.io/apis/v1
 
-**Alternative Rejected: Better-Auth**
-- ❌ Full auth framework (overkill for simple needs)
-- ❌ Requires database (but we have PostgreSQL)
-- ❌ More code to maintain
-- ✅ Better for multi-provider, multi-user scenarios
+      # Server Configuration
+      - PORT=8080
+      - HOST=0.0.0.0
+      - LOG_LEVEL=info
 
-### 2. PostgreSQL for Phase 2 (Not Infisical, Not Env Var)
+    networks:
+      - docker_proxy  # Traefik auto-discovery
+      - docker_syncbricks  # Internal network
 
-**Decision**: Use local PostgreSQL for token encryption/storage in Phase 2
+    labels:
+      # Traefik auto-discovery (updated from nginx-proxy)
+      - "traefik.enable=true"
+      - "traefik.http.routers.coda-mcp.rule=Host(`coda.bestviable.com`)"
+      - "traefik.http.routers.coda-mcp.entrypoints=web"
+      - "traefik.http.services.coda-mcp.loadbalancer.server.port=8080"
 
-**Rationale**:
-- ✅ Already running (no new infrastructure)
-- ✅ Free (no additional cost)
-- ✅ Production-grade encryption
-- ✅ Easy to understand (standard SQL)
-- ✅ Audit logging built-in
-- ✅ Can migrate to Infisical later without refactor
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
-**Trade-off vs. Env Var** (Phase 1):
-- ✅ More features (encryption, audit, rotation)
-- ❌ More complexity (DB connection, schema)
-
-**Trade-off vs. Infisical** (Phase 3):
-- ✅ No external dependency
-- ❌ Local maintenance responsibility
-- But: Can migrate later with 1-line code change
-
-### 3. Reusable NPM Package (Not Inline Middleware)
-
-**Decision**: Extract auth logic into `@bestviable/mcp-auth-middleware` npm package
-
-**Rationale**:
-- ✅ Every new MCP copies same auth code (DRY principle)
-- ✅ Security fixes apply to all MCPs automatically
-- ✅ Versioning and changelog clear
-- ✅ Can be tested independently
-
-**Trade-off**: More complex monorepo setup
-- But: Worth it for 3+ MCPs (you have 1 droplet MCP now, more planned)
-
-### 4. Per-Request Authentication (Not Session-Based)
-
-**Decision**: Validate JWT on every request, no session cookies
-
-**Rationale**:
-- ✅ Stateless (easier to scale)
-- ✅ Each request independently verified
-- ✅ No session fixation/hijacking risk
-- ✅ Works well with API/CLI clients
-
-**Trade-off**: Slight overhead per request (JWT validation ~1ms)
-- Acceptable for MCP use case
-
-### 5. Audit Logging (Not Optional)
-
-**Decision**: Log all token access and operations to database
-
-**Rationale**:
-- ✅ Security compliance (know who accessed what)
-- ✅ Troubleshooting (debug failed operations)
-- ✅ Usage monitoring (identify issues early)
-
-**Storage**: PostgreSQL `audit_log` table
-```sql
-CREATE TABLE audit_log (
-  id SERIAL PRIMARY KEY,
-  service_id INT,
-  action VARCHAR(50), -- 'get_token', 'set_token', 'rotate_key', 'api_call'
-  user_email VARCHAR(255),
-  details JSONB, -- Additional context
-  timestamp TIMESTAMP DEFAULT NOW()
-);
+networks:
+  docker_proxy:
+    external: true
+  docker_syncbricks:
+    external: true
 ```
 
 ---
 
 ## Implementation Strategy
 
-### Phase 1: Minimal Change (1 day)
+### Phase 2: Stytch Integration (4-6 hours)
 
-1. Add `CODA_API_TOKEN` to docker-compose.yml
-2. Add Cloudflare Access JWT validation middleware
-3. Test with curl + Cloudflare tunnel
-4. Update health check
+**Tasks**:
+1. Sign up for Stytch account (free tier)
+2. Create Stytch project and get credentials
+3. Install Stytch SDK: `npm install stytch`
+4. Replace Cloudflare Access middleware with Stytch auth
+5. Add OAuth metadata endpoints
+6. Update docker-compose.yml with Stytch env vars
+7. Update Traefik labels (already using Traefik v3.0)
+8. Test locally with Stytch test console
+9. Deploy to droplet
+10. Test with ChatGPT/Claude.ai web
 
-**Risk**: Low
-**Rollback**: Simple (revert docker-compose.yml)
+**Risk**: Low (Stytch SDK handles complexity)
+**Rollback**: Keep Cloudflare Access as fallback during testing
 
-### Phase 2: Build Reusable Middleware (3-4 days)
+---
 
-1. Create npm package structure
-2. Implement encryption utilities
-3. Create PostgreSQL schema
-4. Implement token CRUD + audit logging
-5. Write comprehensive tests (90%+ coverage)
-6. Publish to npm registry
-7. Integrate into Coda MCP (minimal changes)
-8. Run migration script
+## Migration Path
 
-**Risk**: Medium (database migration)
-**Rollback**: Keep env var as fallback, revert to Phase 1 if needed
+### Current → Stytch → WorkOS (Future)
 
-### Phase 3: Documentation & SOP (3-4 days)
+```
+Phase 1 (Current):     Cloudflare Access JWT + Bearer token
+                       ↓ (4-6 hours)
+Phase 2 (This week):   Stytch OAuth 2.1
+                       ↓ (When needed)
+Phase 3 (10K+ users):  Migrate to WorkOS (1M free MAUs)
+                       ↓ (At 150K+ users)
+Phase 4 (Optional):    Self-host Keycloak (cost optimization)
+```
 
-1. Write OAUTH_SOP.md (comprehensive)
-2. Create troubleshooting runbook
-3. Build MCP template directory
-4. Audit & fix orphaned docs
-5. Update architecture documentation
+**Phase 3 Trigger**: Approaching 10,000 MAUs OR clients demand enterprise SSO
 
-**Risk**: Low (documentation only)
-**Parallel**: Can overlap with Phase 2
+**Phase 4 Trigger**: 150,000+ users AND have DevOps resources
 
 ---
 
 ## Security Considerations
 
-### Token Encryption
-- **Algorithm**: AES-256-GCM (authenticated encryption)
-- **Key Size**: 256-bit (32 bytes)
-- **IV**: Random 128-bit per encryption
-- **Auth Tag**: Provided by GCM mode
-- **Key Storage**: Environment variable (no hardcoding)
+### Token Validation
+- **Algorithm**: RS256 (RSA signature)
+- **Key Rotation**: Stytch handles automatically
+- **Validation**: JWT signature + expiration + audience + issuer
 
-### Key Rotation
-- **Frequency**: Manual (triggered by operator)
-- **Process**: `rotateKey(oldKey, newKey)` decrypts all tokens with old key, re-encrypts with new key
-- **Downtime**: ~1 second (atomic database operation)
+### Token Storage
+- **Access tokens**: Short-lived (1 hour), client stores
+- **Refresh tokens**: Long-lived (30 days), securely stored by client
+- **Coda API token**: Stored in environment variable (Phase 1 approach)
 
 ### Audit Trail
-- **What's Logged**: Action, user email, service, timestamp
-- **What's NOT Logged**: Token values (never)
-- **Retention**: Indefinite (database growth ~1KB per operation)
-
-### Cloudflare Access JWT Validation
-- **Public Keys**: Cached locally (refreshed every 24h)
-- **JWT Signature**: Verified before accepting
-- **Expiration**: Standard JWT `exp` claim checked
-- **Fallback**: Bearer token for local development (disabled in production)
+- **What's Logged**: User email, action, timestamp
+- **Where**: stdout (collected by Docker logs)
+- **Retention**: Docker log rotation (10 MB × 3 files)
 
 ---
 
 ## Testing Strategy
 
-### Unit Tests (90%+ coverage)
-- Encryption/decryption (round-trip, edge cases)
-- JWT validation (valid, invalid, expired)
-- Token CRUD (get, set, delete, rotate)
-- Audit logging (correct fields, timestamps)
+### Unit Tests
+- Stytch token validation (mocked)
+- OAuth metadata endpoints
+- Error handling (expired token, invalid token)
 
 ### Integration Tests
-- Full auth flow (JWT → token retrieval → API call)
-- Phase 1 → Phase 2 migration
-- Failure scenarios (DB down, invalid token, etc.)
+- Full OAuth flow with Stytch test environment
+- MCP protocol + Stytch auth combined
+- Coda API calls with authenticated requests
 
 ### Manual Tests
-- Curl against Coda MCP via Cloudflare tunnel
-- Test with/without Cloudflare Access
-- Verify docker logs show auth validation
-- Health check endpoint behavior
+1. Stytch OAuth flow in browser
+2. ChatGPT connection test
+3. Claude.ai connection test
+4. Verify metadata endpoints
+5. Health check endpoint
 
 ---
 
 ## Monitoring & Observability
 
 ### Logs
-- All auth validation events logged to stdout
-- Format: `[timestamp] [level] [service] message`
-- Example: `2025-11-08T10:30:45Z INFO coda-mcp JWT validated for user@example.com`
+```
+[timestamp] [INFO] Stytch auth successful: user@example.com
+[timestamp] [INFO] MCP request: tools/call (get_whoami)
+[timestamp] [INFO] Coda API call: GET /whoami (200 OK)
+```
 
-### Metrics (Future)
-- Token fetch latency (should be <10ms)
-- Failed auth attempts (should be 0 in normal operation)
-- Token retrieval failures (indicates DB or Infisical down)
+### Health Check
+```json
+GET /health
 
-### Health Checks
-- `/health` endpoint includes auth validation status
-- Response: `{ status: 'ok', auth: 'cloudflare-access', token_store: 'postgres' }`
-
----
-
-## Migration Path & Rollback
-
-### If Phase 2 Fails
-1. Revert code changes to Coda MCP
-2. Keep running on Phase 1 (env var)
-3. Diagnosis: Check PostgreSQL connection, encryption key
-
-### If PostgreSQL Goes Down
-1. Fallback to env var (code supports both)
-2. Update middleware config: `tokenStore: 'env'`
-3. Restart Coda MCP
-
-### If Cloudflare Access JWT Changes
-1. Update JWT validation code
-2. Bearer token fallback still works
-3. Time to update: <1 hour
+{
+  "status": "ok",
+  "service": "coda-mcp",
+  "version": "2.0.0",
+  "auth": {
+    "provider": "stytch",
+    "oauth_compliant": true
+  },
+  "timestamp": "2025-11-14T..."
+}
+```
 
 ---
 
-## Future Considerations
+## Cost Analysis
 
-### Phase 3: Infisical Integration
-- Requires fixing broken Infisical deployment first
-- Code change: `tokenStore: 'infisical'` in config
-- Migration: Export postgres, import to Infisical
-- Benefit: Centralized secrets, version control
+### Personal Use (Now)
+- Stytch: **$0/mo** (free tier: 10,000 MAUs)
+- Droplet: $24/mo (unchanged)
+- **Total**: $24/mo
 
-### Multi-User Support (Later Phase)
-- Current: Single service account per MCP
-- Future: Multiple tokens per service (one per user)
-- Migration: Add `user_id` column to tokens table
+### First Clients (< 10K users)
+- Stytch: **$0-50/mo** (usage-based after free tier)
+- Droplet: $24/mo
+- **Total**: $24-74/mo
 
-### API Rate Limiting
-- Currently: No rate limiting per user
-- Future: Add `rate_limit` column to audit_log, check before allowing request
+### Scale (10K-100K users)
+- WorkOS: **$0/mo** (free up to 1M MAUs)
+- Droplet: $24/mo (or upgrade to 8GB: $48/mo)
+- **Total**: $24-48/mo
 
-### Performance Optimization
-- JWT public keys: Cache locally (already done)
-- Token decryption: ~1ms per call (acceptable)
-- PostgreSQL: Connection pooling (already configured)
-- Future: Redis cache for frequently-accessed tokens
+### Enterprise (100K+ users)
+- WorkOS: **$2,500/mo** (per 1M MAUs)
+- Droplet: $48/mo (8GB) or dedicated infrastructure
+- **Total**: $2,548/mo (or migrate to Keycloak self-hosted for ~$1,096/mo)
 
 ---
 
 ## Risks & Mitigations
 
 | Risk | Severity | Mitigation |
-|------|----------|-----------|
-| PostgreSQL goes down | High | Keep env var fallback, monitoring |
-| Encryption key lost | Critical | Store in Infisical Phase 3 |
-| JWT validation breaks | Medium | Bearer token fallback always available |
-| Infisical broken | Medium | Phase 3 deferred, use PostgreSQL |
-| Audit log fills disk | Low | Implement log retention policy |
-| Token rotation fails | Medium | Atomic DB transaction, rollback on error |
+|------|----------|------------|
+| Stytch outage | Medium | Keep Bearer token fallback during transition |
+| ChatGPT still rejects | High | Test with Stytch sandbox first, validate OAuth metadata |
+| Free tier exceeded | Low | Monitor MAUs, WorkOS migration ready |
+| Implementation bugs | Medium | Comprehensive testing, rollback plan |
 
 ---
 
-## Code Organization
+## Success Criteria
 
-```
-integrations/
-├── mcp/
-│   └── servers/
-│       └── coda/
-│           ├── src/
-│           │   ├── http-server.ts (updated)
-│           │   ├── config.ts (updated)
-│           │   ├── middleware/
-│           │   │   └── auth.ts (uses @bestviable/mcp-auth-middleware)
-│           │   └── routes/
-│           │       └── tools.ts
-│           ├── Dockerfile
-│           └── docker-compose.yml (updated)
-└── npm-packages/
-    └── mcp-auth-middleware/
-        ├── src/
-        │   ├── index.ts (main export)
-        │   ├── validators/
-        │   │   ├── cloudflare-access.ts
-        │   │   └── bearer-token.ts
-        │   ├── encryption/
-        │   │   ├── index.ts
-        │   │   └── key-generation.ts
-        │   ├── postgres/
-        │   │   ├── connection.ts
-        │   │   └── token-store.ts
-        │   └── middleware/
-        │       └── create-auth-middleware.ts
-        ├── src/__tests__/
-        │   ├── encryption.test.ts
-        │   ├── validators.test.ts
-        │   └── token-store.test.ts
-        ├── package.json
-        ├── tsconfig.json
-        └── README.md
-```
+- ✅ Stytch OAuth 2.1 integration deployed
+- ✅ OAuth metadata endpoints responding correctly
+- ✅ ChatGPT web connects to Coda MCP successfully
+- ✅ Claude.ai web connects to Coda MCP successfully
+- ✅ All existing MCP tools still function
+- ✅ Health check shows "oauth_compliant": true
+- ✅ Documentation updated (SOP, setup guide)
 
 ---
 
-**Design Review**: [To be filled during approval]
-**Architecture Approved**: [To be filled]
+**Design Approval**: Pending
+**Implementation Timeline**: 4-6 hours (target: this week)
+**Next Steps**: Create STYTCH_SETUP_GUIDE.md and scaffold code
