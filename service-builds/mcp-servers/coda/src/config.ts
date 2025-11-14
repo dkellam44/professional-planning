@@ -7,32 +7,26 @@ export interface Config {
   // Server configuration
   port: number;
   host: string;
-  
+  baseUrl: string;
+
   // Coda API configuration
   codaApiToken: string;
   codaApiBaseUrl: string;
-  
-  // Cloudflare Access configuration
-  cloudflareAccessTeamDomain: string;
-  cloudflareAccessAud: string;
-  
-  // Authentication configuration
-  authMode: 'cloudflare' | 'bearer' | 'both';
-  bearerToken?: string;
-  
-  // PostgreSQL configuration (for token storage)
-  postgres?: {
-    host: string;
-    port: number;
-    database: string;
-    user: string;
-    password: string;
-    maxConnections?: number;
+
+  // Stytch OAuth 2.1 configuration
+  stytch: {
+    projectId: string;
+    secret: string;
   };
-  
-  // Encryption key for token storage
-  encryptionKey?: string;
-  
+
+  // Legacy: Cloudflare Access configuration (deprecated, kept for backward compatibility)
+  cloudflareAccessTeamDomain?: string;
+  cloudflareAccessAud?: string;
+
+  // Legacy: Authentication configuration (deprecated, kept for backward compatibility)
+  authMode?: 'cloudflare' | 'bearer' | 'both' | 'stytch';
+  bearerToken?: string;
+
   // Logging
   logLevel: 'debug' | 'info' | 'warn' | 'error';
 }
@@ -53,58 +47,39 @@ export const config: Config = {
   // Server configuration
   port: parseInt(getOptionalEnvVar('PORT', '8080'), 10),
   host: getOptionalEnvVar('HOST', '0.0.0.0'),
-  
+  baseUrl: getOptionalEnvVar('BASE_URL', 'https://coda.bestviable.com'),
+
   // Coda API configuration
   codaApiToken: getRequiredEnvVar('CODA_API_TOKEN'),
   codaApiBaseUrl: getOptionalEnvVar('CODA_API_BASE_URL', 'https://coda.io/apis/v1'),
-  
-  // Cloudflare Access configuration
-  cloudflareAccessTeamDomain: getOptionalEnvVar('CLOUDFLARE_ACCESS_TEAM_DOMAIN', 'bestviable.cloudflareaccess.com'),
-  cloudflareAccessAud: getOptionalEnvVar('CLOUDFLARE_ACCESS_AUD', 'bestviable'),
-  
-  // Authentication configuration
-  authMode: (getOptionalEnvVar('AUTH_MODE', 'both') as 'cloudflare' | 'bearer' | 'both'),
+
+  // Stytch OAuth 2.1 configuration
+  stytch: {
+    projectId: getRequiredEnvVar('STYTCH_PROJECT_ID'),
+    secret: getRequiredEnvVar('STYTCH_SECRET'),
+  },
+
+  // Legacy: Cloudflare Access configuration (deprecated)
+  cloudflareAccessTeamDomain: process.env.CLOUDFLARE_ACCESS_TEAM_DOMAIN,
+  cloudflareAccessAud: process.env.CLOUDFLARE_ACCESS_AUD,
+
+  // Legacy: Authentication configuration (deprecated)
+  authMode: process.env.AUTH_MODE as 'cloudflare' | 'bearer' | 'both' | 'stytch' | undefined,
   bearerToken: process.env.BEARER_TOKEN,
-  
-  // PostgreSQL configuration (optional, defaults to environment tokens)
-  postgres: process.env.POSTGRES_HOST ? {
-    host: getOptionalEnvVar('POSTGRES_HOST', 'localhost'),
-    port: parseInt(getOptionalEnvVar('POSTGRES_PORT', '5432'), 10),
-    database: getOptionalEnvVar('POSTGRES_DATABASE', 'mcp_auth'),
-    user: getRequiredEnvVar('POSTGRES_USER'),
-    password: getRequiredEnvVar('POSTGRES_PASSWORD'),
-    maxConnections: parseInt(getOptionalEnvVar('POSTGRES_MAX_CONNECTIONS', '5'), 10)
-  } : undefined,
-  
-  // Encryption key for token storage
-  encryptionKey: getOptionalEnvVar('MCP_AUTH_ENCRYPTION_KEY', 'default-encryption-key-32-bytes-long'),
-  
+
   // Logging
   logLevel: (getOptionalEnvVar('LOG_LEVEL', 'info') as 'debug' | 'info' | 'warn' | 'error'),
 };
 
 // Validate configuration
 export function validateConfig(): void {
-  // Only require CODA_API_TOKEN if not using PostgreSQL token storage
-  if (!config.postgres && !config.codaApiToken) {
-    throw new Error('CODA_API_TOKEN is required when not using PostgreSQL token storage');
-  }
-  
-  if (config.authMode === 'bearer' && !config.bearerToken) {
-    throw new Error('BEARER_TOKEN is required when AUTH_MODE is set to "bearer"');
-  }
-  
-  if (config.postgres) {
-    console.log('✅ PostgreSQL token storage configured');
-    console.log(`   Database: ${config.postgres.database}@${config.postgres.host}:${config.postgres.port}`);
-  } else {
-    console.log('⚠️  Using environment token storage (consider migrating to PostgreSQL)');
-  }
-  
   console.log('✅ Configuration validated successfully');
-  console.log(`   Auth mode: ${config.authMode}`);
+  console.log(`   Auth provider: Stytch OAuth 2.1`);
+  console.log(`   Stytch Project ID: ${config.stytch.projectId}`);
+  console.log(`   Base URL: ${config.baseUrl}`);
   console.log(`   Coda API: ${config.codaApiBaseUrl}`);
   console.log(`   Port: ${config.port}`);
+  console.log(`   Log Level: ${config.logLevel}`);
 }
 
 export default config;
