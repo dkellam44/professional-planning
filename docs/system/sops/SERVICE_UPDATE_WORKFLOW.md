@@ -122,13 +122,13 @@ tar tzf $BACKUP_DIR/*.tar.gz | head -20
 
 ```bash
 # Save current docker-compose configuration
-cp /root/portfolio/infra/apps/docker-compose.yml \
-   /root/portfolio/infra/apps/docker-compose.yml.backup.$BACKUP_DATE
+cp /home/david/services/infra/apps/docker-compose.yml \
+   /home/david/services/infra/apps/docker-compose.yml.backup.$BACKUP_DATE
 
 # Save environment file (if using .env)
-if [ -f /root/portfolio/infra/apps/.env ]; then
-  cp /root/portfolio/infra/apps/.env \
-     /root/portfolio/infra/apps/.env.backup.$BACKUP_DATE
+if [ -f /home/david/services/infra/apps/.env ]; then
+  cp /home/david/services/infra/apps/.env \
+     /home/david/services/infra/apps/.env.backup.$BACKUP_DATE
 fi
 
 # Save container configuration snapshot
@@ -178,10 +178,10 @@ EOF
 # Check release notes for new environment variables needed
 
 # If .env file is used:
-if [ -f /root/portfolio/infra/apps/.env ]; then
+if [ -f /home/david/services/infra/apps/.env ]; then
   # Add new variables to .env
   NEW_SECRET=$(openssl rand -base64 32)
-  echo "NEW_VAR=$NEW_SECRET" >> /root/portfolio/infra/apps/.env
+  echo "NEW_VAR=$NEW_SECRET" >> /home/david/services/infra/apps/.env
 fi
 ```
 
@@ -189,7 +189,7 @@ fi
 
 ```bash
 # Edit configuration with new image version
-nano /root/portfolio/infra/apps/docker-compose.yml
+nano /home/david/services/infra/apps/docker-compose.yml
 
 # Changes to make:
 # 1. Update image: ghcr.io/service:OLD_VERSION → ghcr.io/service:NEW_VERSION
@@ -225,7 +225,7 @@ docker images | grep SERVICE_NAME
 ### Step 3.4: Deploy Update
 
 ```bash
-cd /root/portfolio/infra/apps
+cd /home/david/services/infra/apps
 
 # Stop current container (preserves volume)
 docker-compose stop SERVICE_NAME
@@ -406,7 +406,7 @@ watch -n 30 'docker inspect SERVICE_NAME | grep -A 5 Health'
 **Use this for:** Most issues (lost auth session, crashes, etc.)
 
 ```bash
-cd /root/portfolio/infra/apps
+cd /home/david/services/infra/apps
 
 # Stop current container
 docker-compose stop SERVICE_NAME

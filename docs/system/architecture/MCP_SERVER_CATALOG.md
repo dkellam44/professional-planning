@@ -6,7 +6,7 @@
 - tags: [mcp, servers, inventory, catalog]
 - source_path: /docs/architecture/integrations/mcp/server_catalog_v01.md
 - date: 2025-10-29
-- last_updated: 2025-10-30
+- last_updated: 2025-11-14
 ---
 
 # MCP Server Catalog
@@ -19,7 +19,7 @@
 - An MCP is deprecated or retired
 - Endpoint URLs or configuration change
 
-**Last Updated**: 2025-10-30
+**Last Updated**: 2025-11-14 (Added archon-mcp, Traefik deployment info)
 
 ---
 
@@ -56,6 +56,7 @@ Remote MCPs accessible to all AI clients via **streaming HTTP** over HTTPS. Host
 | **firecrawl** | `https://firecrawl.bestviable.com/mcp` | ✅ Production | 6 tools | firecrawl-mcp | [Docs](../../../../integrations/mcp/servers/firecrawl/) | 2025-10-31 |
 | **digitalocean** | `https://digitalocean.bestviable.com/mcp` | 🟡 Ready to Deploy | 50+ tools (Droplets, Apps, DBaaS, Networking) | digitalocean-labs/mcp-digitalocean | [Docs](../../../../integrations/mcp/servers/digitalocean/) | 2025-10-30 |
 | **cloudflare** | `https://cloudflare.bestviable.com/mcp` | 🟡 Ready to Deploy | Proxy to selected Cloudflare MCP | cloudflare/mcp-server-cloudflare | [Docs](../../../../integrations/mcp/servers/cloudflare/) | 2025-10-30 |
+| **archon-mcp** | `https://archon-mcp.bestviable.com/mcp` | ✅ Production | 12 tools | Archon AI agents | [Docs](../../../../integrations/mcp/servers/archon/) | 2025-11-12 |
 | **puppeteer** | `https://puppeteer.bestviable.com/mcp` | 🔮 Future | 10 tools | @modelcontextprotocol/server-puppeteer | [Docs](../../../../integrations/mcp/servers/puppeteer/) | - |
 
 ### Coda MCP Gateway

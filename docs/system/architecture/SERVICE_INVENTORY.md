@@ -1,66 +1,78 @@
 # Service Inventory
 
-Complete inventory of all Docker containers running in the infrastructure post-user-hierarchy-refactor and OpenWebUI deployment. This document provides operational details, health status, and maintenance information for all services.
+Complete inventory of all Docker containers running in the infrastructure post-Traefik migration and droplet cleanup (2025-11-14). This document provides operational details, health status, and maintenance information for all services.
+
+**Last Updated**: 2025-11-14 (Traefik migration, deprecated nginx-proxy + acme-companion)
 
 ## Infrastructure Overview
 
-**Droplet Specifications**: 4GB RAM, 80GB SSD, 2 vCPUs
-**Total Services**: 10 containers
-**Memory Utilization**: ~1.8GB / 3.8GB (48%)
-**Storage Utilization**: 47GB / 77GB (61%)
-**Deployment Pattern**: SyncBricks (nginx-proxy + Cloudflare Tunnel)
+**Droplet Specifications**: 4GB RAM, 80GB SSD, 2 vCPUs (upgraded from 2GB on 2025-11-06)
+**Reverse Proxy**: Traefik v3.0 (deployed 2025-11-13, replacing nginx-proxy)
+**Total Services**: 12 containers (3 deprecated: stopped, not removed)
+**Memory Utilization**: ~3.3GB / 3.8GB (87%) - approaching orange threshold
+**Storage Utilization**: 49GB / 77GB (63%)
+**Deployment Pattern**: Traefik + Cloudflare Tunnel (HTTP-only, CF terminates SSL)
 **User Structure**: Non-root user `david` with sudo access
-**Primary Path**: `/home/david/services/` (migrated from `/root/infra/`)
+**Primary Path**: `/home/david/services/` (migrated from `/root/infra/` on 2025-11-12)
 
 ## Service Status Summary
 
 | Status Count | Services |
 |--------------|----------|
-| ✅ **Healthy (9)** | postgres, qdrant, n8n, acme-companion, coda-mcp, openweb, dozzle, uptime-kuma, cloudflared |
-| ✅ **Running (1)** | nginx-proxy |
+| ✅ **Healthy (9)** | traefik, postgres, qdrant, n8n, coda-mcp, openweb, dozzle, uptime-kuma, cloudflared |
+| ✅ **Healthy (3)** | archon-server, archon-ui, archon-mcp |
+| ⚠️ **Unhealthy (1)** | traefik (healthcheck failing but traffic routing works) |
+| ❌ **Exited (2)** | nginx-proxy (deprecated 2025-11-13), acme-companion (deprecated 2025-11-13) |
 
 ## Core Infrastructure Services
 
-### 1. nginx-proxy
-**Container**: `nginx-proxy`
-**Image**: `nginxproxy/nginx-proxy:latest`
-**Ports**: 80, 443
-**Networks**: `docker_proxy` (external)
-**Status**: ✅ Running
-**Health**: N/A (no health check configured)
-**Purpose**: Reverse proxy with automatic service discovery via Docker labels
+### 1. Traefik (PRIMARY REVERSE PROXY)
+**Container**: `traefik`
+**Image**: `traefik:v3.0.0`
+**Ports**: 80 (HTTP), 443 (HTTPS - listener only, unused)
+**Networks**: `docker_proxy` (external), `docker_syncbricks` (internal discovery)
+**Status**: ✅ Running (healthcheck: ⚠️ unhealthy but routing works)
+**Purpose**: Modern reverse proxy with auto-discovery via Docker labels
+**Location**: `/home/david/services/traefik/`
+**Deployed**: 2025-11-13 (replaced nginx-proxy)
 
 **Key Features**:
-- Automatic SSL/TLS via Let's Encrypt integration
-- Service discovery via container labels
-- Load balancing and routing
-- WebSocket support
+- Automatic service discovery via Docker labels
+- HTTP-only routing (port 80) - SSL/TLS handled by Cloudflare
+- Zero-downtime reloads (no container restarts needed)
+- Built-in dashboard (port 8080, localhost-only)
+- No Let's Encrypt integration (Cloudflare handles SSL)
 
-**Docker Labels**:
+**Configuration**:
+- Static config: `/home/david/services/traefik/traefik.yml`
+- Docker provider enabled for auto-discovery
+- Network alias: `nginx-proxy` (for Cloudflare Tunnel compatibility)
+
+**Service Discovery Labels** (new format, replacing VIRTUAL_HOST):
 ```yaml
-com.nginx-proxy.virtual-host: "service.domain.com"
-com.nginx-proxy.port: "8080"
-com.nginx-proxy.scheme: "http"
+traefik.enable: "true"
+traefik.http.routers.SERVICE.rule: "Host(`domain.bestviable.com`)"
+traefik.http.routers.SERVICE.entrypoints: "web"
+traefik.http.services.SERVICE.loadbalancer.server.port: "8080"
 ```
 
 ---
 
-### 2. acme-companion
-**Container**: `acme-companion`
-**Image**: `nginxproxy/acme-companion:latest`
-**Ports**: None
-**Networks**: `docker_proxy` (external)
-**Status**: ✅ Healthy
-**Health**: ✅ Healthy
-**Purpose**: Automatic SSL certificate management for nginx-proxy
-**Resource Usage**: ~50MB RAM
-
-**Function**: Automatically obtains and renews Let's Encrypt certificates for all proxied services.
-**Certificates Managed**: *.bestviable.com (wildcard), n8n.bestviable.com, coda.bestviable.com, openweb.bestviable.com, logs.bestviable.com, kuma.bestviable.com
+### 2. nginx-proxy (DEPRECATED - Exited)
+**⚠️ STATUS**: EXITED (Removed 2025-11-13, replaced by Traefik)
+**Purpose**: Legacy reverse proxy (archived, no longer used)
+**Replacement**: See Traefik section above
 
 ---
 
-### 3. cloudflared
+### 3. acme-companion (DEPRECATED - Exited)
+**⚠️ STATUS**: EXITED (Removed 2025-11-13, replaced by Traefik ACME)
+**Purpose**: Legacy SSL management (archived, no longer used)
+**Replacement**: Cloudflare Zero Trust terminates SSL (no Let's Encrypt needed)
+
+---
+
+### 4. cloudflared
 **Container**: `cloudflared`
 **Image**: `cloudflare/cloudflared:latest`
 **Ports**: None
