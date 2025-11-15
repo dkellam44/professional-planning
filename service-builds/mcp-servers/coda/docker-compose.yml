@@ -14,6 +14,10 @@ services:
       # Stytch OAuth 2.1 Configuration
       - STYTCH_PROJECT_ID=${STYTCH_PROJECT_ID}
       - STYTCH_SECRET=${STYTCH_SECRET}
+      - STYTCH_PUBLIC_TOKEN=${STYTCH_PUBLIC_TOKEN}
+
+      # OAuth 2.0 Configuration
+      - JWT_SECRET=${JWT_SECRET}
 
       # Coda API Configuration
       - CODA_API_TOKEN=${CODA_API_TOKEN}
