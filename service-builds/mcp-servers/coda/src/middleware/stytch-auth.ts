@@ -1,6 +1,7 @@
 import { Client as StytchClient } from 'stytch';
 import { Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
 
 // Load environment variables if not already loaded
 dotenv.config();
@@ -57,12 +58,13 @@ export async function authenticate(
   next: NextFunction
 ): Promise<void> {
   try {
-    // Skip authentication for health check, OAuth metadata endpoints, and OAuth token endpoint
+    // Skip authentication for health check, OAuth metadata endpoints, and OAuth flow endpoints
     // These endpoints must be accessible without authentication
     if (req.path === '/health' ||
         req.path.startsWith('/.well-known/') ||
         req.path === '/v1/public/oauth/authorize' ||
         req.path === '/v1/public/oauth/token' ||
+        req.path === '/v1/oauth/callback' ||
         req.path === '/oauth/register') {
       next();
       return;
@@ -81,19 +83,39 @@ export async function authenticate(
 
     const accessToken = authHeader.substring(7); // Remove "Bearer " prefix
 
-    // Validate access token with Stytch
-    // This performs JWT signature validation, expiration check, and retrieves user session
-    const client = initializeStytchClient();
-    const response: any = await client.sessions.authenticate({
-      session_token: accessToken,
-    });
+    // Validate JWT access token (issued by our OAuth flow)
+    const jwtSecret = process.env.JWT_SECRET || '';
 
-    // Extract user info from Stytch response
-    // Handle both B2B (member) and B2C (user) response formats
-    const userId = response.member?.member_id || response.user?.user_id || 'unknown';
-    const userEmail = response.member?.email_address || response.user?.emails?.[0]?.email || 'unknown';
-    const sessionId = response.session?.session_id || accessToken.substring(0, 20);
-    const orgId = response.organization?.organization_id;
+    // Parse JWT
+    const parts = accessToken.split('.');
+    if (parts.length !== 3) {
+      throw new Error('Invalid JWT format');
+    }
+
+    const [header, payload, signature] = parts;
+
+    // Verify signature
+    const expectedSignature = crypto.createHmac('sha256', jwtSecret)
+      .update(`${header}.${payload}`)
+      .digest('base64url');
+
+    if (signature !== expectedSignature) {
+      throw new Error('Invalid JWT signature');
+    }
+
+    // Decode payload
+    const decodedPayload = JSON.parse(Buffer.from(payload, 'base64url').toString());
+
+    // Check expiration
+    if (decodedPayload.exp && decodedPayload.exp < Math.floor(Date.now() / 1000)) {
+      throw new Error('JWT expired');
+    }
+
+    // Extract user info from JWT
+    const userId = decodedPayload.sub || 'unknown';
+    const userEmail = decodedPayload.email || 'unknown';
+    const sessionId = accessToken.substring(0, 20);
+    const orgId = decodedPayload.org_id;
 
     req.user = {
       user_id: userId,

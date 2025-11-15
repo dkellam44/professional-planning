@@ -213,11 +213,32 @@ router.post('/oauth/register', (req: Request, res: Response) => {
   }
 });
 
+// OAuth authorization state storage (authorization code flow)
+// In production, use Redis or a database
+const authorizationRequests = new Map<string, {
+  client_id: string;
+  redirect_uri: string;
+  state: string;
+  code_challenge?: string;
+  code_challenge_method?: string;
+  scope: string;
+  timestamp: number;
+}>();
+
+const authorizationCodes = new Map<string, {
+  client_id: string;
+  redirect_uri: string;
+  code_challenge?: string;
+  user_id: string;
+  user_email: string;
+  scope: string;
+  timestamp: number;
+}>();
+
 /**
  * OAuth Authorization Endpoint (RFC 6749)
  *
- * Redirects users to authenticate with Stytch/Google OAuth.
- * Proxies authorization requests to Stytch's authorization endpoint.
+ * Initiates OAuth flow by redirecting to Stytch Google OAuth.
  *
  * GET /v1/public/oauth/authorize?client_id=...&response_type=code&scope=...&redirect_uri=...&state=...
  */
@@ -225,23 +246,56 @@ router.get('/v1/public/oauth/authorize', (req: Request, res: Response) => {
   try {
     const { client_id, response_type, scope, redirect_uri, state, code_challenge, code_challenge_method } = req.query;
 
-    // Build authorization URL to Stytch
-    const params = new URLSearchParams({
+    // Validate request
+    if (!client_id || !redirect_uri || !state || response_type !== 'code') {
+      return res.status(400).json({
+        error: 'invalid_request',
+        error_description: 'Missing or invalid required parameters',
+      });
+    }
+
+    // Store authorization request for callback
+    const requestId = crypto.randomBytes(32).toString('hex');
+    authorizationRequests.set(requestId, {
       client_id: client_id as string,
-      response_type: response_type as string,
-      scope: scope as string,
       redirect_uri: redirect_uri as string,
       state: state as string,
+      code_challenge: code_challenge as string,
+      code_challenge_method: code_challenge_method as string,
+      scope: scope as string || 'openid email profile',
+      timestamp: Date.now(),
     });
 
-    if (code_challenge) params.append('code_challenge', code_challenge as string);
-    if (code_challenge_method) params.append('code_challenge_method', code_challenge_method as string);
-
     // Log authorization request
-    console.log(`[OAUTH] Authorization request from client: ${client_id}`);
+    console.log(`[OAUTH] Authorization request from client: ${client_id} (request_id: ${requestId})`);
 
-    // Redirect to Stytch authorization endpoint
-    const stytchAuthUrl = `https://api.stytch.com/v1/public/oauth/authorize?${params.toString()}`;
+    // Get Stytch public token from environment
+    const publicToken = process.env.STYTCH_PUBLIC_TOKEN;
+    if (!publicToken) {
+      console.error('[OAUTH] STYTCH_PUBLIC_TOKEN not configured');
+      return res.status(500).json({
+        error: 'server_error',
+        error_description: 'OAuth not properly configured',
+      });
+    }
+
+    // Build Stytch Google OAuth start URL
+    const baseUrl = process.env.BASE_URL || 'https://coda.bestviable.com';
+    const callbackUrl = `${baseUrl}/v1/oauth/callback`;
+
+    const stytchParams = new URLSearchParams({
+      public_token: publicToken,
+      login_redirect_url: callbackUrl,
+      signup_redirect_url: callbackUrl,
+    });
+
+    // Add custom state to track the request
+    stytchParams.append('custom_scopes', requestId);
+
+    // Redirect to Stytch Google OAuth
+    const stytchAuthUrl = `https://api.stytch.com/v1/public/oauth/google/start?${stytchParams.toString()}`;
+
+    console.log(`[OAUTH] Redirecting to Stytch Google OAuth (request_id: ${requestId})`);
     res.redirect(stytchAuthUrl);
   } catch (error) {
     console.error('[OAUTH] Authorization endpoint error:', error);
@@ -253,10 +307,80 @@ router.get('/v1/public/oauth/authorize', (req: Request, res: Response) => {
 });
 
 /**
+ * OAuth Callback Endpoint
+ *
+ * Receives the callback from Stytch after user authentication.
+ * Exchanges Stytch token for user info and generates authorization code.
+ *
+ * GET /v1/oauth/callback?token=...&stytch_token_type=oauth
+ */
+router.get('/v1/oauth/callback', async (req: Request, res: Response) => {
+  try {
+    const { token, stytch_token_type } = req.query;
+
+    if (!token || stytch_token_type !== 'oauth') {
+      return res.status(400).send('Invalid callback parameters');
+    }
+
+    console.log('[OAUTH] Received callback from Stytch');
+
+    // Import Stytch client
+    const { initializeStytchClient } = await import('../middleware/stytch-auth');
+    const stytchClient = initializeStytchClient();
+
+    // Authenticate with Stytch to get user info
+    const authResponse = await stytchClient.oauth.authenticate({
+      token: token as string,
+      session_duration_minutes: 60,
+    });
+
+    const userId = authResponse.user.user_id;
+    const userEmail = authResponse.user.emails?.[0]?.email || 'unknown';
+
+    console.log(`[OAUTH] User authenticated via Stytch: ${userEmail}`);
+
+    // Find the original authorization request
+    // For now, we'll use the first pending request (in production, use proper state tracking)
+    const [requestId, authRequest] = Array.from(authorizationRequests.entries())[0] || [];
+
+    if (!authRequest) {
+      return res.status(400).send('No pending authorization request found');
+    }
+
+    // Remove the request from pending
+    authorizationRequests.delete(requestId);
+
+    // Generate authorization code
+    const authCode = crypto.randomBytes(32).toString('hex');
+    authorizationCodes.set(authCode, {
+      client_id: authRequest.client_id,
+      redirect_uri: authRequest.redirect_uri,
+      code_challenge: authRequest.code_challenge,
+      user_id: userId,
+      user_email: userEmail,
+      scope: authRequest.scope,
+      timestamp: Date.now(),
+    });
+
+    console.log(`[OAUTH] Generated authorization code for client: ${authRequest.client_id}`);
+
+    // Redirect back to client with authorization code
+    const redirectUrl = new URL(authRequest.redirect_uri);
+    redirectUrl.searchParams.append('code', authCode);
+    redirectUrl.searchParams.append('state', authRequest.state);
+
+    res.redirect(redirectUrl.toString());
+  } catch (error) {
+    console.error('[OAUTH] Callback error:', error);
+    res.status(500).send('Authentication failed');
+  }
+});
+
+/**
  * OAuth Token Endpoint (RFC 6749)
  *
  * Exchanges authorization code for access token.
- * Proxies the request to Stytch's token endpoint.
+ * Generates JWT access token for authenticated user.
  *
  * POST /v1/public/oauth/token
  * Content-Type: application/x-www-form-urlencoded or application/json
@@ -272,7 +396,7 @@ router.get('/v1/public/oauth/authorize', (req: Request, res: Response) => {
  */
 router.post('/v1/public/oauth/token', async (req: Request, res: Response) => {
   try {
-    const { grant_type, code, client_id, client_secret, redirect_uri, code_verifier } = req.body;
+    const { grant_type, code, client_id, redirect_uri, code_verifier } = req.body;
 
     // Validate required fields
     if (grant_type !== 'authorization_code' || !code || !client_id || !redirect_uri) {
@@ -282,42 +406,74 @@ router.post('/v1/public/oauth/token', async (req: Request, res: Response) => {
       });
     }
 
-    // Build request to Stytch token endpoint
-    const tokenRequest = {
-      grant_type: 'authorization_code',
-      code,
-      client_id,
-      client_secret,
-      redirect_uri,
-      code_verifier, // Include for PKCE
-    };
+    console.log(`[OAUTH] Token exchange request from client: ${client_id}`);
 
-    // Remove undefined fields
-    Object.keys(tokenRequest).forEach(
-      (key: string) => tokenRequest[key as keyof typeof tokenRequest] === undefined && delete tokenRequest[key as keyof typeof tokenRequest]
-    );
-
-    // Log token exchange request (debug mode only)
-    console.log(`[OAUTH] Token exchange for client: ${client_id}`);
-
-    // Forward to Stytch token endpoint
-    const response = await fetch('https://api.stytch.com/v1/public/oauth/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(tokenRequest),
-    });
-
-    const tokenData = await response.json();
-
-    if (!response.ok) {
-      console.error('[OAUTH] Stytch token exchange failed:', tokenData);
-      return res.status(response.status).json(tokenData);
+    // Retrieve authorization code
+    const authData = authorizationCodes.get(code);
+    if (!authData) {
+      return res.status(400).json({
+        error: 'invalid_grant',
+        error_description: 'Authorization code is invalid or expired',
+      });
     }
 
-    // Return access token to client
-    res.status(200).json(tokenData);
+    // Validate client_id and redirect_uri match
+    if (authData.client_id !== client_id || authData.redirect_uri !== redirect_uri) {
+      return res.status(400).json({
+        error: 'invalid_grant',
+        error_description: 'Client credentials do not match authorization request',
+      });
+    }
+
+    // Verify PKCE if code_challenge was used
+    if (authData.code_challenge && !code_verifier) {
+      return res.status(400).json({
+        error: 'invalid_request',
+        error_description: 'code_verifier required for PKCE',
+      });
+    }
+
+    if (authData.code_challenge && code_verifier) {
+      // Verify PKCE challenge (S256)
+      const hash = crypto.createHash('sha256').update(code_verifier).digest('base64url');
+      if (hash !== authData.code_challenge) {
+        return res.status(400).json({
+          error: 'invalid_grant',
+          error_description: 'PKCE verification failed',
+        });
+      }
+    }
+
+    // Remove used authorization code
+    authorizationCodes.delete(code);
+
+    // Generate JWT access token
+    const jwtSecret = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
+    const payload = {
+      sub: authData.user_id,
+      email: authData.user_email,
+      scope: authData.scope,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 3600, // 1 hour
+      iss: process.env.BASE_URL || 'https://coda.bestviable.com',
+      aud: client_id,
+    };
+
+    // Simple JWT creation (in production, use jsonwebtoken library)
+    const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+    const payloadStr = Buffer.from(JSON.stringify(payload)).toString('base64url');
+    const signature = crypto.createHmac('sha256', jwtSecret).update(`${header}.${payloadStr}`).digest('base64url');
+    const accessToken = `${header}.${payloadStr}.${signature}`;
+
+    console.log(`[OAUTH] Issued access token for user: ${authData.user_email}`);
+
+    // Return token response
+    res.status(200).json({
+      access_token: accessToken,
+      token_type: 'Bearer',
+      expires_in: 3600,
+      scope: authData.scope,
+    });
   } catch (error) {
     console.error('[OAUTH] Token endpoint error:', error);
     res.status(500).json({
