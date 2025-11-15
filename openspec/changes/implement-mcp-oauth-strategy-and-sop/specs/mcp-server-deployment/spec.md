@@ -6,156 +6,207 @@
 
 ## MODIFIED Requirements
 
-### Requirement: MCP Server Authentication
-The MCP server deployment SHALL enforce authentication on all endpoints except health/status checks using one of: Cloudflare Access JWT, Bearer token, or database-backed credentials.
+### Requirement: OAuth 2.1 Authentication
+The MCP server deployment SHALL enforce OAuth 2.1 authentication on all endpoints except health/status checks and OAuth metadata endpoints, with full RFC compliance.
 
-#### Scenario: User authenticates via Cloudflare Access JWT
-- **WHEN** user makes request through Cloudflare tunnel with JWT header
-- **THEN** server validates JWT signature and extracts user email
-- **AND** request proceeds to tool handler
+#### Scenario: User authenticates via Stytch OAuth 2.1 with PKCE
+- **WHEN** user initiates OAuth flow from ChatGPT or Claude.ai web
+- **THEN** server redirects to Stytch authorization endpoint
+- **AND** PKCE code challenge is verified (RFC 7636)
+- **AND** server validates authorization code and issues access token
+- **AND** request proceeds to MCP tool handler
 
-#### Scenario: User authenticates via Bearer token (development mode)
-- **WHEN** user makes request with `Authorization: Bearer token` header
-- **THEN** server validates token format and allows request
-- **AND** useful for local development without Cloudflare Access
+#### Scenario: User provides valid Stytch access token
+- **WHEN** user makes request with `Authorization: Bearer <stytch-access-token>` header
+- **THEN** server validates token using Stytch SDK
+- **AND** token signature verified using JWKS from Stytch
+- **AND** request proceeds with user email in request context
+
+#### Scenario: Bearer token fallback for Claude Code development
+- **WHEN** user makes request with `Authorization: Bearer <custom-token>` header during development
+- **THEN** server accepts token without Stytch validation
+- **AND** useful for local testing without OAuth flow
+- **AND** NOT used in production
 
 #### Scenario: Unauthenticated request is rejected
-- **WHEN** user makes request without JWT or Bearer token
-- **THEN** server returns 401 Unauthorized
-- **AND** includes clear error message
+- **WHEN** user makes request without Authorization header
+- **THEN** server returns 401 Unauthorized with WWW-Authenticate header
+- **AND** includes OAuth 2.1 error codes (invalid_token, expired_token, insufficient_scope)
+- **AND** error response follows RFC 6750 format
 
-#### Scenario: Invalid JWT is rejected
-- **WHEN** user provides invalid or expired JWT
-- **THEN** server validates signature fails
-- **AND** request returns 401 with "Invalid JWT" message
+#### Scenario: Invalid or expired token is rejected
+- **WHEN** user provides invalid/expired Stytch token
+- **THEN** server validates token signature fails
+- **AND** request returns 401 with "invalid_token" error code
+- **AND** client can initiate new OAuth flow
 
 ---
 
-### Requirement: MCP Token Storage
-The MCP deployment SHALL store service API tokens securely using one of three approaches (progressively adding features): environment variables, PostgreSQL with encryption, or external secrets manager.
+### Requirement: OAuth 2.1 Metadata Endpoints
+The MCP server SHALL implement required OAuth 2.1 metadata endpoints for client discovery and resource protection.
 
-#### Scenario: Phase 1 - Token stored in environment variable
-- **WHEN** MCP starts with `tokenStore: 'env'` configuration
-- **THEN** server reads `CODA_API_TOKEN` from `process.env`
-- **AND** uses token for all API calls
+#### Scenario: Authorization Server Metadata (RFC 8414)
+- **WHEN** client requests `/.well-known/oauth-authorization-server`
+- **THEN** server returns JSON with:
+  - `issuer`: Stytch project identifier
+  - `authorization_endpoint`: Stytch OAuth endpoint
+  - `token_endpoint`: Stytch token endpoint
+  - `jwks_uri`: Stytch JWKS endpoint
+  - `scopes_supported`: ["openid", "profile", "email"]
+  - `response_types_supported`: ["code"]
+  - `grant_types_supported`: ["authorization_code"]
+  - `code_challenge_methods_supported`: ["S256"] (PKCE required)
+- **AND** response follows RFC 8414 specification
+- **AND** endpoint accessible without authentication
+
+#### Scenario: Protected Resource Metadata (RFC 9728)
+- **WHEN** client requests `/.well-known/oauth-protected-resource`
+- **THEN** server returns JSON with:
+  - `resource`: Coda MCP resource identifier
+  - `authorization_servers`: [Stytch project URL]
+  - `scope_name`: scope required for resource access
+  - `access_token_type`: "Bearer"
+- **AND** response follows RFC 9728 specification
+- **AND** endpoint accessible without authentication
+
+#### Scenario: JWKS Endpoint for Token Validation
+- **WHEN** server needs to validate Stytch tokens
+- **THEN** server proxies requests to `/.well-known/jwks.json`
+- **AND** caches JWKS for 1 hour to reduce external calls
+- **AND** fails gracefully if Stytch JWKS unavailable
+
+#### Scenario: Service Token Storage for API Access
+The MCP server SHALL store Coda API tokens securely using one of three approaches: environment variables, PostgreSQL with encryption, or external secrets manager.
+
+#### Scenario: Phase 1 - Service token in environment variable
+- **WHEN** MCP starts with `CODA_API_TOKEN` environment variable
+- **THEN** server reads token from process.env
+- **AND** uses token for all Coda API calls
 - **AND** token is NOT logged or exposed in responses
 
-#### Scenario: Phase 2 - Token stored in PostgreSQL with encryption
-- **WHEN** MCP starts with `tokenStore: 'postgres'` configuration
-- **THEN** server connects to PostgreSQL with pool (min=2, max=10)
-- **AND** queries `tokens` table with service_id
+#### Scenario: Phase 2 - Service token in PostgreSQL with encryption
+- **WHEN** MCP configured for PostgreSQL token storage
+- **THEN** server connects to PostgreSQL with connection pool
+- **AND** queries encrypted `tokens` table
 - **AND** decrypts token using AES-256-GCM with `MCP_AUTH_ENCRYPTION_KEY`
 - **AND** token persists across container restarts
 
-#### Scenario: Phase 3 - Token stored in external secrets manager
-- **WHEN** MCP starts with `tokenStore: 'infisical'` configuration
-- **THEN** server connects to Infisical API using `INFISICAL_API_KEY`
+#### Scenario: Phase 3 - Service token in Infisical secrets manager
+- **WHEN** MCP configured for Infisical token storage
+- **THEN** server connects to Infisical using `INFISICAL_API_KEY`
 - **AND** fetches secret using workspace ID and secret name
-- **AND** caches token for 5 minutes to avoid excessive API calls
+- **AND** caches token for 5 minutes to reduce API calls
+- **AND** rotates cache on 401 response from API
 
-#### Scenario: Token retrieval failure is handled gracefully
-- **WHEN** token storage is unavailable (DB down, Infisical unreachable, env var missing)
+#### Scenario: Service token retrieval failure is handled gracefully
+- **WHEN** token storage unavailable (DB down, Infisical unreachable, env var missing)
 - **THEN** server returns 503 Service Unavailable
-- **AND** includes diagnostic message ("PostgreSQL connection failed", etc.)
-- **AND** does NOT return 500 or expose internal error details
+- **AND** includes diagnostic message
+- **AND** does NOT expose internal error details
 
 ---
 
 ### Requirement: MCP Deployment Template
-The MCP server deployment SHALL include reusable template and middleware package (`@bestviable/mcp-auth-middleware`) for new MCP implementations.
+The MCP server deployment SHALL include reusable template for new MCP implementations with built-in OAuth 2.1 support.
 
 #### Scenario: New MCP author uses template
-- **WHEN** developer creates `/templates/mcp-server-template/`
+- **WHEN** developer creates new MCP from `/templates/mcp-server-template/`
 - **THEN** new MCP can be scaffolded in <5 minutes
-- **AND** includes Dockerfile, docker-compose.yml, auth middleware, example handlers
+- **AND** includes Dockerfile, docker-compose.yml, OAuth middleware, example handlers
+- **AND** template includes Stytch SDK configuration
 - **AND** template follows standard patterns from existing Coda, GitHub MCPs
 
-#### Scenario: New MCP author integrates auth middleware
-- **WHEN** developer imports `@bestviable/mcp-auth-middleware`
-- **THEN** middleware handles JWT validation, Bearer token fallback, token retrieval
-- **AND** developer only needs to implement business logic (tools/handlers)
-- **AND** middleware configurable via simple config object
+#### Scenario: New MCP author integrates OAuth middleware
+- **WHEN** developer imports auth middleware in new MCP
+- **THEN** middleware handles:
+  - Stytch token validation
+  - Bearer token fallback for development
+  - Service token retrieval
+  - Error responses following RFC 6750
+- **AND** developer only implements business logic (tools/handlers)
+- **AND** middleware configurable via config object
 
-#### Scenario: Middleware supports multiple auth methods
-- **WHEN** middleware created with `mode: 'cloudflare'` or `mode: 'bearer'` or `mode: 'both'`
-- **THEN** validates appropriately (Cloudflare JWT only, Bearer token only, or either)
-- **AND** can switch between auth methods by changing config
+#### Scenario: Service token storage is configurable
+- **WHEN** middleware configured with `tokenStore: 'env' | 'postgres' | 'infisical'`
+- **THEN** middleware uses appropriate retrieval strategy
+- **AND** can switch between strategies by changing config
+- **AND** no code changes required to switch strategies
 
 ---
 
-### Requirement: MCP Token Encryption
-The MCP deployment SHALL encrypt stored tokens at rest using AES-256-GCM with NIST-approved encryption.
+### Requirement: PKCE Support for OAuth 2.1
+The MCP server SHALL implement PKCE (RFC 7636) as mandatory for all OAuth flows.
 
-#### Scenario: Token is encrypted before storage
-- **WHEN** token set via `setToken(serviceName, key, value)`
-- **THEN** server encrypts plaintext token using AES-256-GCM
-- **AND** stores encrypted value (+ IV + auth tag) in database
-- **AND** plaintext token is NOT stored anywhere
+#### Scenario: Authorization request includes PKCE challenge
+- **WHEN** client initiates OAuth flow
+- **THEN** client generates code verifier and code challenge (S256)
+- **AND** code challenge included in authorization request
+- **AND** server receives challenge with `code_challenge_methods_supported: ["S256"]`
 
-#### Scenario: Token is decrypted on retrieval
-- **WHEN** token fetched via `getToken(serviceName, key)`
-- **THEN** server retrieves encrypted value from database
-- **AND** decrypts using AES-256-GCM with stored IV and auth tag
+#### Scenario: Token request includes PKCE verifier
+- **WHEN** client exchanges authorization code for token
+- **THEN** client includes code verifier in token request
+- **AND** server validates verifier matches stored challenge
+- **AND** token issued only if verification succeeds
+
+#### Scenario: PKCE validation failures are rejected
+- **WHEN** PKCE challenge/verifier mismatch detected
+- **THEN** server returns 400 Bad Request
+- **AND** error code: `invalid_request`
+- **AND** user redirected to re-authenticate
+
+---
+
+### Requirement: Service Token Encryption
+The MCP deployment SHALL encrypt stored service tokens at rest using AES-256-GCM when using PostgreSQL storage.
+
+#### Scenario: Service token is encrypted before storage
+- **WHEN** service token stored in PostgreSQL
+- **THEN** token encrypted using AES-256-GCM
+- **AND** encrypted value stored with IV and auth tag
+- **AND** plaintext token never stored
+
+#### Scenario: Service token is decrypted on retrieval
+- **WHEN** service token retrieved from PostgreSQL
+- **THEN** server decrypts using AES-256-GCM
 - **AND** returns plaintext token to caller
-- **AND** fails with clear error if decryption fails ("Invalid encryption key", etc.)
+- **AND** fails with clear error if decryption fails
 
 #### Scenario: Encryption key can be rotated
 - **WHEN** `rotateKey(oldKey, newKey)` called
-- **THEN** all tokens in service are re-encrypted with new key
-- **AND** operation is atomic (all succeed or all fail)
-- **AND** completes in <5 seconds for typical token counts
-
----
-
-### Requirement: MCP Audit Logging
-The MCP deployment SHALL maintain audit log of all token access and configuration changes.
-
-#### Scenario: Token access is logged
-- **WHEN** token retrieved via `getToken()`
-- **THEN** entry inserted into `audit_log` table:
-  - service_id
-  - action: 'get_token'
-  - user_email (from JWT or env var)
-  - timestamp
-  - result: 'success' or 'failure'
-- **AND** log entry created <10ms after action
-
-#### Scenario: Token configuration changes are logged
-- **WHEN** token set/deleted/rotated
-- **THEN** audit entry includes:
-  - action: 'set_token' | 'delete_token' | 'rotate_key'
-  - operator email
-  - affected token key (not value)
-  - timestamp
-
-#### Scenario: Audit log contains no sensitive data
-- **WHEN** audit entries written
-- **THEN** log contains NO plaintext tokens
-- **AND** contains NO encryption keys
-- **AND** contains NO API credentials
-- **AND** safe to expose in logs/dashboards
+- **THEN** all tokens in service re-encrypted with new key
+- **AND** operation is atomic
+- **AND** completes in <5 seconds
 
 ---
 
 ## Related Capabilities
 
-- `cloudflare-access-integration` - JWT validation
-- `token-management` - CRUD operations
+- `oauth-2.1-compliance` - RFC 8414, RFC 9728, RFC 7636 implementation
+- `stytch-integration` - OAuth provider and token validation
+- `service-token-management` - Coda API token CRUD operations
 - `docker-deployment` - Container orchestration
-- `postgresql-infrastructure` - Database backend
+- `postgresql-infrastructure` - Optional database backend for service token storage
 
 ## Impact Summary
 
-**Breaking Changes**: None - fully backward compatible
+**Breaking Changes**: Replaces Cloudflare Access authentication with Stytch OAuth 2.1
 **New Capabilities**:
-- Encrypted token storage
-- Audit logging
-- Reusable middleware package
-- Token rotation
+- Full OAuth 2.1 compliance with PKCE
+- OAuth metadata endpoints (RFC 8414, RFC 9728)
+- Stytch-managed user authentication
+- Service token storage flexibility (env/postgres/infisical)
+- Reusable OAuth middleware for new MCPs
 
-**Migration Path**: Env var → PostgreSQL → Infisical (transparent code changes)
+**Migration Path**:
+1. Phase 1 (Current): Cloudflare Access JWT + Bearer token (env var service token)
+2. Phase 2 (Planned): Stytch OAuth 2.1 + Bearer token fallback (env var service token)
+3. Phase 2F (Optional): Remove Cloudflare Access support after 30-day transition
+4. Phase 3 (Future): Service token storage in PostgreSQL with encryption
+5. Phase 4 (Future): Service token storage in Infisical secrets manager
 
 ---
 
-**Spec Version**: 1.0
-**Last Updated**: 2025-11-08
+**Spec Version**: 2.0 (OAuth 2.1 Compliance)
+**Last Updated**: 2025-11-14
+**Status**: UPDATED for Stytch OAuth 2.1 strategy

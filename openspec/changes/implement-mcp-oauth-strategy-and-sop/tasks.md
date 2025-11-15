@@ -1,8 +1,9 @@
 # Implementation Tasks: MCP OAuth Strategy & SOP
 
 **Change ID**: `implement-mcp-oauth-strategy-and-sop`
-**Total Tasks**: 45
+**Total Tasks**: 44 (25 Phase 2 Stytch OAuth 2.1 + Phases 3-4)
 **Phases**: 4 (Sequential with parallel subtasks possible)
+**Last Updated**: 2025-11-14 (Phase 2 redesign: Stytch OAuth 2.1 instead of PostgreSQL middleware)
 
 ---
 
@@ -22,7 +23,7 @@ All tasks reference relative paths; prefix with appropriate base path above.
 
 ## Progress Status
 
-**Last Updated**: 2025-11-09 (Phase 1 Implementation Complete)
+**Last Updated**: 2025-11-14 (Phase 1 Complete, Phase 2 Design Ready)
 
 **Phase 1 Status**: ✅ **COMPLETE**
 - ✅ **1.1.1-1.1.5**: Authentication middleware fully implemented with JWT validation
@@ -30,6 +31,16 @@ All tasks reference relative paths; prefix with appropriate base path above.
 - ✅ **1.3.1-1.3.2**: No OAuth endpoints present (clean implementation)
 - ✅ **1.4.1-1.4.2**: Health check complete with auth status
 - ✅ **1.5.1-1.5.5**: Full testing complete (Bearer token + Cloudflare JWT)
+
+**Phase 2 Status**: ⏳ **IN PROGRESS (Design Complete, Implementation Pending)**
+- **Strategy**: Stytch OAuth 2.1 with PKCE
+- **Timeline**: ~4-6 hours (vs weeks for PostgreSQL middleware)
+- **Scope**: 25 tasks across 8 sections (Stytch setup, SDK integration, metadata endpoints, testing)
+- **Key Changes**:
+  - Replace Cloudflare Access JWT with Stytch OAuth 2.1
+  - Add OAuth 2.1 metadata endpoints (RFC 8414, RFC 9728)
+  - Implement PKCE for ChatGPT/Claude.ai web integration
+  - Maintain Bearer token fallback for Claude Code development
 
 **Implementation Details**:
 1. ✅ Middleware at `src/middleware/cloudflare-access-auth.ts` validates both JWT and Bearer tokens
@@ -39,6 +50,8 @@ All tasks reference relative paths; prefix with appropriate base path above.
 5. ✅ Health endpoint returns auth mode and token storage info
 6. ✅ Server builds and runs successfully
 7. ✅ Both authentication methods tested and working
+8. ⏳ Phase 2: Stytch OAuth 2.1 middleware implementation (pending)
+9. ⏳ Phase 2: OAuth 2.1 metadata endpoints RFC 8414/9728 (pending)
 
 ---
 
@@ -314,189 +327,174 @@ During implementation, discovered that **MCP notifications (messages without `id
 
 ---
 
-## Phase 2: Reusable Auth Middleware & PostgreSQL (Week 2-3)
+## Phase 2: Stytch OAuth 2.1 Integration (Week 2)
 
-### Section 2.1: Create NPM Package Structure
+### Section 2.1: Stytch Account & Project Setup
 
-- [ ] 2.1.1 Scaffold `@bestviable/mcp-auth-middleware` package
-  - **Location**: `/integrations/npm-packages/mcp-auth-middleware/`
-  - **Task**: Create directory structure with package.json
-  - **Acceptance**: `npm install --save-dev typescript` works
+- [ ] 2.1.1 Sign up for Stytch account
+  - **URL**: https://stytch.com
+  - **Task**: Create free account (free tier: 10,000 MAUs)
+  - **Acceptance**: Account created with access to dashboard
 
-- [ ] 2.1.2 Configure TypeScript
-  - **File**: `tsconfig.json`
-  - **Task**: Set up compilation to `dist/` folder
-  - **Acceptance**: `npm run build` produces compiled JavaScript
+- [ ] 2.1.2 Create Stytch project
+  - **Task**: Create new project in Stytch dashboard
+  - **Task**: Generate Project ID and API Secret
+  - **Acceptance**: Credentials available for copy/paste
 
-- [ ] 2.1.3 Set up build pipeline
-  - **File**: `package.json` scripts
-  - **Task**: Add `build`, `test`, `lint` scripts
-  - **Acceptance**: All scripts execute without errors
+- [ ] 2.1.3 Configure OAuth 2.1 settings
+  - **Task**: Set up authorization endpoints
+  - **Task**: Configure PKCE as mandatory
+  - **Task**: Add redirect URIs (ChatGPT, Claude.ai, localhost for testing)
+  - **Acceptance**: OAuth configuration complete
 
-- [ ] 2.1.4 Initialize git and npm
-  - **Task**: Create .gitignore, README.md, LICENSE
-  - **Acceptance**: Package ready for `npm install` in other projects
+### Section 2.2: Install Stytch SDK
 
-### Section 2.2: Cloudflare Access Validator
+- [ ] 2.2.1 Update package.json
+  - **File**: `service-builds/mcp-servers/coda/package.json`
+  - **Task**: Add `"stytch": "^27.0.0"`
+  - **Task**: Remove `"jsonwebtoken"` and `"jwks-rsa"` (Stytch SDK handles)
+  - **Acceptance**: Dependencies updated
 
-- [ ] 2.2.1 Create JWT validation module
-  - **File**: `src/validators/cloudflare-access.ts`
-  - **Task**: Implement `validateCloudflareAccessJWT()` function
-  - **Task**: Cache public keys locally to avoid repeated fetches
-  - **Acceptance**: Function validates and returns user email
+- [ ] 2.2.2 Run npm install
+  - **Command**: `npm install`
+  - **Acceptance**: `node_modules/stytch` directory present
 
-- [ ] 2.2.2 Implement Bearer token fallback
-  - **File**: `src/validators/bearer-token.ts`
-  - **Task**: Implement `validateBearerToken()` for dev/test mode
-  - **Acceptance**: Extracts token from `Authorization: Bearer` header
+### Section 2.3: Implement Stytch Authentication Middleware
 
-- [ ] 2.2.3 Create unified auth validator
-  - **File**: `src/validators/index.ts`
-  - **Task**: Export both validators with clear error messages
-  - **Acceptance**: Single entry point for validation logic
+- [ ] 2.3.1 Create Stytch auth middleware
+  - **File**: `service-builds/mcp-servers/coda/src/middleware/stytch-auth.ts`
+  - **Task**: Implement authentication using Stytch SDK
+  - **Task**: Validate access tokens with `stytchClient.sessions.authenticate()`
+  - **Task**: Extract user email and session ID
+  - **Acceptance**: Middleware validates Stytch tokens
 
-### Section 2.3: Token Encryption
+- [ ] 2.3.2 Replace Cloudflare Access middleware
+  - **File**: `service-builds/mcp-servers/coda/src/http-server.ts`
+  - **Task**: Replace old `cloudflare-access-auth.ts` import with stytch middleware
+  - **Task**: Update middleware application order
+  - **Acceptance**: Stytch auth is applied to all `/mcp` requests
 
-- [ ] 2.3.1 Implement encryption utilities
-  - **File**: `src/encryption/index.ts`
-  - **Task**: Implement AES-256-GCM encrypt/decrypt
-  - **Task**: Use environment variable for encryption key
-  - **Acceptance**: Round-trip encryption/decryption works
+- [ ] 2.3.3 Handle authentication errors gracefully
+  - **Task**: Return 401 for invalid/expired tokens
+  - **Task**: Include clear error messages in responses
+  - **Acceptance**: Error responses follow JSON-RPC 2.0 format
 
-- [ ] 2.3.2 Add encryption key generation
-  - **File**: `src/encryption/key-generation.ts`
-  - **Task**: Auto-generate key if `MCP_AUTH_ENCRYPTION_KEY` not set
-  - **Task**: Persist key for reproducibility
-  - **Acceptance**: Same plaintext always produces same ciphertext after restart
+### Section 2.4: Add OAuth 2.1 Metadata Endpoints
 
-- [ ] 2.3.3 Write encryption unit tests
-  - **File**: `src/encryption/__tests__/encrypt.test.ts`
-  - **Task**: Test various key sizes, inputs, edge cases
-  - **Acceptance**: 100% coverage for encryption module
+- [ ] 2.4.1 Create OAuth metadata routes
+  - **File**: `service-builds/mcp-servers/coda/src/routes/oauth-metadata.ts`
+  - **Task**: Implement `/.well-known/oauth-authorization-server` (RFC 8414)
+  - **Task**: Implement `/.well-known/oauth-protected-resource` (RFC 9728)
+  - **Task**: Implement `/.well-known/jwks.json` (proxy to Stytch)
+  - **Acceptance**: All three endpoints respond with correct metadata
 
-### Section 2.4: PostgreSQL Schema & Connection
+- [ ] 2.4.2 Register OAuth routes with Express
+  - **File**: `service-builds/mcp-servers/coda/src/http-server.ts`
+  - **Task**: Add OAuth metadata routes to app
+  - **Task**: These endpoints should NOT require authentication
+  - **Acceptance**: Routes accessible before OAuth flow
 
-- [ ] 2.4.1 Design database schema
-  - **File**: `docs/schema.sql`
-  - **Task**: Create tables:
-    - `services` (id, name, created_at)
-    - `tokens` (id, service_id, key, encrypted_value, created_at, updated_at)
-    - `audit_log` (id, service_id, action, user_email, timestamp)
-  - **Acceptance**: Schema includes indexes and constraints
+- [ ] 2.4.3 Verify OAuth metadata format
+  - **Task**: Validate RFC 8414 compliance
+  - **Task**: Validate RFC 9728 compliance
+  - **Acceptance**: Metadata endpoints return valid JSON
 
-- [ ] 2.4.2 Create migration script
-  - **File**: `scripts/init-mcp-auth-db.sh`
-  - **Task**: Connect to local postgres and create schema
-  - **Acceptance**: Script runs without errors on fresh database
+### Section 2.5: Update Configuration
 
-- [ ] 2.4.3 Implement PostgreSQL connection pool
-  - **File**: `src/postgres/connection.ts`
-  - **Task**: Use `pg` npm package with connection pooling
-  - **Task**: Support env vars: `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
-  - **Acceptance**: Pool created with min=2, max=10 connections
+- [ ] 2.5.1 Add Stytch environment variables
+  - **File**: `service-builds/mcp-servers/coda/src/config.ts`
+  - **Task**: Add `STYTCH_PROJECT_ID` and `STYTCH_SECRET`
+  - **Task**: Make Stytch config required (no fallback)
+  - **Acceptance**: Config module loads and validates Stytch vars
 
-- [ ] 2.4.4 Write connection tests
-  - **File**: `src/postgres/__tests__/connection.test.ts`
-  - **Task**: Test connection, query execution, error handling
-  - **Acceptance**: Tests pass against local postgres
+- [ ] 2.5.2 Create .env.example with Stytch vars
+  - **File**: `service-builds/mcp-servers/coda/.env.example`
+  - **Task**: Add Stytch Project ID and Secret placeholders
+  - **Task**: Add comments explaining where to get values
+  - **Acceptance**: Example file is copy-paste ready
 
-### Section 2.5: Token CRUD Operations
+- [ ] 2.5.3 Update docker-compose.yml
+  - **File**: `service-builds/mcp-servers/coda/docker-compose.yml`
+  - **Task**: Add `STYTCH_PROJECT_ID` and `STYTCH_SECRET` env vars
+  - **Task**: Keep existing Traefik labels (already using v3.0)
+  - **Acceptance**: Docker compose includes Stytch configuration
 
-- [ ] 2.5.1 Implement getToken()
-  - **File**: `src/postgres/token-store.ts`
-  - **Task**: Query `tokens` table, decrypt value, return plaintext
-  - **Signature**: `async getToken(serviceName: string, key: string): Promise<string | null>`
-  - **Acceptance**: Returns original plaintext, null if not found
+### Section 2.6: Local Testing with Stytch Sandbox
 
-- [ ] 2.5.2 Implement setToken()
-  - **Task**: Encrypt value, insert/update in `tokens` table
-  - **Signature**: `async setToken(serviceName: string, key: string, value: string): Promise<void>`
-  - **Acceptance**: Token persists and can be retrieved
+- [ ] 2.6.1 Set up Stytch test environment
+  - **Task**: Create test user in Stytch dashboard
+  - **Task**: Generate test tokens
+  - **Acceptance**: Test tokens available for manual testing
 
-- [ ] 2.5.3 Implement deleteToken()
-  - **Task**: Delete from `tokens` table
-  - **Signature**: `async deleteToken(serviceName: string, key: string): Promise<void>`
-  - **Acceptance**: Subsequent getToken() returns null
+- [ ] 2.6.2 Test OAuth metadata endpoints locally
+  - **Command**: `curl http://localhost:8080/.well-known/oauth-authorization-server`
+  - **Acceptance**: Returns valid RFC 8414 JSON
 
-- [ ] 2.5.4 Implement rotateKey()
-  - **Task**: Update key for all tokens in service (decrypt → re-encrypt with new key)
-  - **Signature**: `async rotateKey(oldKey: string, newKey: string): Promise<number>`
-  - **Acceptance**: Returns count of rotated tokens
+- [ ] 2.6.3 Test Stytch token validation
+  - **Task**: Get test access token from Stytch
+  - **Command**: `curl -H "Authorization: Bearer <test-token>" http://localhost:8080/mcp`
+  - **Acceptance**: Request succeeds with valid token
 
-- [ ] 2.5.5 Implement audit logging
-  - **Task**: Insert into `audit_log` for all token operations
-  - **Acceptance**: Audit table has entries: `service_id`, `action`, `user_email`, `timestamp`
+- [ ] 2.6.4 Test unauthenticated requests are rejected
+  - **Command**: `curl http://localhost:8080/mcp`
+  - **Acceptance**: Returns 401 Unauthorized
 
-- [ ] 2.5.6 Write token store unit tests
-  - **File**: `src/postgres/__tests__/token-store.test.ts`
-  - **Task**: Test all CRUD operations, encryption round-trip, audit log
-  - **Acceptance**: 95%+ coverage
+### Section 2.7: Deployment to Droplet
 
-### Section 2.6: Express Middleware Factory
+- [ ] 2.7.1 Build Docker image with Stytch
+  - **Location**: Droplet `/root/portfolio/service-builds/mcp-servers/coda/`
+  - **Command**: `docker-compose build --no-cache`
+  - **Acceptance**: Image builds without errors
 
-- [ ] 2.6.1 Create middleware factory
-  - **File**: `src/middleware/create-auth-middleware.ts`
-  - **Task**: Export `createAuthMiddleware(config)` function
-  - **Task**: Support configuration:
-    ```typescript
-    {
-      mode: 'cloudflare' | 'bearer' | 'both',
-      tokenStore: 'env' | 'postgres',
-      serviceName: string,
-      encryptionKey?: string
-    }
-    ```
-  - **Acceptance**: Middleware validates JWT or Bearer token
+- [ ] 2.7.2 Deploy to droplet
+  - **Task**: Update docker-compose.yml on droplet with Stytch env vars
+  - **Command**: `docker-compose down && docker-compose up -d`
+  - **Acceptance**: Container starts and stays running
 
-- [ ] 2.6.2 Update Coda MCP to use middleware
-  - **File**: `/integrations/mcp/servers/coda/src/http-server.ts`
-  - **Task**: Replace local auth code with middleware import
-  - **Acceptance**: Coda MCP still works with same behavior
+- [ ] 2.7.3 Verify OAuth endpoints are accessible
+  - **Command**: `curl -I https://coda.bestviable.com/.well-known/oauth-authorization-server`
+  - **Acceptance**: Returns HTTP 200
 
-### Section 2.7: Migration Script
+- [ ] 2.7.4 Check health endpoint
+  - **Command**: `curl https://coda.bestviable.com/health`
+  - **Acceptance**: Response includes `"auth": {"provider": "stytch", "oauth_compliant": true}`
 
-- [ ] 2.7.1 Create env-to-postgres migration
-  - **File**: `scripts/migrate-env-to-postgres.sh`
-  - **Task**: Read `CODA_API_TOKEN` from env or docker-compose.yml
-  - **Task**: Insert into postgres with encryption
-  - **Task**: Support dry-run mode
-  - **Acceptance**: Script outputs "X tokens migrated" and verification hash
+### Section 2.8: Test with ChatGPT & Claude.ai
 
-- [ ] 2.7.2 Test migration script
-  - **Task**: Run against test database
-  - **Task**: Verify round-trip (original token = decrypted token)
-  - **Acceptance**: Dry-run completes successfully
+- [ ] 2.8.1 Configure Coda MCP in ChatGPT
+  - **Task**: Add MCP server to ChatGPT settings
+  - **Task**: Point to `https://coda.bestviable.com`
+  - **Acceptance**: ChatGPT discovers OAuth metadata endpoints
 
-### Section 2.8: Package Publishing
+- [ ] 2.8.2 Complete OAuth flow in ChatGPT
+  - **Task**: Click "Connect to Coda MCP"
+  - **Task**: Authenticate with Stytch (email or social)
+  - **Acceptance**: OAuth flow completes successfully
 
-- [ ] 2.8.1 Build TypeScript to JavaScript
-  - **Command**: `npm run build`
-  - **Acceptance**: `dist/` folder contains .js files
+- [ ] 2.8.3 Test MCP tools in ChatGPT
+  - **Task**: Ask ChatGPT to list Coda documents
+  - **Acceptance**: Tools are available and return data
 
-- [ ] 2.8.2 Configure npm registry
-  - **Task**: Set up private npm registry or monorepo setup
-  - **Acceptance**: Can `npm install @bestviable/mcp-auth-middleware` in other projects
+- [ ] 2.8.4 Test with Claude.ai web
+  - **Task**: Repeat steps 2.8.1-2.8.3 for Claude.ai
+  - **Acceptance**: Claude.ai connects and tools work
 
-- [ ] 2.8.3 Create CHANGELOG
-  - **File**: `CHANGELOG.md`
-  - **Task**: Document version 1.0.0 release notes
-  - **Acceptance**: Includes feature list and known limitations
+- [ ] 2.8.5 Document OAuth flow success
+  - **File**: Create test results document
+  - **Task**: Record successful OAuth flows from ChatGPT and Claude.ai
+  - **Acceptance**: Document shows both tools connected
 
-### Section 2.9: Integration Testing
+---
 
-- [ ] 2.9.1 Test Coda MCP with postgres backend
-  - **Task**: Migrate token to postgres using script
-  - **Task**: Restart Coda MCP container
-  - **Acceptance**: Coda MCP still works with token from postgres
+## Phase 2F: Deprecate Legacy Cloudflare Access (Optional)
 
-- [ ] 2.9.2 Test token rotation
-  - **Task**: Rotate encryption key in middleware
-  - **Task**: Verify all tokens still decrypt correctly
-  - **Acceptance**: No downtime during rotation
+- [ ] 2F.1 Keep Bearer token fallback during transition
+  - **Task**: Maintain Bearer token support alongside Stytch (for Claude Code)
+  - **Acceptance**: Both auth methods work
 
-- [ ] 2.9.3 Test audit logging
-  - **Task**: Check `audit_log` table for all operations
-  - **Acceptance**: Entries show action, service_id, timestamp
+- [ ] 2F.2 Document deprecation timeline
+  - **Task**: Plan Cloudflare Access removal (after 30-day transition)
+  - **Acceptance**: Clear timeline documented
 
 ---
 
