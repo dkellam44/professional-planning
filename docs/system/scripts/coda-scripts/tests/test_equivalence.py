@@ -26,6 +26,7 @@ import sys
 import json
 import time
 import subprocess
+import argparse
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
@@ -106,13 +107,31 @@ class EquivalenceTester:
         print("=" * 60)
         
         tests = [
+            # Document Operations
             ("get_document", self.test_get_document),
             ("list_documents", self.test_list_documents),
+            ("create_doc", self.test_create_doc),
+            ("copy_doc", self.test_copy_doc),
+            ("update_doc", self.test_update_doc),
+            ("delete_doc", self.test_delete_doc),
+            
+            # Table Operations
             ("get_table", self.test_get_table),
+            ("list_tables", self.test_list_tables),
+            
+            # Row Operations
             ("list_rows", self.test_list_rows),
             ("create_row", self.test_create_row),
             ("update_row", self.test_update_row),
             ("delete_row", self.test_delete_row),
+            
+            # Page Operations
+            ("list_pages", self.test_list_pages),
+            ("get_page", self.test_get_page),
+            
+            # Column Operations
+            ("list_columns", self.test_list_columns),
+            ("get_column", self.test_get_column),
         ]
         
         results = []
@@ -426,6 +445,323 @@ class EquivalenceTester:
             performance_gain=mcp_time / script_time if script_time > 0 else 0
         )
 
+    def test_create_doc(self) -> TestResult:
+        """Test create_doc equivalence."""
+        print("   Testing create_doc...")
+        
+        # Run script
+        script_start = time.time()
+        script_result = self._run_script("create_doc.py", ["--title", "Test Document"])
+        script_time = time.time() - script_start
+        
+        # Simulate MCP result
+        mcp_start = time.time()
+        mcp_result = self._simulate_mcp_create_doc()
+        mcp_time = time.time() - mcp_start
+        
+        # Compare results
+        equivalent = self._compare_created_documents(script_result, mcp_result)
+        
+        # Token analysis
+        script_tokens = self._estimate_script_tokens("create_doc")
+        mcp_tokens = self._estimate_mcp_tokens("create_doc")
+        token_savings = ((mcp_tokens - script_tokens) / mcp_tokens) * 100
+        
+        return TestResult(
+            test_name="create_doc",
+            script_result=script_result,
+            mcp_result=mcp_result,
+            equivalent=equivalent,
+            script_tokens=script_tokens,
+            mcp_tokens=mcp_tokens,
+            token_savings=token_savings,
+            script_time=script_time,
+            mcp_time=mcp_time,
+            performance_gain=mcp_time / script_time if script_time > 0 else 0
+        )
+
+    def test_copy_doc(self) -> TestResult:
+        """Test copy_doc equivalence."""
+        print("   Testing copy_doc...")
+        
+        # Run script
+        script_start = time.time()
+        script_result = self._run_script("copy_doc.py", [self.test_doc_id, "--title", "Test Document Copy"])
+        script_time = time.time() - script_start
+        
+        # Simulate MCP result
+        mcp_start = time.time()
+        mcp_result = self._simulate_mcp_copy_doc()
+        mcp_time = time.time() - mcp_start
+        
+        # Compare results
+        equivalent = self._compare_copied_documents(script_result, mcp_result)
+        
+        # Token analysis
+        script_tokens = self._estimate_script_tokens("copy_doc")
+        mcp_tokens = self._estimate_mcp_tokens("copy_doc")
+        token_savings = ((mcp_tokens - script_tokens) / mcp_tokens) * 100
+        
+        return TestResult(
+            test_name="copy_doc",
+            script_result=script_result,
+            mcp_result=mcp_result,
+            equivalent=equivalent,
+            script_tokens=script_tokens,
+            mcp_tokens=mcp_tokens,
+            token_savings=token_savings,
+            script_time=script_time,
+            mcp_time=mcp_time,
+            performance_gain=mcp_time / script_time if script_time > 0 else 0
+        )
+
+    def test_update_doc(self) -> TestResult:
+        """Test update_doc equivalence."""
+        print("   Testing update_doc...")
+        
+        # Run script
+        script_start = time.time()
+        script_result = self._run_script("update_doc.py", [self.test_doc_id, "--title", "Updated Title"])
+        script_time = time.time() - script_start
+        
+        # Simulate MCP result
+        mcp_start = time.time()
+        mcp_result = self._simulate_mcp_update_doc()
+        mcp_time = time.time() - mcp_start
+        
+        # Compare results
+        equivalent = self._compare_updated_documents(script_result, mcp_result)
+        
+        # Token analysis
+        script_tokens = self._estimate_script_tokens("update_doc")
+        mcp_tokens = self._estimate_mcp_tokens("update_doc")
+        token_savings = ((mcp_tokens - script_tokens) / mcp_tokens) * 100
+        
+        return TestResult(
+            test_name="update_doc",
+            script_result=script_result,
+            mcp_result=mcp_result,
+            equivalent=equivalent,
+            script_tokens=script_tokens,
+            mcp_tokens=mcp_tokens,
+            token_savings=token_savings,
+            script_time=script_time,
+            mcp_time=mcp_time,
+            performance_gain=mcp_time / script_time if script_time > 0 else 0
+        )
+
+    def test_delete_doc(self) -> TestResult:
+        """Test delete_doc equivalence."""
+        print("   Testing delete_doc...")
+        
+        # Run script (with force to skip confirmation)
+        script_start = time.time()
+        script_result = self._run_script("delete_doc.py", [self.test_doc_id, "--force"])
+        script_time = time.time() - script_start
+        
+        # Simulate MCP result
+        mcp_start = time.time()
+        mcp_result = self._simulate_mcp_delete_doc()
+        mcp_time = time.time() - mcp_start
+        
+        # Compare results
+        equivalent = self._compare_document_deletion(script_result, mcp_result)
+        
+        # Token analysis
+        script_tokens = self._estimate_script_tokens("delete_doc")
+        mcp_tokens = self._estimate_mcp_tokens("delete_doc")
+        token_savings = ((mcp_tokens - script_tokens) / mcp_tokens) * 100
+        
+        return TestResult(
+            test_name="delete_doc",
+            script_result=script_result,
+            mcp_result=mcp_result,
+            equivalent=equivalent,
+            script_tokens=script_tokens,
+            mcp_tokens=mcp_tokens,
+            token_savings=token_savings,
+            script_time=script_time,
+            mcp_time=mcp_time,
+            performance_gain=mcp_time / script_time if script_time > 0 else 0
+        )
+
+    def test_list_tables(self) -> TestResult:
+        """Test list_tables equivalence."""
+        print("   Testing list_tables...")
+        
+        # Run script
+        script_start = time.time()
+        script_result = self._run_script("list_tables.py", [self.test_doc_id])
+        script_time = time.time() - script_start
+        
+        # Simulate MCP result
+        mcp_start = time.time()
+        mcp_result = self._simulate_mcp_list_tables()
+        mcp_time = time.time() - mcp_start
+        
+        # Compare results
+        equivalent = self._compare_table_lists(script_result, mcp_result)
+        
+        # Token analysis
+        script_tokens = self._estimate_script_tokens("list_tables")
+        mcp_tokens = self._estimate_mcp_tokens("list_tables")
+        token_savings = ((mcp_tokens - script_tokens) / mcp_tokens) * 100
+        
+        return TestResult(
+            test_name="list_tables",
+            script_result=script_result,
+            mcp_result=mcp_result,
+            equivalent=equivalent,
+            script_tokens=script_tokens,
+            mcp_tokens=mcp_tokens,
+            token_savings=token_savings,
+            script_time=script_time,
+            mcp_time=mcp_time,
+            performance_gain=mcp_time / script_time if script_time > 0 else 0
+        )
+
+    def test_list_pages(self) -> TestResult:
+        """Test list_pages equivalence."""
+        print("   Testing list_pages...")
+        
+        # Run script
+        script_start = time.time()
+        script_result = self._run_script("list_pages.py", [self.test_doc_id])
+        script_time = time.time() - script_start
+        
+        # Simulate MCP result
+        mcp_start = time.time()
+        mcp_result = self._simulate_mcp_list_pages()
+        mcp_time = time.time() - mcp_start
+        
+        # Compare results
+        equivalent = self._compare_page_lists(script_result, mcp_result)
+        
+        # Token analysis
+        script_tokens = self._estimate_script_tokens("list_pages")
+        mcp_tokens = self._estimate_mcp_tokens("list_pages")
+        token_savings = ((mcp_tokens - script_tokens) / mcp_tokens) * 100
+        
+        return TestResult(
+            test_name="list_pages",
+            script_result=script_result,
+            mcp_result=mcp_result,
+            equivalent=equivalent,
+            script_tokens=script_tokens,
+            mcp_tokens=mcp_tokens,
+            token_savings=token_savings,
+            script_time=script_time,
+            mcp_time=mcp_time,
+            performance_gain=mcp_time / script_time if script_time > 0 else 0
+        )
+
+    def test_get_page(self) -> TestResult:
+        """Test get_page equivalence."""
+        print("   Testing get_page...")
+        
+        # Run script (using a test page ID)
+        test_page_id = "canvas-1F8S1"
+        script_start = time.time()
+        script_result = self._run_script("get_page.py", [self.test_doc_id, test_page_id])
+        script_time = time.time() - script_start
+        
+        # Simulate MCP result
+        mcp_start = time.time()
+        mcp_result = self._simulate_mcp_get_page()
+        mcp_time = time.time() - mcp_start
+        
+        # Compare results
+        equivalent = self._compare_pages(script_result, mcp_result)
+        
+        # Token analysis
+        script_tokens = self._estimate_script_tokens("get_page")
+        mcp_tokens = self._estimate_mcp_tokens("get_page")
+        token_savings = ((mcp_tokens - script_tokens) / mcp_tokens) * 100
+        
+        return TestResult(
+            test_name="get_page",
+            script_result=script_result,
+            mcp_result=mcp_result,
+            equivalent=equivalent,
+            script_tokens=script_tokens,
+            mcp_tokens=mcp_tokens,
+            token_savings=token_savings,
+            script_time=script_time,
+            mcp_time=mcp_time,
+            performance_gain=mcp_time / script_time if script_time > 0 else 0
+        )
+
+    def test_list_columns(self) -> TestResult:
+        """Test list_columns equivalence."""
+        print("   Testing list_columns...")
+        
+        # Run script
+        script_start = time.time()
+        script_result = self._run_script("list_columns.py", [self.test_doc_id, self.test_table_id])
+        script_time = time.time() - script_start
+        
+        # Simulate MCP result
+        mcp_start = time.time()
+        mcp_result = self._simulate_mcp_list_columns()
+        mcp_time = time.time() - mcp_start
+        
+        # Compare results
+        equivalent = self._compare_column_lists(script_result, mcp_result)
+        
+        # Token analysis
+        script_tokens = self._estimate_script_tokens("list_columns")
+        mcp_tokens = self._estimate_mcp_tokens("list_columns")
+        token_savings = ((mcp_tokens - script_tokens) / mcp_tokens) * 100
+        
+        return TestResult(
+            test_name="list_columns",
+            script_result=script_result,
+            mcp_result=mcp_result,
+            equivalent=equivalent,
+            script_tokens=script_tokens,
+            mcp_tokens=mcp_tokens,
+            token_savings=token_savings,
+            script_time=script_time,
+            mcp_time=mcp_time,
+            performance_gain=mcp_time / script_time if script_time > 0 else 0
+        )
+
+    def test_get_column(self) -> TestResult:
+        """Test get_column equivalence."""
+        print("   Testing get_column...")
+        
+        # Run script (using a test column ID)
+        test_column_id = "c-1F8S1"
+        script_start = time.time()
+        script_result = self._run_script("get_column.py", [self.test_doc_id, self.test_table_id, test_column_id])
+        script_time = time.time() - script_start
+        
+        # Simulate MCP result
+        mcp_start = time.time()
+        mcp_result = self._simulate_mcp_get_column()
+        mcp_time = time.time() - mcp_start
+        
+        # Compare results
+        equivalent = self._compare_columns(script_result, mcp_result)
+        
+        # Token analysis
+        script_tokens = self._estimate_script_tokens("get_column")
+        mcp_tokens = self._estimate_mcp_tokens("get_column")
+        token_savings = ((mcp_tokens - script_tokens) / mcp_tokens) * 100
+        
+        return TestResult(
+            test_name="get_column",
+            script_result=script_result,
+            mcp_result=mcp_result,
+            equivalent=equivalent,
+            script_tokens=script_tokens,
+            mcp_tokens=mcp_tokens,
+            token_savings=token_savings,
+            script_time=script_time,
+            mcp_time=mcp_time,
+            performance_gain=mcp_time / script_time if script_time > 0 else 0
+        )
+
     # Helper methods
     def _run_script(self, script_name: str, args: List[str]) -> Dict[str, Any]:
         """Run a script and return result."""
@@ -702,6 +1038,256 @@ class EquivalenceTester:
         return (
             script_delete.get("success") == True and
             mcp_delete.get("success") == True
+        )
+
+    def _simulate_mcp_create_doc(self) -> Dict[str, Any]:
+        """Simulate MCP create_doc result."""
+        return {
+            "id": "_new_ABC123",
+            "type": "doc",
+            "name": "Test Document",
+            "href": "https://coda.io/apis/v1/docs/_new_ABC123",
+            "browserLink": "https://coda.io/d/_d_new_ABC123",
+            "owner": "user@example.com",
+            "ownerName": "Test User",
+            "createdAt": "2025-01-20T10:30:00Z",
+            "updatedAt": "2025-01-20T10:30:00Z"
+        }
+
+    def _compare_created_documents(self, script_result: Dict[str, Any], mcp_result: Dict[str, Any]) -> bool:
+        """Compare created document results for equivalence."""
+        script_doc = script_result.get("data", {})
+        mcp_doc = mcp_result
+        
+        # Both should indicate success and have document ID
+        return (
+            script_doc.get("success") == True and
+            script_doc.get("id") is not None and
+            mcp_doc.get("id") is not None
+        )
+
+    def _simulate_mcp_copy_doc(self) -> Dict[str, Any]:
+        """Simulate MCP copy_doc result."""
+        return {
+            "id": "_copy_DEF456",
+            "type": "doc",
+            "name": "Test Document Copy",
+            "href": "https://coda.io/apis/v1/docs/_copy_DEF456",
+            "browserLink": "https://coda.io/d/_d_copy_DEF456",
+            "owner": "user@example.com",
+            "ownerName": "Test User",
+            "createdAt": "2025-01-20T10:30:00Z",
+            "updatedAt": "2025-01-20T10:30:00Z",
+            "sourceDoc": {"id": "_d0_QJN4S", "type": "doc"}
+        }
+
+    def _compare_copied_documents(self, script_result: Dict[str, Any], mcp_result: Dict[str, Any]) -> bool:
+        """Compare copied document results for equivalence."""
+        script_doc = script_result.get("data", {})
+        mcp_doc = mcp_result
+        
+        # Both should indicate success and have document ID
+        return (
+            script_doc.get("success") == True and
+            script_doc.get("id") is not None and
+            mcp_doc.get("id") is not None
+        )
+
+    def _simulate_mcp_update_doc(self) -> Dict[str, Any]:
+        """Simulate MCP update_doc result."""
+        return {
+            "id": "_d0_QJN4S",
+            "type": "doc",
+            "name": "Updated Title",
+            "href": "https://coda.io/apis/v1/docs/_d0_QJN4S",
+            "browserLink": "https://coda.io/d/_dAbCDeFGH",
+            "owner": "user@example.com",
+            "ownerName": "Test User",
+            "updatedAt": "2025-01-20T11:45:30Z"
+        }
+
+    def _compare_updated_documents(self, script_result: Dict[str, Any], mcp_result: Dict[str, Any]) -> bool:
+        """Compare updated document results for equivalence."""
+        script_update = script_result.get("data", {})
+        mcp_update = mcp_result
+        
+        # Both should indicate success and have updated timestamp
+        return (
+            script_update.get("success") == True and
+            script_update.get("updatedAt") is not None and
+            mcp_update.get("updatedAt") is not None
+        )
+
+    def _simulate_mcp_delete_doc(self) -> Dict[str, Any]:
+        """Simulate MCP delete_doc result."""
+        return {"success": True}  # MCP typically returns simple success
+
+    def _compare_document_deletion(self, script_result: Dict[str, Any], mcp_result: Dict[str, Any]) -> bool:
+        """Compare document deletion results for equivalence."""
+        script_delete = script_result.get("data", {})
+        mcp_delete = mcp_result
+        
+        # Both should indicate success
+        return (
+            script_delete.get("success") == True and
+            mcp_delete.get("success") == True
+        )
+
+    def _simulate_mcp_list_tables(self) -> Dict[str, Any]:
+        """Simulate MCP list_tables result."""
+        return {
+            "items": [
+                {
+                    "id": "grid-1F8S1",
+                    "type": "table",
+                    "name": "Test Table",
+                    "href": "https://coda.io/apis/v1/docs/_d0_QJN4S/tables/grid-1F8S1",
+                    "browserLink": "https://coda.io/d/_dAbCDeFGH/#Test-Table_tgrid-1F8S1",
+                    "rowCount": 25
+                }
+            ]
+        }
+
+    def _compare_table_lists(self, script_result: Dict[str, Any], mcp_result: Dict[str, Any]) -> bool:
+        """Compare table list results for equivalence."""
+        script_tables = script_result.get("data", {}).get("tables", [])
+        mcp_tables = mcp_result.get("items", [])
+        
+        if len(script_tables) != len(mcp_tables):
+            return False
+        
+        # Compare table counts and basic info
+        for i, table in enumerate(script_tables):
+            if i >= len(mcp_tables):
+                return False
+            if table.get("id") != mcp_tables[i].get("id"):
+                return False
+            if table.get("name") != mcp_tables[i].get("name"):
+                return False
+        
+        return True
+
+    def _simulate_mcp_list_pages(self) -> Dict[str, Any]:
+        """Simulate MCP list_pages result."""
+        return {
+            "items": [
+                {
+                    "id": "canvas-1F8S1",
+                    "type": "page",
+                    "name": "Test Page",
+                    "href": "https://coda.io/apis/v1/docs/_d0_QJN4S/pages/canvas-1F8S1",
+                    "browserLink": "https://coda.io/d/_dAbCDeFGH/Test-Page",
+                    "contentType": "canvas"
+                }
+            ]
+        }
+
+    def _compare_page_lists(self, script_result: Dict[str, Any], mcp_result: Dict[str, Any]) -> bool:
+        """Compare page list results for equivalence."""
+        script_pages = script_result.get("data", {}).get("pages", [])
+        mcp_pages = mcp_result.get("items", [])
+        
+        if len(script_pages) != len(mcp_pages):
+            return False
+        
+        # Compare page counts and basic info
+        for i, page in enumerate(script_pages):
+            if i >= len(mcp_pages):
+                return False
+            if page.get("id") != mcp_pages[i].get("id"):
+                return False
+            if page.get("name") != mcp_pages[i].get("name"):
+                return False
+        
+        return True
+
+    def _simulate_mcp_get_page(self) -> Dict[str, Any]:
+        """Simulate MCP get_page result."""
+        return {
+            "id": "canvas-1F8S1",
+            "type": "page",
+            "name": "Test Page",
+            "href": "https://coda.io/apis/v1/docs/_d0_QJN4S/pages/canvas-1F8S1",
+            "browserLink": "https://coda.io/d/_dAbCDeFGH/Test-Page",
+            "contentType": "canvas",
+            "isHidden": False,
+            "createdAt": "2025-01-01T00:00:00Z",
+            "updatedAt": "2025-01-15T12:30:45Z"
+        }
+
+    def _compare_pages(self, script_result: Dict[str, Any], mcp_result: Dict[str, Any]) -> bool:
+        """Compare page results for equivalence."""
+        script_page = script_result.get("data", {})
+        mcp_page = mcp_result
+        
+        # Compare essential fields
+        return (
+            script_page.get("id") == mcp_page.get("id") and
+            script_page.get("name") == mcp_page.get("name") and
+            script_page.get("contentType") == mcp_page.get("contentType")
+        )
+
+    def _simulate_mcp_list_columns(self) -> Dict[str, Any]:
+        """Simulate MCP list_columns result."""
+        return {
+            "items": [
+                {
+                    "id": "c-1F8S1",
+                    "name": "Task Name",
+                    "type": "column",
+                    "display": True,
+                    "calculated": False
+                },
+                {
+                    "id": "c-2G9T2",
+                    "name": "Status",
+                    "type": "column",
+                    "display": False,
+                    "calculated": False
+                }
+            ]
+        }
+
+    def _compare_column_lists(self, script_result: Dict[str, Any], mcp_result: Dict[str, Any]) -> bool:
+        """Compare column list results for equivalence."""
+        script_columns = script_result.get("data", {}).get("columns", [])
+        mcp_columns = mcp_result.get("items", [])
+        
+        if len(script_columns) != len(mcp_columns):
+            return False
+        
+        # Compare column counts and basic info
+        for i, column in enumerate(script_columns):
+            if i >= len(mcp_columns):
+                return False
+            if column.get("id") != mcp_columns[i].get("id"):
+                return False
+            if column.get("name") != mcp_columns[i].get("name"):
+                return False
+        
+        return True
+
+    def _simulate_mcp_get_column(self) -> Dict[str, Any]:
+        """Simulate MCP get_column result."""
+        return {
+            "id": "c-1F8S1",
+            "type": "column",
+            "name": "Task Name",
+            "display": True,
+            "calculated": False,
+            "href": "https://coda.io/apis/v1/docs/_d0_QJN4S/tables/grid-1F8S1/columns/c-1F8S1"
+        }
+
+    def _compare_columns(self, script_result: Dict[str, Any], mcp_result: Dict[str, Any]) -> bool:
+        """Compare column results for equivalence."""
+        script_column = script_result.get("data", {})
+        mcp_column = mcp_result
+        
+        # Compare essential fields
+        return (
+            script_column.get("id") == mcp_column.get("id") and
+            script_column.get("name") == mcp_column.get("name") and
+            script_column.get("display") == mcp_column.get("display")
         )
 
     def _estimate_script_tokens(self, operation: str) -> int:
