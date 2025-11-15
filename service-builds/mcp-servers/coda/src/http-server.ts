@@ -2,7 +2,8 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import axios from 'axios';
-import { authenticate, AuthenticatedRequest } from './middleware/cloudflare-access-auth';
+import { authenticate, AuthenticatedRequest } from './middleware/stytch-auth';
+import oauthMetadataRouter from './routes/oauth-metadata';
 import { config, validateConfig } from './config';
 
 // Create Express app
@@ -11,7 +12,7 @@ const app = express();
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: true, // Allow all origins (Cloudflare Access will handle auth)
+  origin: true, // Allow all origins (OAuth 2.1 with PKCE handles auth)
   credentials: true
 }));
 
@@ -19,7 +20,11 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Apply authentication middleware
+// Register OAuth 2.1 metadata endpoints (must be before auth middleware)
+// These endpoints provide RFC 8414 and RFC 9728 compliant metadata
+app.use(oauthMetadataRouter);
+
+// Apply Stytch OAuth 2.1 authentication middleware
 app.use(authenticate);
 
 // Health check endpoint (skips auth via middleware)
@@ -27,10 +32,12 @@ app.get('/health', (req: AuthenticatedRequest, res: Response) => {
   res.status(200).json({
     status: 'ok',
     service: 'coda-mcp',
-    version: '1.0.0',
+    version: '2.0.0',
     auth: {
-      mode: config.authMode,
-      tokenStorage: config.postgres ? 'postgres' : 'env'
+      provider: 'stytch',
+      oauth_compliant: true,
+      rfc_8414_endpoint: '/.well-known/oauth-authorization-server',
+      rfc_9728_endpoint: '/.well-known/oauth-protected-resource'
     },
     timestamp: new Date().toISOString()
   });
@@ -160,12 +167,15 @@ export function startServer(): void {
   try {
     // Validate configuration before starting
     validateConfig();
-    
+
     const server = app.listen(config.port, config.host, () => {
-      console.log(`🚀 Coda MCP server started`);
+      console.log(`🚀 Coda MCP server started (Phase 2: Stytch OAuth 2.1)`);
       console.log(`   URL: http://${config.host}:${config.port}`);
-      console.log(`   Auth mode: ${config.authMode}`);
+      console.log(`   Auth: Stytch OAuth 2.1 with PKCE`);
       console.log(`   Coda API: ${config.codaApiBaseUrl}`);
+      console.log(`   Metadata:`);
+      console.log(`     - RFC 8414: http://${config.host}:${config.port}/.well-known/oauth-authorization-server`);
+      console.log(`     - RFC 9728: http://${config.host}:${config.port}/.well-known/oauth-protected-resource`);
       console.log(`   Health: http://${config.host}:${config.port}/health`);
       console.log(`   MCP: http://${config.host}:${config.port}/mcp`);
     });
