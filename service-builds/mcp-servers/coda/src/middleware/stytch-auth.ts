@@ -1,7 +1,6 @@
 import { Client as StytchClient } from 'stytch';
 import { Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
-import crypto from 'crypto';
 
 // Load environment variables if not already loaded
 dotenv.config();
@@ -13,17 +12,19 @@ function initializeStytchClient(): any {
   if (!stytchClient) {
     const projectId = process.env.STYTCH_PROJECT_ID;
     const secret = process.env.STYTCH_SECRET;
+    const domain = process.env.STYTCH_DOMAIN;
 
-    if (!projectId || !secret) {
+    if (!projectId || !secret || !domain) {
       throw new Error(
-        'Stytch OAuth 2.1 configuration incomplete. ' +
-        'Please set STYTCH_PROJECT_ID and STYTCH_SECRET environment variables.'
+        'Stytch configuration incomplete. ' +
+        'Please set STYTCH_PROJECT_ID, STYTCH_SECRET, and STYTCH_DOMAIN environment variables.'
       );
     }
 
     stytchClient = new StytchClient({
       project_id: projectId,
       secret: secret,
+      custom_base_url: domain,
     });
   }
   return stytchClient;
@@ -58,14 +59,9 @@ export async function authenticate(
   next: NextFunction
 ): Promise<void> {
   try {
-    // Skip authentication for health check, OAuth metadata endpoints, and OAuth flow endpoints
+    // Skip authentication for health check and OAuth metadata endpoints
     // These endpoints must be accessible without authentication
-    if (req.path === '/health' ||
-        req.path.startsWith('/.well-known/') ||
-        req.path === '/v1/public/oauth/authorize' ||
-        req.path === '/v1/public/oauth/token' ||
-        req.path === '/v1/oauth/callback' ||
-        req.path === '/oauth/register') {
+    if (req.path === '/health' || req.path.startsWith('/.well-known/')) {
       next();
       return;
     }
@@ -73,6 +69,12 @@ export async function authenticate(
     // Extract access token from Authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      // Return 401 with WWW-Authenticate header pointing to Protected Resource Metadata
+      // This is required by RFC 9728 and the MCP specification
+      const baseUrl = process.env.BASE_URL || 'https://coda.bestviable.com';
+      const wwwAuthValue = `Bearer error="Unauthorized", error_description="Unauthorized", resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`;
+
+      res.setHeader('WWW-Authenticate', wwwAuthValue);
       res.status(401).json({
         error: 'unauthorized',
         message: 'Missing or invalid Authorization header. Expected: Bearer <token>',
@@ -83,39 +85,19 @@ export async function authenticate(
 
     const accessToken = authHeader.substring(7); // Remove "Bearer " prefix
 
-    // Validate JWT access token (issued by our OAuth flow)
-    const jwtSecret = process.env.JWT_SECRET || '';
+    // Validate access token using Stytch's token introspection
+    // This validates the JWT signature, expiration, and audience
+    const client = initializeStytchClient();
 
-    // Parse JWT
-    const parts = accessToken.split('.');
-    if (parts.length !== 3) {
-      throw new Error('Invalid JWT format');
-    }
+    // Use Stytch's introspectTokenLocal method to validate the JWT
+    // This method validates the token locally using JWKS without making an API call
+    const tokenData: any = await client.idp.introspectTokenLocal(accessToken);
 
-    const [header, payload, signature] = parts;
-
-    // Verify signature
-    const expectedSignature = crypto.createHmac('sha256', jwtSecret)
-      .update(`${header}.${payload}`)
-      .digest('base64url');
-
-    if (signature !== expectedSignature) {
-      throw new Error('Invalid JWT signature');
-    }
-
-    // Decode payload
-    const decodedPayload = JSON.parse(Buffer.from(payload, 'base64url').toString());
-
-    // Check expiration
-    if (decodedPayload.exp && decodedPayload.exp < Math.floor(Date.now() / 1000)) {
-      throw new Error('JWT expired');
-    }
-
-    // Extract user info from JWT
-    const userId = decodedPayload.sub || 'unknown';
-    const userEmail = decodedPayload.email || 'unknown';
-    const sessionId = accessToken.substring(0, 20);
-    const orgId = decodedPayload.org_id;
+    // Extract user info from validated token
+    const userId = tokenData.sub || 'unknown';
+    const userEmail = tokenData.email || 'unknown';
+    const sessionId = tokenData.session_id || accessToken.substring(0, 20);
+    const orgId = tokenData.organization_id;
 
     req.user = {
       user_id: userId,
@@ -138,20 +120,16 @@ export async function authenticate(
     next();
   } catch (error: any) {
     // Log authentication failure
-    console.error('[AUTH] Stytch validation failed:', error.error_type || error.message);
+    console.error('[AUTH] Stytch token validation failed:', error.error_type || error.message);
 
-    // Determine error message based on error type
-    let errorMessage = 'Invalid or expired access token';
-    if (error.error_type === 'session_not_found') {
-      errorMessage = 'Session not found or expired';
-    } else if (error.error_type === 'invalid_token') {
-      errorMessage = 'Invalid access token format';
-    }
+    // Return 401 with WWW-Authenticate header
+    const baseUrl = process.env.BASE_URL || 'https://coda.bestviable.com';
+    const wwwAuthValue = `Bearer error="invalid_token", error_description="The access token is invalid or expired", resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`;
 
-    // Return 401 Unauthorized
+    res.setHeader('WWW-Authenticate', wwwAuthValue);
     res.status(401).json({
       error: 'unauthorized',
-      message: errorMessage,
+      message: 'Invalid or expired access token',
       timestamp: new Date().toISOString(),
     });
   }
