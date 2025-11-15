@@ -58,8 +58,10 @@ router.get('/.well-known/oauth-authorization-server', (req, res) => {
 
   res.json({
     issuer: 'https://api.stytch.com',
-    authorization_endpoint: 'https://api.stytch.com/v1/public/oauth/authorize',
-    token_endpoint: 'https://api.stytch.com/v1/public/oauth/token',
+    // Authorization and token endpoints are routed through the project's custom domain
+    // Stytch routes /v1/public/oauth/authorize and /v1/public/oauth/token through coda.bestviable.com
+    authorization_endpoint: `${baseUrl}/v1/public/oauth/authorize`,
+    token_endpoint: `${baseUrl}/v1/public/oauth/token`,
     jwks_uri: 'https://api.stytch.com/v1/public/keys',
 
     // RFC 7591: Dynamic Client Registration endpoint
