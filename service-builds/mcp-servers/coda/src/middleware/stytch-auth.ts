@@ -57,8 +57,13 @@ export async function authenticate(
   next: NextFunction
 ): Promise<void> {
   try {
-    // Skip authentication for health check and OAuth metadata endpoints
-    if (req.path === '/health' || req.path.startsWith('/.well-known/')) {
+    // Skip authentication for health check, OAuth metadata endpoints, and OAuth token endpoint
+    // These endpoints must be accessible without authentication
+    if (req.path === '/health' ||
+        req.path.startsWith('/.well-known/') ||
+        req.path === '/v1/public/oauth/authorize' ||
+        req.path === '/v1/public/oauth/token' ||
+        req.path === '/oauth/register') {
       next();
       return;
     }

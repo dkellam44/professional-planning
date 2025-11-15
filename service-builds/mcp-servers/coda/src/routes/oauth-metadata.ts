@@ -213,4 +213,118 @@ router.post('/oauth/register', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * OAuth Authorization Endpoint (RFC 6749)
+ *
+ * Redirects users to authenticate with Stytch/Google OAuth.
+ * Proxies authorization requests to Stytch's authorization endpoint.
+ *
+ * GET /v1/public/oauth/authorize?client_id=...&response_type=code&scope=...&redirect_uri=...&state=...
+ */
+router.get('/v1/public/oauth/authorize', (req: Request, res: Response) => {
+  try {
+    const { client_id, response_type, scope, redirect_uri, state, code_challenge, code_challenge_method } = req.query;
+
+    // Build authorization URL to Stytch
+    const params = new URLSearchParams({
+      client_id: client_id as string,
+      response_type: response_type as string,
+      scope: scope as string,
+      redirect_uri: redirect_uri as string,
+      state: state as string,
+    });
+
+    if (code_challenge) params.append('code_challenge', code_challenge as string);
+    if (code_challenge_method) params.append('code_challenge_method', code_challenge_method as string);
+
+    // Log authorization request
+    console.log(`[OAUTH] Authorization request from client: ${client_id}`);
+
+    // Redirect to Stytch authorization endpoint
+    const stytchAuthUrl = `https://api.stytch.com/v1/public/oauth/authorize?${params.toString()}`;
+    res.redirect(stytchAuthUrl);
+  } catch (error) {
+    console.error('[OAUTH] Authorization endpoint error:', error);
+    res.status(500).json({
+      error: 'server_error',
+      error_description: 'An error occurred during authorization',
+    });
+  }
+});
+
+/**
+ * OAuth Token Endpoint (RFC 6749)
+ *
+ * Exchanges authorization code for access token.
+ * Proxies the request to Stytch's token endpoint.
+ *
+ * POST /v1/public/oauth/token
+ * Content-Type: application/x-www-form-urlencoded or application/json
+ *
+ * Request:
+ * {
+ *   "grant_type": "authorization_code",
+ *   "code": "...",
+ *   "client_id": "...",
+ *   "client_secret": "...",
+ *   "redirect_uri": "..."
+ * }
+ */
+router.post('/v1/public/oauth/token', async (req: Request, res: Response) => {
+  try {
+    const { grant_type, code, client_id, client_secret, redirect_uri, code_verifier } = req.body;
+
+    // Validate required fields
+    if (grant_type !== 'authorization_code' || !code || !client_id || !redirect_uri) {
+      return res.status(400).json({
+        error: 'invalid_request',
+        error_description: 'Missing required fields for authorization_code grant',
+      });
+    }
+
+    // Build request to Stytch token endpoint
+    const tokenRequest = {
+      grant_type: 'authorization_code',
+      code,
+      client_id,
+      client_secret,
+      redirect_uri,
+      code_verifier, // Include for PKCE
+    };
+
+    // Remove undefined fields
+    Object.keys(tokenRequest).forEach(
+      (key: string) => tokenRequest[key as keyof typeof tokenRequest] === undefined && delete tokenRequest[key as keyof typeof tokenRequest]
+    );
+
+    // Log token exchange request (debug mode only)
+    console.log(`[OAUTH] Token exchange for client: ${client_id}`);
+
+    // Forward to Stytch token endpoint
+    const response = await fetch('https://api.stytch.com/v1/public/oauth/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(tokenRequest),
+    });
+
+    const tokenData = await response.json();
+
+    if (!response.ok) {
+      console.error('[OAUTH] Stytch token exchange failed:', tokenData);
+      return res.status(response.status).json(tokenData);
+    }
+
+    // Return access token to client
+    res.status(200).json(tokenData);
+  } catch (error) {
+    console.error('[OAUTH] Token endpoint error:', error);
+    res.status(500).json({
+      error: 'server_error',
+      error_description: 'An error occurred while processing the token request',
+    });
+  }
+});
+
 export default router;
