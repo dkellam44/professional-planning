@@ -242,6 +242,96 @@ Coda MCP Server (Node.js/Express)
 
 ---
 
+## Stytch Implementation Strategy (UPDATED 2025-11-15)
+
+### Key Findings from Stytch MCP Guide
+
+Based on comprehensive review of Stytch's official MCP authentication guide and RFC specifications:
+
+#### 1. No Frontend Required ✅
+**Critical Discovery**: Stytch hosts all OAuth UI components (login, consent screens, user management).
+
+**What this means**:
+- ✅ **Backend-only implementation** - no React components to deploy
+- ✅ **No separate authorization page** - Stytch provides hosted UI
+- ✅ **No additional infrastructure** - MCP server remains single-container deployment
+- ✅ **User redirected to Stytch** - users see Stytch-branded login pages
+
+**Reference**: Stytch MCP Guide, lines 238-242: "If you're using an external IdP, the client will redirect the user directly to the provider's authorization page, and your MCP server doesn't need to implement /authorize."
+
+#### 2. Simplified Metadata Strategy ✅
+**Updated approach**: Only host Protected Resource Metadata, let clients fetch Authorization Server Metadata directly from Stytch.
+
+**What to implement**:
+- ✅ `/.well-known/oauth-protected-resource` (we host - RFC 9728)
+- ❌ `/.well-known/oauth-authorization-server` (Stytch hosts - clients fetch directly)
+- ❌ `/.well-known/jwks.json` (Stytch hosts - no need to proxy)
+
+**Why this is better**:
+1. Less code to maintain
+2. Clearer separation: Stytch = auth server, we = resource server
+3. No proxy caching/sync issues
+4. Follows external IdP pattern from guide
+
+#### 3. Mandatory Security Validations (RFC 8707) ⚠️
+**Critical requirement**: All 4 checks MUST be enforced:
+
+```typescript
+// MANDATORY CHECK #1: JWT Signature (Stytch SDK handles)
+await stytchClient.sessions.authenticateJwt({ session_jwt: token });
+
+// MANDATORY CHECK #2: Audience Validation (RFC 8707 REQUIRED)
+if (decoded.aud !== "https://coda.bestviable.com/mcp") {
+  throw new Error('Invalid audience');
+}
+
+// MANDATORY CHECK #3: Issuer Validation
+if (decoded.iss !== stytchIssuer) {
+  throw new Error('Invalid issuer');
+}
+
+// MANDATORY CHECK #4: Expiration Validation
+if (decoded.exp < Date.now() / 1000) {
+  throw new Error('Token expired');
+}
+```
+
+**Reference**: RFC 8707 Resource Indicators mandate audience validation to prevent token replay attacks across services.
+
+#### 4. Routing Order Critical ⚠️
+**Implementation requirement**: Metadata endpoints MUST route BEFORE auth middleware.
+
+**Correct order**:
+```typescript
+// 1. FIRST: Public OAuth metadata endpoints (no auth)
+app.use('/.well-known', oauthMetadataRouter);
+
+// 2. SECOND: Authentication middleware
+app.use(authenticateMiddleware);
+
+// 3. THIRD: Protected MCP endpoints
+app.post('/mcp', mcpHandler);
+```
+
+**If wrong**: Metadata endpoints return 401, OAuth discovery fails, ChatGPT/Claude.ai cannot connect.
+
+#### 5. WWW-Authenticate Header Format ⚠️
+**RFC-compliant format**:
+```typescript
+// ✅ CORRECT (RFC 9728)
+res.set(
+  'WWW-Authenticate',
+  'Bearer realm="MCP Server", resource_metadata_uri="https://coda.bestviable.com/.well-known/oauth-protected-resource"'
+);
+
+// ❌ WRONG (non-standard)
+res.set('WWW-Authenticate', 'Bearer resource_metadata="https://..."');
+```
+
+**Field name MUST be**: `resource_metadata_uri` (not `resource_metadata`)
+
+---
+
 ## Implementation Details
 
 ### Stytch SDK Integration
@@ -291,18 +381,36 @@ export async function authenticate(
     // Extract access token from Authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      // Return RFC-compliant WWW-Authenticate header
+      res.set(
+        'WWW-Authenticate',
+        'Bearer realm="MCP Server", resource_metadata_uri="https://coda.bestviable.com/.well-known/oauth-protected-resource"'
+      );
       return res.status(401).json({
         error: 'unauthorized',
-        message: 'Missing or invalid Authorization header',
+        error_description: 'Missing or invalid Authorization header',
       });
     }
 
     const accessToken = authHeader.substring(7);
 
-    // Validate access token with Stytch
-    const response = await stytchClient.sessions.authenticate({
-      session_token: accessToken,
+    // Validate access token with Stytch (performs checks #1, #3, #4)
+    const response = await stytchClient.sessions.authenticateJwt({
+      session_jwt: accessToken,
     });
+
+    // MANDATORY CHECK #2: Audience Validation (RFC 8707)
+    // Token MUST be issued for this specific MCP server
+    const expectedAudience = 'https://coda.bestviable.com/mcp';
+    // Note: Adjust based on actual Stytch JWT structure
+    // May be in response.session or decoded JWT claims
+    if (response.session.custom_claims?.aud !== expectedAudience) {
+      res.status(401).json({
+        error: 'invalid_token',
+        error_description: 'Token audience mismatch',
+      });
+      return;
+    }
 
     // Extract user info
     req.user = {
@@ -312,61 +420,58 @@ export async function authenticate(
     };
 
     // Set Coda service token (from env)
+    // IMPORTANT: Never forward client token to Coda API
     req.serviceToken = process.env.CODA_API_TOKEN;
 
     next();
   } catch (error) {
     console.error('[AUTH] Stytch validation failed:', error);
     res.status(401).json({
-      error: 'unauthorized',
-      message: 'Invalid or expired access token',
+      error: 'invalid_token',
+      error_description: 'Token validation failed',
     });
   }
 }
 ```
 
-### OAuth Metadata Endpoints
+### OAuth Metadata Endpoints (UPDATED: Simplified Strategy)
+
+**What we implement**: Only Protected Resource Metadata (RFC 9728)
+
+**What Stytch hosts**: Authorization Server Metadata + JWKS (clients fetch directly)
 
 ```typescript
 // src/routes/oauth-metadata.ts
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 
 const router = Router();
 
-// Authorization Server Metadata (RFC 8414)
-router.get('/.well-known/oauth-authorization-server', (req, res) => {
-  res.json({
-    issuer: 'https://api.stytch.com',
-    authorization_endpoint: 'https://api.stytch.com/v1/public/oauth/authorize',
-    token_endpoint: 'https://api.stytch.com/v1/public/oauth/token',
-    jwks_uri: 'https://api.stytch.com/v1/public/keys',
-    response_types_supported: ['code'],
-    grant_types_supported: ['authorization_code', 'refresh_token'],
-    code_challenge_methods_supported': ['S256'],
-    token_endpoint_auth_methods_supported: ['client_secret_post'],
-  });
-});
-
 // Protected Resource Metadata (RFC 9728)
-router.get('/.well-known/oauth-protected-resource', (req, res) => {
-  res.json({
-    resource: 'https://coda.bestviable.com',
+// This is the ONLY endpoint we need to implement
+router.get('/oauth-protected-resource', (req: Request, res: Response) => {
+  // Static metadata - no auth required
+  res.status(200).json({
+    resource: 'https://coda.bestviable.com/mcp',
     authorization_servers: ['https://api.stytch.com'],
-    scopes_supported: ['mcp.read', 'mcp.write'],
-    bearer_methods_supported: ['header'],
+    bearer_methods_supported: ['header']
   });
-});
-
-// JWKS Endpoint (proxies to Stytch)
-router.get('/.well-known/jwks.json', async (req, res) => {
-  // Proxy to Stytch JWKS endpoint
-  const response = await fetch('https://api.stytch.com/v1/public/keys');
-  const keys = await response.json();
-  res.json(keys);
 });
 
 export default router;
 ```
+
+**Why simplified**:
+- ✅ Less code to maintain
+- ✅ No proxy caching issues
+- ✅ Clearer separation: Stytch owns auth server metadata
+- ✅ Clients fetch ASM directly from `authorization_servers[0]`
+
+**Client discovery flow**:
+1. Client requests MCP endpoint → 401 with `resource_metadata_uri`
+2. Client fetches `/.well-known/oauth-protected-resource` (our endpoint)
+3. Client reads `authorization_servers: ["https://api.stytch.com"]`
+4. Client fetches `https://api.stytch.com/.well-known/oauth-authorization-server`
+5. Client initiates OAuth flow with Stytch
 
 ### Environment Variables
 

@@ -40,40 +40,67 @@ The MCP server deployment SHALL enforce OAuth 2.1 authentication on all endpoint
 - **AND** request returns 401 with "invalid_token" error code
 - **AND** client can initiate new OAuth flow
 
+#### Scenario: Audience validation enforced (RFC 8707 MANDATORY)
+- **WHEN** user provides access token with `aud` claim not matching MCP server resource identifier
+- **THEN** server rejects token with 401 Unauthorized
+- **AND** response includes `error: "invalid_token", error_description: "Token audience mismatch"`
+- **AND** prevents token replay attacks across different services
+- **AND** `aud` claim MUST equal `"https://coda.bestviable.com/mcp"`
+
+#### Scenario: Issuer validation enforced
+- **WHEN** user provides access token with `iss` claim not matching Stytch issuer
+- **THEN** server rejects token with 401 Unauthorized
+- **AND** response includes `error: "invalid_token", error_description: "Invalid issuer"`
+- **AND** prevents tokens from untrusted authorization servers
+
+#### Scenario: Token expiration enforced
+- **WHEN** user provides access token with `exp` claim in the past
+- **THEN** server rejects token with 401 Unauthorized
+- **AND** response includes `error: "invalid_token", error_description: "Token expired"`
+- **AND** `exp` claim validated against current server time
+
+#### Scenario: WWW-Authenticate header RFC compliance
+- **WHEN** server returns 401 Unauthorized for missing/invalid token
+- **THEN** response includes `WWW-Authenticate` header
+- **AND** header format: `Bearer realm="MCP Server", resource_metadata_uri="https://coda.bestviable.com/.well-known/oauth-protected-resource"`
+- **AND** field name MUST be `resource_metadata_uri` (not `resource_metadata`)
+- **AND** guides client to discovery endpoint per RFC 9728
+
+#### Scenario: Metadata endpoints route before authentication
+- **WHEN** Express app registers routes
+- **THEN** `/.well-known/*` routes registered BEFORE auth middleware
+- **AND** metadata endpoints accessible without authentication
+- **AND** prevents 401 responses that would break OAuth discovery
+- **AND** routing order: metadata → auth → protected endpoints
+
 ---
 
-### Requirement: OAuth 2.1 Metadata Endpoints
-The MCP server SHALL implement required OAuth 2.1 metadata endpoints for client discovery and resource protection.
+### Requirement: OAuth 2.1 Metadata Endpoints (UPDATED: Simplified Strategy)
+The MCP server SHALL implement Protected Resource Metadata (RFC 9728) and delegate Authorization Server Metadata to Stytch.
 
-#### Scenario: Authorization Server Metadata (RFC 8414)
-- **WHEN** client requests `/.well-known/oauth-authorization-server`
-- **THEN** server returns JSON with:
-  - `issuer`: Stytch project identifier
-  - `authorization_endpoint`: Stytch OAuth endpoint
-  - `token_endpoint`: Stytch token endpoint
-  - `jwks_uri`: Stytch JWKS endpoint
-  - `scopes_supported`: ["openid", "profile", "email"]
-  - `response_types_supported`: ["code"]
-  - `grant_types_supported`: ["authorization_code"]
-  - `code_challenge_methods_supported`: ["S256"] (PKCE required)
-- **AND** response follows RFC 8414 specification
-- **AND** endpoint accessible without authentication
-
-#### Scenario: Protected Resource Metadata (RFC 9728)
+#### Scenario: Protected Resource Metadata hosted locally (RFC 9728)
 - **WHEN** client requests `/.well-known/oauth-protected-resource`
-- **THEN** server returns JSON with:
-  - `resource`: Coda MCP resource identifier
-  - `authorization_servers`: [Stytch project URL]
-  - `scope_name`: scope required for resource access
-  - `access_token_type`: "Bearer"
+- **THEN** server returns static JSON with:
+  - `resource`: `"https://coda.bestviable.com/mcp"` (MCP server resource identifier)
+  - `authorization_servers`: `["https://api.stytch.com"]` (Stytch auth server URL)
+  - `bearer_methods_supported`: `["header"]` (only header-based Bearer tokens)
 - **AND** response follows RFC 9728 specification
 - **AND** endpoint accessible without authentication
+- **AND** NO proxying to Stytch (static JSON response)
 
-#### Scenario: JWKS Endpoint for Token Validation
-- **WHEN** server needs to validate Stytch tokens
-- **THEN** server proxies requests to `/.well-known/jwks.json`
-- **AND** caches JWKS for 1 hour to reduce external calls
-- **AND** fails gracefully if Stytch JWKS unavailable
+#### Scenario: Authorization Server Metadata delegated to Stytch (RFC 8414)
+- **WHEN** client discovers `authorization_servers` from PRM
+- **THEN** client fetches ASM directly from `https://api.stytch.com/.well-known/oauth-authorization-server`
+- **AND** MCP server does NOT proxy or host ASM endpoint
+- **AND** Stytch provides: `issuer`, `authorization_endpoint`, `token_endpoint`, `jwks_uri`, PKCE support
+- **AND** simplifies implementation (less code, no caching issues)
+
+#### Scenario: JWKS endpoint delegated to Stytch
+- **WHEN** server validates Stytch JWT tokens
+- **THEN** Stytch SDK handles JWKS fetching internally
+- **AND** MCP server does NOT proxy `/.well-known/jwks.json`
+- **AND** Stytch SDK caches public keys automatically
+- **AND** reduces external dependencies
 
 #### Scenario: Service Token Storage for API Access
 The MCP server SHALL store Coda API tokens securely using one of three approaches: environment variables, PostgreSQL with encryption, or external secrets manager.

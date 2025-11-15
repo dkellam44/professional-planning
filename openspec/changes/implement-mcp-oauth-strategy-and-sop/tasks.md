@@ -329,170 +329,463 @@ During implementation, discovered that **MCP notifications (messages without `id
 
 ## Phase 2: Stytch OAuth 2.1 Integration (Week 2)
 
-### Section 2.1: Stytch Account & Project Setup
+**Estimated Duration**: ~6.75 hours (including buffer)
+
+**Key Enhancements from Original Plan**:
+- Added pre-implementation audit to catch existing bugs
+- Mandatory security validations (aud, iss, exp claims)
+- Simplified metadata strategy (no ASM/JWKS proxying)
+- WWW-Authenticate header RFC compliance
+- Routing order enforcement
+
+### Section 2.0: Pre-Implementation Audit (NEW - 30 min)
+
+**Objective**: Verify current implementation and identify issues before starting
+
+- [ ] 2.0.1 Audit WWW-Authenticate header format
+  - **File**: `integrations/mcp/servers/coda/src/middleware/cloudflare-access-auth.ts`
+  - **Task**: Check 401 response headers for RFC compliance
+  - **Issue**: May use `resource_metadata` (non-standard) instead of `resource_metadata_uri` (RFC-compliant)
+  - **Acceptance**: Documented whether fix is needed
+
+- [ ] 2.0.2 Verify routing order in http-server.ts
+  - **File**: `integrations/mcp/servers/coda/src/http-server.ts`
+  - **Task**: Confirm public endpoints route BEFORE auth middleware
+  - **Issue**: Metadata endpoints may be blocked by authentication
+  - **Acceptance**: Documented current routing structure
+
+- [ ] 2.0.3 Review current JWT validation logic
+  - **Task**: Check if `aud` (audience) claim is validated
+  - **Task**: Check if `iss` (issuer) claim is validated
+  - **Finding**: Likely missing mandatory RFC 8707 audience validation
+  - **Acceptance**: List of required security fixes documented
+
+### Section 2.1: Stytch Account & Project Setup (30 min)
 
 - [ ] 2.1.1 Sign up for Stytch account
   - **URL**: https://stytch.com
   - **Task**: Create free account (free tier: 10,000 MAUs)
   - **Acceptance**: Account created with access to dashboard
 
-- [ ] 2.1.2 Create Stytch project
-  - **Task**: Create new project in Stytch dashboard
+- [ ] 2.1.2 Create Stytch B2B project
+  - **Task**: Create new **B2B** project in Stytch dashboard (enables organization/member model)
   - **Task**: Generate Project ID and API Secret
   - **Acceptance**: Credentials available for copy/paste
 
 - [ ] 2.1.3 Configure OAuth 2.1 settings
-  - **Task**: Set up authorization endpoints
-  - **Task**: Configure PKCE as mandatory
-  - **Task**: Add redirect URIs (ChatGPT, Claude.ai, localhost for testing)
-  - **Acceptance**: OAuth configuration complete
+  - **Task**: Set resource identifier: `https://coda.bestviable.com/mcp`
+  - **Task**: Configure scopes: `coda.read`, `coda.write` (custom scopes)
+  - **Task**: Enable Dynamic Client Registration (DCR)
+  - **Task**: Configure PKCE as mandatory (S256 code challenge method)
+  - **Task**: Token type: JWT (for local validation)
+  - **Acceptance**: OAuth configuration matches MCP requirements
 
-### Section 2.2: Install Stytch SDK
+- [ ] 2.1.4 Test credentials locally
+  - **Task**: Copy credentials to local .env
+  - **Acceptance**: Credentials load correctly
+
+### Section 2.2: Install Stytch SDK (15 min)
 
 - [ ] 2.2.1 Update package.json
-  - **File**: `service-builds/mcp-servers/coda/package.json`
+  - **File**: `integrations/mcp/servers/coda/package.json`
   - **Task**: Add `"stytch": "^27.0.0"`
-  - **Task**: Remove `"jsonwebtoken"` and `"jwks-rsa"` (Stytch SDK handles)
+  - **Task**: Remove `"jsonwebtoken"` and `"jwks-rsa"` (Stytch SDK handles JWT validation)
   - **Acceptance**: Dependencies updated
 
-- [ ] 2.2.2 Run npm install
+- [ ] 2.2.2 Install dependencies
   - **Command**: `npm install`
-  - **Acceptance**: `node_modules/stytch` directory present
+  - **Acceptance**: `node_modules/stytch` directory present, no conflicts
 
-### Section 2.3: Implement Stytch Authentication Middleware
+- [ ] 2.2.3 Update .env.example
+  - **File**: `integrations/mcp/servers/coda/.env.example`
+  - **Task**: Add Stytch variables with clear comments
+  - **Acceptance**: Template documents where to get credentials
 
-- [ ] 2.3.1 Create Stytch auth middleware
-  - **File**: `service-builds/mcp-servers/coda/src/middleware/stytch-auth.ts`
-  - **Task**: Implement authentication using Stytch SDK
-  - **Task**: Validate access tokens with `stytchClient.sessions.authenticate()`
-  - **Task**: Extract user email and session ID
-  - **Acceptance**: Middleware validates Stytch tokens
+### Section 2.3: Implement OAuth Metadata Endpoints (45 min)
 
-- [ ] 2.3.2 Replace Cloudflare Access middleware
-  - **File**: `service-builds/mcp-servers/coda/src/http-server.ts`
-  - **Task**: Replace old `cloudflare-access-auth.ts` import with stytch middleware
-  - **Task**: Update middleware application order
-  - **Acceptance**: Stytch auth is applied to all `/mcp` requests
+**Strategy**: Serve Protected Resource Metadata locally, let clients fetch Authorization Server Metadata directly from Stytch
 
-- [ ] 2.3.3 Handle authentication errors gracefully
-  - **Task**: Return 401 for invalid/expired tokens
-  - **Task**: Include clear error messages in responses
-  - **Acceptance**: Error responses follow JSON-RPC 2.0 format
+- [ ] 2.3.1 Create metadata routes file
+  - **File**: `integrations/mcp/servers/coda/src/routes/oauth-metadata.ts`
+  - **Task**: Export Express router with public endpoints
+  - **Acceptance**: Module structure created
 
-### Section 2.4: Add OAuth 2.1 Metadata Endpoints
+- [ ] 2.3.2 Implement Protected Resource Metadata endpoint
+  - **Endpoint**: `GET /.well-known/oauth-protected-resource`
+  - **Task**: Return static JSON per RFC 9728:
+    ```json
+    {
+      "resource": "https://coda.bestviable.com/mcp",
+      "authorization_servers": ["https://api.stytch.com"],
+      "bearer_methods_supported": ["header"]
+    }
+    ```
+  - **Note**: Do NOT proxy Stytch's ASM or JWKS (clients fetch directly)
+  - **Acceptance**: Endpoint returns valid RFC 9728 JSON
 
-- [ ] 2.4.1 Create OAuth metadata routes
-  - **File**: `service-builds/mcp-servers/coda/src/routes/oauth-metadata.ts`
-  - **Task**: Implement `/.well-known/oauth-authorization-server` (RFC 8414)
-  - **Task**: Implement `/.well-known/oauth-protected-resource` (RFC 9728)
-  - **Task**: Implement `/.well-known/jwks.json` (proxy to Stytch)
-  - **Acceptance**: All three endpoints respond with correct metadata
+- [ ] 2.3.3 Register routes in http-server.ts **BEFORE auth middleware**
+  - **File**: `integrations/mcp/servers/coda/src/http-server.ts`
+  - **CRITICAL**: Routing order matters!
+    ```typescript
+    app.use('/.well-known', metadataRouter);  // First (public)
+    app.use(authenticateMiddleware);          // Second
+    app.post('/mcp', mcpHandler);             // Third (protected)
+    ```
+  - **Acceptance**: Metadata accessible without authentication
 
-- [ ] 2.4.2 Register OAuth routes with Express
-  - **File**: `service-builds/mcp-servers/coda/src/http-server.ts`
-  - **Task**: Add OAuth metadata routes to app
-  - **Task**: These endpoints should NOT require authentication
-  - **Acceptance**: Routes accessible before OAuth flow
+- [ ] 2.3.4 Test metadata endpoint locally
+  - **Command**: `curl http://localhost:8080/.well-known/oauth-protected-resource`
+  - **Acceptance**: Returns valid JSON, no auth required
 
-- [ ] 2.4.3 Verify OAuth metadata format
-  - **Task**: Validate RFC 8414 compliance
-  - **Task**: Validate RFC 9728 compliance
-  - **Acceptance**: Metadata endpoints return valid JSON
+### Section 2.4: Implement Stytch Authentication Middleware (90 min)
 
-### Section 2.5: Update Configuration
+**Objective**: Replace Cloudflare Access JWT with Stytch token validation + mandatory security checks
 
-- [ ] 2.5.1 Add Stytch environment variables
-  - **File**: `service-builds/mcp-servers/coda/src/config.ts`
+- [ ] 2.4.1 Create Stytch middleware file
+  - **File**: `integrations/mcp/servers/coda/src/middleware/stytch-auth.ts`
+  - **Task**: Initialize Stytch B2B client with project credentials
+  - **Acceptance**: Module structure created
+
+- [ ] 2.4.2 Implement token validation with MANDATORY security checks
+  - **Task**: Extract Bearer token from `Authorization` header
+  - **Task**: Validate with `stytchClient.sessions.authenticateJwt()`
+  - **MANDATORY RFC-REQUIRED CHECKS** (all 4 must pass):
+    1. ✅ JWT signature valid (Stytch SDK handles)
+    2. ✅ `aud` claim === `"https://coda.bestviable.com/mcp"` (RFC 8707 MANDATORY)
+    3. ✅ `iss` claim matches Stytch issuer
+    4. ✅ `exp` claim > current time
+  - **Task**: Extract user identity: `user_id`, `email`
+  - **Task**: Set `req.user` and `req.serviceToken` (Coda API token from env)
+  - **Acceptance**: All 4 security checks enforced
+
+- [ ] 2.4.3 Fix WWW-Authenticate header format (RFC compliance)
+  - **Current (non-standard)**: `resource_metadata="..."`
+  - **Required (RFC-compliant)**: `resource_metadata_uri="..."`
+  - **Example**:
+    ```
+    WWW-Authenticate: Bearer realm="MCP Server", resource_metadata_uri="https://coda.bestviable.com/.well-known/oauth-protected-resource"
+    ```
+  - **Acceptance**: Header uses correct field name
+
+- [ ] 2.4.4 Implement error responses
+  - **Missing token**: 401 with WWW-Authenticate header
+  - **Invalid token**: 401 with `error="invalid_token"`
+  - **Wrong audience**: 401 with `error="invalid_token", error_description="Token audience mismatch"`
+  - **Insufficient scopes**: 403 with `error="insufficient_scope"`
+  - **Acceptance**: All error types return proper OAuth error codes
+
+- [ ] 2.4.5 Maintain Bearer token fallback for development
+  - **Task**: Keep simple Bearer validation for Claude Code testing
+  - **Condition**: Only when `NODE_ENV=development`
+  - **Acceptance**: Local development still works
+
+- [ ] 2.4.6 Replace Cloudflare Access middleware in http-server.ts
+  - **File**: `integrations/mcp/servers/coda/src/http-server.ts`
+  - **Task**: Import new Stytch middleware
+  - **Task**: Remove Cloudflare Access middleware import
+  - **Task**: Apply after metadata routes, before MCP handlers
+  - **Acceptance**: Stytch auth applied correctly
+
+### Section 2.5: Update Configuration (15 min)
+
+- [ ] 2.5.1 Update src/config.ts
+  - **File**: `integrations/mcp/servers/coda/src/config.ts`
   - **Task**: Add `STYTCH_PROJECT_ID` and `STYTCH_SECRET`
-  - **Task**: Make Stytch config required (no fallback)
-  - **Acceptance**: Config module loads and validates Stytch vars
+  - **Task**: Make them required (no fallback)
+  - **Task**: Validate on startup
+  - **Acceptance**: Config validates Stytch credentials
 
-- [ ] 2.5.2 Create .env.example with Stytch vars
-  - **File**: `service-builds/mcp-servers/coda/.env.example`
-  - **Task**: Add Stytch Project ID and Secret placeholders
-  - **Task**: Add comments explaining where to get values
-  - **Acceptance**: Example file is copy-paste ready
+- [ ] 2.5.2 Update docker-compose.yml
+  - **File**: `integrations/mcp/servers/coda/docker-compose.yml`
+  - **Task**: Add environment variables:
+    ```yaml
+    - STYTCH_PROJECT_ID=${STYTCH_PROJECT_ID}
+    - STYTCH_SECRET=${STYTCH_SECRET}
+    ```
+  - **Task**: Keep existing Traefik labels (v3.0)
+  - **Acceptance**: Compose includes all required env vars
 
-- [ ] 2.5.3 Update docker-compose.yml
-  - **File**: `service-builds/mcp-servers/coda/docker-compose.yml`
-  - **Task**: Add `STYTCH_PROJECT_ID` and `STYTCH_SECRET` env vars
-  - **Task**: Keep existing Traefik labels (already using v3.0)
-  - **Acceptance**: Docker compose includes Stytch configuration
+- [ ] 2.5.3 Create complete .env.example
+  - **File**: `integrations/mcp/servers/coda/.env.example`
+  - **Task**: Full template with comments
+  - **Acceptance**: Copy-paste ready template
 
-### Section 2.6: Local Testing with Stytch Sandbox
+### Section 2.6: Local Testing (30 min)
 
-- [ ] 2.6.1 Set up Stytch test environment
-  - **Task**: Create test user in Stytch dashboard
-  - **Task**: Generate test tokens
-  - **Acceptance**: Test tokens available for manual testing
+- [ ] 2.6.1 Build locally
+  - **Command**: `npm run build`
+  - **Acceptance**: No TypeScript errors
 
-- [ ] 2.6.2 Test OAuth metadata endpoints locally
-  - **Command**: `curl http://localhost:8080/.well-known/oauth-authorization-server`
-  - **Acceptance**: Returns valid RFC 8414 JSON
+- [ ] 2.6.2 Start local server
+  - **Command**: `docker-compose up --build`
+  - **Acceptance**: Server starts without errors
 
-- [ ] 2.6.3 Test Stytch token validation
-  - **Task**: Get test access token from Stytch
+- [ ] 2.6.3 Test metadata endpoint
+  - **Command**: `curl http://localhost:8080/.well-known/oauth-protected-resource`
+  - **Acceptance**: Valid JSON with Stytch auth server
+
+- [ ] 2.6.4 Test unauthenticated request
+  - **Command**: `curl -I http://localhost:8080/mcp`
+  - **Acceptance**: 401 with proper WWW-Authenticate header
+
+- [ ] 2.6.5 Test with Stytch test token
+  - **Task**: Generate test token from Stytch dashboard
   - **Command**: `curl -H "Authorization: Bearer <test-token>" http://localhost:8080/mcp`
-  - **Acceptance**: Request succeeds with valid token
+  - **Acceptance**: Request succeeds or fails with clear error
 
-- [ ] 2.6.4 Test unauthenticated requests are rejected
-  - **Command**: `curl http://localhost:8080/mcp`
-  - **Acceptance**: Returns 401 Unauthorized
+- [ ] 2.6.6 Verify audience validation
+  - **Task**: Use token with wrong audience
+  - **Acceptance**: 401 with "audience mismatch" error
 
-### Section 2.7: Deployment to Droplet
+### Section 2.7: Droplet Deployment (30 min)
 
-- [ ] 2.7.1 Build Docker image with Stytch
-  - **Location**: Droplet `/root/portfolio/service-builds/mcp-servers/coda/`
-  - **Command**: `docker-compose build --no-cache`
-  - **Acceptance**: Image builds without errors
+- [ ] 2.7.1 Upload code to droplet
+  - **Command**: `scp -r integrations/mcp/servers/coda/* tools-droplet-agents:/root/portfolio/integrations/mcp/servers/coda/`
+  - **Acceptance**: Files uploaded successfully
 
-- [ ] 2.7.2 Deploy to droplet
-  - **Task**: Update docker-compose.yml on droplet with Stytch env vars
-  - **Command**: `docker-compose down && docker-compose up -d`
-  - **Acceptance**: Container starts and stays running
+- [ ] 2.7.2 Add Stytch secrets to droplet .env
+  - **Task**: SSH to droplet and update `.env`
+  - **WARNING**: Never commit secrets to git
+  - **Acceptance**: Production credentials configured
 
-- [ ] 2.7.3 Verify OAuth endpoints are accessible
-  - **Command**: `curl -I https://coda.bestviable.com/.well-known/oauth-authorization-server`
-  - **Acceptance**: Returns HTTP 200
+- [ ] 2.7.3 Build on droplet with cache bypass
+  - **Location**: `/root/portfolio/integrations/mcp/servers/coda/`
+  - **Commands**:
+    ```bash
+    docker-compose down
+    docker-compose build --no-cache  # Force TypeScript recompilation
+    docker-compose up -d
+    ```
+  - **Acceptance**: Container builds successfully
 
-- [ ] 2.7.4 Check health endpoint
-  - **Command**: `curl https://coda.bestviable.com/health`
-  - **Acceptance**: Response includes `"auth": {"provider": "stytch", "oauth_compliant": true}`
+- [ ] 2.7.4 Monitor startup logs
+  - **Command**: `docker logs coda-mcp -f`
+  - **Acceptance**: Stytch client initializes correctly
 
-### Section 2.8: Test with ChatGPT & Claude.ai
+- [ ] 2.7.5 Verify container health
+  - **Command**: `docker ps | grep coda-mcp`
+  - **Acceptance**: Status shows "Up" and "healthy"
 
-- [ ] 2.8.1 Configure Coda MCP in ChatGPT
-  - **Task**: Add MCP server to ChatGPT settings
-  - **Task**: Point to `https://coda.bestviable.com`
-  - **Acceptance**: ChatGPT discovers OAuth metadata endpoints
+### Section 2.8: External Verification (30 min)
 
-- [ ] 2.8.2 Complete OAuth flow in ChatGPT
+- [ ] 2.8.1 Test metadata endpoint externally
+  - **Command**: `curl https://coda.bestviable.com/.well-known/oauth-protected-resource`
+  - **Acceptance**: HTTP 200 with valid JSON
+
+- [ ] 2.8.2 Verify OAuth discovery flow
+  - **Task**: Confirm `authorization_servers` points to Stytch
+  - **Acceptance**: Metadata follows RFC 9728 format
+
+- [ ] 2.8.3 Test unauthenticated MCP request
+  - **Command**: `curl -I https://coda.bestviable.com/mcp`
+  - **Acceptance**: 401 with WWW-Authenticate header
+
+- [ ] 2.8.4 Update health endpoint
+  - **Task**: Add OAuth compliance indicator:
+    ```json
+    {
+      "auth": {
+        "provider": "stytch",
+        "oauth_compliant": true
+      }
+    }
+    ```
+  - **Acceptance**: Health endpoint confirms OAuth 2.1 compliance
+
+### Section 2.9: ChatGPT/Claude.ai Integration Testing (60 min)
+
+- [ ] 2.9.1 Configure Coda MCP in ChatGPT
+  - **Task**: Open ChatGPT settings
+  - **Task**: Add new MCP server: `https://coda.bestviable.com/mcp`
+  - **Acceptance**: ChatGPT discovers OAuth metadata
+
+- [ ] 2.9.2 Complete OAuth flow in ChatGPT
   - **Task**: Click "Connect to Coda MCP"
-  - **Task**: Authenticate with Stytch (email or social)
+  - **Task**: Redirected to Stytch-hosted login page
+  - **Task**: Authenticate (email/password or social login)
+  - **Task**: Review consent screen showing scopes
+  - **Task**: Approve access
   - **Acceptance**: OAuth flow completes successfully
 
-- [ ] 2.8.3 Test MCP tools in ChatGPT
-  - **Task**: Ask ChatGPT to list Coda documents
-  - **Acceptance**: Tools are available and return data
+- [ ] 2.9.3 Verify token exchange
+  - **Task**: Check droplet logs for successful authentication
+  - **Acceptance**: User email appears in logs
 
-- [ ] 2.8.4 Test with Claude.ai web
-  - **Task**: Repeat steps 2.8.1-2.8.3 for Claude.ai
-  - **Acceptance**: Claude.ai connects and tools work
+- [ ] 2.9.4 Test MCP tools in ChatGPT
+  - **Task**: Ask ChatGPT: "List my Coda documents"
+  - **Acceptance**: Tool executes, returns Coda data
 
-- [ ] 2.8.5 Document OAuth flow success
-  - **File**: Create test results document
-  - **Task**: Record successful OAuth flows from ChatGPT and Claude.ai
-  - **Acceptance**: Document shows both tools connected
+- [ ] 2.9.5 Test with Claude.ai
+  - **Task**: Add MCP server in Claude.ai settings
+  - **Task**: Complete OAuth flow
+  - **Task**: Test tool execution
+  - **Acceptance**: Claude.ai connects successfully
+
+- [ ] 2.9.6 Document successful connections
+  - **File**: `PHASE2_TEST_RESULTS.md`
+  - **Task**: Screenshot consent screens
+  - **Task**: Save successful tool execution logs
+  - **Acceptance**: Results documented
+
+### Section 2.10: Cleanup & Documentation (NEW - 30 min)
+
+- [ ] 2.10.1 Archive deprecated Cloudflare Access middleware
+  - **Task**: Move old `cloudflare-access-auth.ts` to archive/
+  - **Note**: Don't delete (may need for rollback)
+  - **Acceptance**: Old code archived safely
+
+- [ ] 2.10.2 Update README.md
+  - **File**: `integrations/mcp/servers/coda/README.md`
+  - **Task**: Document Stytch OAuth setup
+  - **Task**: Add configuration instructions
+  - **Task**: Link to Stytch dashboard
+  - **Acceptance**: README reflects current OAuth implementation
+
+- [ ] 2.10.3 Confirm health endpoint OAuth status
+  - **Command**: `curl https://coda.bestviable.com/health`
+  - **Acceptance**: Returns `"oauth_compliant": true`
+
+- [ ] 2.10.4 Create STYTCH_SETUP_GUIDE.md
+  - **File**: `docs/system/architecture/STYTCH_SETUP_GUIDE.md`
+  - **Task**: Complete setup instructions
+  - **Task**: Troubleshooting section
+  - **Acceptance**: Guide is complete and tested
+
+- [ ] 2.10.5 Update tasks.md completion status
+  - **Task**: Mark all Phase 2 tasks as complete
+  - **Task**: Document any deviations from plan
+  - **Acceptance**: All Phase 2 tasks checked off
 
 ---
 
-## Phase 2F: Deprecate Legacy Cloudflare Access (Optional)
+### Phase 2 Security Validation Checklist
 
-- [ ] 2F.1 Keep Bearer token fallback during transition
+**Before marking Phase 2 complete, verify ALL items**:
+
+- [ ] ✅ Audience validation enforced (`aud` claim === `https://coda.bestviable.com/mcp`)
+- [ ] ✅ Issuer validation enforced (`iss` claim matches Stytch)
+- [ ] ✅ Token expiration checked (`exp` claim validated)
+- [ ] ✅ WWW-Authenticate header uses `resource_metadata_uri` (not `resource_metadata`)
+- [ ] ✅ Metadata endpoints public (routed before auth middleware)
+- [ ] ✅ MCP token NEVER forwarded to Coda API (service token used)
+- [ ] ✅ Secrets in environment variables (never hardcoded)
+- [ ] ✅ HTTPS enforced for all OAuth endpoints
+- [ ] ✅ 401/403 errors return proper OAuth error codes
+- [ ] ✅ ChatGPT successfully connects via OAuth
+- [ ] ✅ Claude.ai successfully connects via OAuth
+
+---
+
+### Phase 2 Success Criteria
+
+- ✅ Stytch OAuth 2.1 integration deployed
+- ✅ Metadata endpoints RFC-compliant and accessible
+- ✅ All 4 security checks enforced (signature, aud, iss, exp)
+- ✅ WWW-Authenticate headers properly formatted
+- ✅ ChatGPT web connects and executes tools
+- ✅ Claude.ai web connects and executes tools
+- ✅ Health endpoint shows `"oauth_compliant": true`
+- ✅ Documentation complete and accurate
+- ✅ Claude Code still works (Bearer token fallback)
+
+---
+
+### Rollback Plan
+
+If OAuth integration fails:
+
+1. **Immediate**: Revert to Cloudflare Access JWT middleware (restore from archive)
+2. **Restore**: Previous docker-compose.yml
+3. **Restart**: `docker-compose down && docker-compose up -d`
+4. **Verify**: Bearer token fallback works for Claude Code
+5. **Debug**: Review Stytch logs and MCP client errors
+6. **Iterate**: Fix issues, redeploy
+
+---
+
+## Phase 2F: Update Legacy Documentation (After MCP Operational)
+
+**When**: After Phase 2 deployment succeeds and MCP is operational
+
+### Section 2F.1: Review and Update STYTCH_SETUP_GUIDE.md (30 min)
+
+- [ ] 2F.1.1 Update OAuth metadata endpoints section
+  - **File**: `/Users/davidkellam/workspace/portfolio/docs/system/architecture/STYTCH_SETUP_GUIDE.md`
+  - **Issue**: Lines 296-359 show proxying ASM and JWKS (outdated strategy)
+  - **Fix**: Update to show only PRM endpoint implementation
+  - **Acceptance**: Code examples match simplified strategy
+
+- [ ] 2F.1.2 Add mandatory security validations to middleware code
+  - **Issue**: Lines 232-291 missing aud/iss/exp validation
+  - **Fix**: Add all 4 mandatory security checks to code example
+  - **Fix**: Add RFC-compliant WWW-Authenticate header
+  - **Acceptance**: Middleware code matches PHASE2_EXECUTION_GUIDE.md
+
+- [ ] 2F.1.3 Update file paths throughout document
+  - **Issue**: References `/home/user/professional-planning/service-builds/...`
+  - **Fix**: Replace with `/Users/davidkellam/workspace/portfolio/integrations/...`
+  - **Acceptance**: All paths are correct
+
+- [ ] 2F.1.4 Add pre-implementation audit section
+  - **Task**: Add Section 0: Pre-Implementation Audit before Section 1
+  - **Content**: Check WWW-Authenticate header, routing order, current validation
+  - **Acceptance**: Matches PHASE2_EXECUTION_GUIDE.md Section 1
+
+- [ ] 2F.1.5 Emphasize routing order criticality
+  - **Task**: Add warning about metadata routes before auth middleware
+  - **Location**: Step 4.4 (Update http-server.ts)
+  - **Acceptance**: Clear warning with correct/incorrect examples
+
+### Section 2F.2: Review and Update STYTCH_TESTING_CHECKLIST.md (30 min)
+
+- [ ] 2F.2.1 Remove obsolete metadata endpoint tests
+  - **File**: `/Users/davidkellam/workspace/portfolio/docs/system/architecture/STYTCH_TESTING_CHECKLIST.md`
+  - **Issue**: Lines 73-151 test ASM and JWKS endpoints (we don't host)
+  - **Fix**: Remove Test 1 (ASM) and Test 3 (JWKS)
+  - **Fix**: Keep only Test 2 (PRM)
+  - **Acceptance**: Only tests PRM endpoint
+
+- [ ] 2F.2.2 Add security validation tests
+  - **Task**: Add new Section 3.5: Security Validation Tests
+  - **Tests to add**:
+    - Test aud claim validation (wrong audience rejected)
+    - Test iss claim validation (wrong issuer rejected)
+    - Test exp claim validation (expired token rejected)
+    - Test WWW-Authenticate header format (resource_metadata_uri field)
+  - **Acceptance**: All 4 security checks have test cases
+
+- [ ] 2F.2.3 Add routing order test
+  - **Task**: Add test verifying metadata accessible without auth
+  - **Location**: Section 3 (OAuth Metadata Endpoints)
+  - **Test**: `curl http://localhost:8080/.well-known/oauth-protected-resource` (no auth header)
+  - **Acceptance**: Test confirms metadata public
+
+- [ ] 2F.2.4 Update file paths
+  - **Issue**: References `/home/david/services/...`
+  - **Fix**: Replace with correct droplet path `/root/portfolio/integrations/...`
+  - **Acceptance**: All paths match actual deployment
+
+### Section 2F.3: Update last modified dates
+
+- [ ] 2F.3.1 Update STYTCH_SETUP_GUIDE.md metadata
+  - **Task**: Change `Last Updated: 2025-11-14` to current date
+  - **Task**: Update version to `2.0` (major update)
+  - **Acceptance**: Metadata reflects changes
+
+- [ ] 2F.3.2 Update STYTCH_TESTING_CHECKLIST.md metadata
+  - **Task**: Change `Last Updated: 2025-11-14` to current date
+  - **Task**: Update version to `2.0`
+  - **Acceptance**: Metadata reflects changes
+
+---
+
+## Phase 2G: Deprecate Legacy Cloudflare Access (Optional)
+
+- [ ] 2G.1 Keep Bearer token fallback during transition
   - **Task**: Maintain Bearer token support alongside Stytch (for Claude Code)
   - **Acceptance**: Both auth methods work
 
-- [ ] 2F.2 Document deprecation timeline
+- [ ] 2G.2 Document deprecation timeline
   - **Task**: Plan Cloudflare Access removal (after 30-day transition)
   - **Acceptance**: Clear timeline documented
 
