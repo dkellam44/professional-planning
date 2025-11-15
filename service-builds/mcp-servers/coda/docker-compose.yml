@@ -38,17 +38,12 @@ services:
       - docker_syncbricks  # Internal network for service communication
 
     labels:
-      # Traefik v3.0 auto-discovery labels for HTTP (web entrypoint only - no TLS)
+      # Traefik v3.0 auto-discovery labels (HTTP only via Cloudflare Tunnel)
+      # Architecture: Cloudflare terminates HTTPS/TLS → HTTP tunnel → Traefik:80 → Service:8080
       - "traefik.enable=true"
       - "traefik.http.routers.coda-mcp.rule=Host(`coda.bestviable.com`)"
       - "traefik.http.routers.coda-mcp.entrypoints=web"
       - "traefik.http.services.coda-mcp.loadbalancer.server.port=8080"
-
-      # HTTPS router with TLS (websecure entrypoint)
-      - "traefik.http.routers.coda-mcp-secure.rule=Host(`coda.bestviable.com`)"
-      - "traefik.http.routers.coda-mcp-secure.entrypoints=websecure"
-      - "traefik.http.routers.coda-mcp-secure.tls=true"
-      - "traefik.http.routers.coda-mcp-secure.service=coda-mcp"
 
       # Service metadata
       - "com.bestviable.service=coda-mcp"
