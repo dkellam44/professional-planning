@@ -102,6 +102,8 @@
 7. **Production-ready**: Used by enterprise SaaS products
 8. **Clear migration path**: Can scale to WorkOS (1M MAUs free) if needed
 
+> **Important**: The current `.env` contains credentials for an older **B2C** Stytch project (`project-live-543e711c-431a-4958-ac10-9ee5af154558`). Converting to a new **B2B** project will produce new project IDs, secrets, and issuer domains—plan for credential rotation locally, in docker-compose, and on the droplet immediately after creating the B2B project.
+
 ### Alternatives Considered
 
 | Solution | Personal Use | Client SaaS | Memory | Complexity | Decision |
@@ -149,44 +151,42 @@ Coda MCP Server (Node.js/Express)
 ### Detailed Request Flow
 
 ```
-1. OAuth Authorization (One-Time Setup per User)
-   ─────────────────────────────────────────────────
-   User clicks "Connect MCP" in ChatGPT/Claude.ai
+1. OAuth Authorization (One-Time per user)
+   ───────────────────────────────────────
+   User clicks "Connect MCP" in ChatGPT/Claude
       ↓
-   Client redirects to Stytch authorization endpoint
-      → https://api.stytch.com/v1/public/oauth/authorize
-      → Params: client_id, redirect_uri, code_challenge (PKCE)
+   Client opens https://coda.bestviable.com/oauth/authorize
+      → React/Vite UI loads, renders Stytch <B2BIdentityProvider />
+      → If user not logged in, <StytchB2B> login component appears
       ↓
-   User authenticates (email, Google, GitHub, etc.)
+   Stytch-hosted login + consent flow completes
       ↓
-   Stytch redirects back with authorization code
-      → https://chatgpt.com/callback?code=...
+   Stytch redirects back to ChatGPT/Claude with authorization code
       ↓
-   Client exchanges code for access token
-      → POST https://api.stytch.com/v1/public/oauth/token
-      → Body: code, code_verifier (PKCE), client_id
-      ↓
-   Stytch returns: { access_token, refresh_token, expires_in }
+   Client exchanges code for access token at Stytch token endpoint
 
-2. MCP Tool Call (Every Request)
+2. MCP Tool Call (Every request)
    ─────────────────────────────
-   Client sends MCP request with access token
+   Client sends MCP request with `Authorization: Bearer <stytch-token>`
       → POST https://coda.bestviable.com/mcp
-      → Headers: Authorization: Bearer stk_...
       → Body: {"jsonrpc":"2.0","id":1,"method":"tools/call",...}
       ↓
    Cloudflare Tunnel → Traefik → Coda MCP Server
       ↓
-   Stytch Middleware validates access token
-      → Verify JWT signature using Stytch public keys
-      → Check expiration, audience, issuer
-      → Extract user: { user_id, email }
+   Stytch middleware validates token
+      → Stytch SDK verifies signature + expiration
+      → Checks `aud === https://coda.bestviable.com/mcp`
+      → Checks `iss === https://malachite-regnosaurus-2033.customers.stytch.com`
       ↓
-   MCP Handler processes request
-      → Get Coda API token from env (CODA_API_TOKEN)
-      → Call Coda API
-      → Return result in JSON-RPC format
+   MCP handler executes tool with CODA_API_TOKEN
+      → Response returned in JSON-RPC format
 ```
+
+### Authorization UI
+
+- Added a lightweight React/Vite bundle (`authorization-ui/`) that renders `<StytchB2B>` for login and `<B2BIdentityProvider />` for consent using the OAuth query parameters. The bundle reads runtime values from `window.__MCP_AUTH_CONFIG__` populated by Express.
+- `/oauth/authorize` now serves the compiled bundle and injects `STYTCH_PUBLIC_TOKEN` + `STYTCH_OAUTH_REDIRECT_URI` per request, with `Cache-Control: no-store` to avoid caching secrets. The runtime automatically locates `/app/dist/authorization-ui` inside the container.
+- Dockerfile copies the authorization UI sources and runs `npm run build`; `docker-compose.yml` uses `env_file: .env`, so containers inherit all Stytch/BASE_URL vars. `.env.example` and README document the new vars (`STYTCH_PUBLIC_TOKEN`, `STYTCH_OAUTH_REDIRECT_URI`, `BASE_URL=https://coda.bestviable.com`).
 
 ### Authentication Endpoints
 
@@ -248,16 +248,14 @@ Coda MCP Server (Node.js/Express)
 
 Based on comprehensive review of Stytch's official MCP authentication guide and RFC specifications:
 
-#### 1. No Frontend Required ✅
-**Critical Discovery**: Stytch hosts all OAuth UI components (login, consent screens, user management).
+#### 1. Authorization UI Requirements (Updated 2025-11-16)
+**Discovery**: While Stytch can host the login + consent UI directly, the MCP "Connected App" flow (per Stytch Connected Apps guide) requires us to publish an `Authorization URL`. ChatGPT/Claude register that URL during dynamic client registration and will only redirect the end-user to our domain. Therefore we now serve a lightweight React/Vite app at `/oauth/authorize` that immediately mounts Stytch's `<StytchB2B />` + `<B2BIdentityProvider />` components.
 
 **What this means**:
-- ✅ **Backend-only implementation** - no React components to deploy
-- ✅ **No separate authorization page** - Stytch provides hosted UI
-- ✅ **No additional infrastructure** - MCP server remains single-container deployment
-- ✅ **User redirected to Stytch** - users see Stytch-branded login pages
-
-**Reference**: Stytch MCP Guide, lines 238-242: "If you're using an external IdP, the client will redirect the user directly to the provider's authorization page, and your MCP server doesn't need to implement /authorize."
+- ✅ We keep a **minimal frontend** solely responsible for bootstrapping the hosted components and injecting runtime config (`STYTCH_PUBLIC_TOKEN`, redirect URI, requested scopes).
+- ✅ The UI is built once during Docker image creation (Vite) and shipped as static assets under `/app/dist/authorization-ui`.
+- ✅ Express injects the runtime variables into `index.html` and adds `Cache-Control: no-store`.
+- ✅ Stytch still owns the actual login + consent surfaces; our page is just a shim to satisfy the Authorization URL requirement and to display tenant-specific branding/instructions.
 
 #### 2. Simplified Metadata Strategy ✅
 **Updated approach**: Only host Protected Resource Metadata, let clients fetch Authorization Server Metadata directly from Stytch.
@@ -345,6 +343,21 @@ res.set('WWW-Authenticate', 'Bearer resource_metadata="https://..."');
   }
 }
 ```
+
+### Stytch Connected App Configuration
+
+Per the Stytch Connected Apps "Getting Started" guide, configure the Connected App backing ChatGPT/Claude as follows:
+
+- **App Type**: Third-party (clients such as ChatGPT/Claude request access to our resource server).
+- **OAuth Flow**: Authorization Code with PKCE enforced (S256). ChatGPT/Claude always supply code challenge/verifier so we disallow implicit/hybrid.
+- **Client Type**: Public (neither ChatGPT nor Claude can safely hold a client secret). Token endpoint validates PKCE instead of client secret.
+- **Authorization URL**: `https://coda.bestviable.com/oauth/authorize` (served by our React shim which mounts `<StytchB2B>`/`<B2BIdentityProvider />`).
+- **Token URL**: Use the default from the B2B project (`https://api.stytch.com/v1/public/oauth/token`) so ChatGPT exchanges the code directly with Stytch.
+- **Resource Indicator**: `https://coda.bestviable.com/mcp` (matches PRM `resource` and the `aud` we enforce).
+- **Scopes**: `openid email profile coda.read coda.write` (documented in PRM and consistent with the Connected App definition).
+- **Token Type**: JWT access tokens signed by Stytch; we validate via `sessions.authenticateJwt`.
+
+This configuration ensures the Connected App metadata Stytch publishes through `.well-known/openid-configuration` matches our PRM, unblocks ChatGPT's dynamic registration, and keeps us aligned with the MCP OAuth 2.1 requirements.
 
 ### Updated Middleware
 
@@ -623,6 +636,11 @@ Phase 4 (Optional):    Self-host Keycloak (cost optimization)
 3. Claude.ai connection test
 4. Verify metadata endpoints
 5. Health check endpoint
+
+### Tooling & Automation
+- **Linting**: Add `.eslintrc.cjs` extending `eslint:recommended` + `plugin:@typescript-eslint/recommended`, backed by a lightweight `tsconfig.eslint.json` so `npm run lint` validates code style and catches unsafe patterns (unused vars, any usage).
+- **Unit tests**: Configure Jest via `ts-jest` (`jest.config.ts`) and seed baseline specs covering the OAuth metadata router and Stytch middleware error handling. These tests run in CI (or locally) via `npm test` and fail fast if metadata schema or RFC-mandated checks change.
+- **Coverage targets**: Aim for >80% coverage on middleware and routing files once baseline tests exist; add more suites as new handlers are implemented.
 
 ---
 

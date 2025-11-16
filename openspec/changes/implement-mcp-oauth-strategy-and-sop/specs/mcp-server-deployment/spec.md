@@ -78,29 +78,29 @@ The MCP server deployment SHALL enforce OAuth 2.1 authentication on all endpoint
 ### Requirement: OAuth 2.1 Metadata Endpoints (UPDATED: Simplified Strategy)
 The MCP server SHALL implement Protected Resource Metadata (RFC 9728) and delegate Authorization Server Metadata to Stytch.
 
-#### Scenario: Protected Resource Metadata hosted locally (RFC 9728)
 - **WHEN** client requests `/.well-known/oauth-protected-resource`
 - **THEN** server returns static JSON with:
   - `resource`: `"https://coda.bestviable.com/mcp"` (MCP server resource identifier)
-  - `authorization_servers`: `["https://api.stytch.com"]` (Stytch auth server URL)
-  - `bearer_methods_supported`: `["header"]` (only header-based Bearer tokens)
+  - `authorization_servers`: `["https://malachite-regnosaurus-2033.customers.stytch.com"]`
+  - `bearer_methods_supported`: `["header"]`
 - **AND** response follows RFC 9728 specification
 - **AND** endpoint accessible without authentication
 - **AND** NO proxying to Stytch (static JSON response)
 
-#### Scenario: Authorization Server Metadata delegated to Stytch (RFC 8414)
-- **WHEN** client discovers `authorization_servers` from PRM
-- **THEN** client fetches ASM directly from `https://api.stytch.com/.well-known/oauth-authorization-server`
+- **WHEN** client discovers `authorization_servers` from PRM`
+- **THEN** client fetches ASM directly from Stytch's issuer domain (OpenID configuration)
 - **AND** MCP server does NOT proxy or host ASM endpoint
 - **AND** Stytch provides: `issuer`, `authorization_endpoint`, `token_endpoint`, `jwks_uri`, PKCE support
 - **AND** simplifies implementation (less code, no caching issues)
 
-#### Scenario: JWKS endpoint delegated to Stytch
 - **WHEN** server validates Stytch JWT tokens
-- **THEN** Stytch SDK handles JWKS fetching internally
-- **AND** MCP server does NOT proxy `/.well-known/jwks.json`
-- **AND** Stytch SDK caches public keys automatically
-- **AND** reduces external dependencies
+- **THEN** Stytch SDK handles JWKS fetching internally (no proxy endpoint hosted by MCP)
+
+#### Scenario: Authorization UI served at `/oauth/authorize`
+- **WHEN** client initiates OAuth at `https://coda.bestviable.com/oauth/authorize`
+- **THEN** server returns the React/Vite bundle embedding Stytch's `<B2BIdentityProvider />`
+- **AND** HTML injection populates `STYTCH_PUBLIC_TOKEN` and redirect URL from environment variables
+- **AND** response headers include `Cache-Control: no-store` to prevent caching sensitive configuration
 
 #### Scenario: Service Token Storage for API Access
 The MCP server SHALL store Coda API tokens securely using one of three approaches: environment variables, PostgreSQL with encryption, or external secrets manager.
@@ -199,6 +199,23 @@ The MCP deployment SHALL encrypt stored service tokens at rest using AES-256-GCM
 - **AND** returns plaintext token to caller
 - **AND** fails with clear error if decryption fails
 
+---
+
+### Requirement: Developer Quality Gates (ADDED)
+The MCP deployment SHALL provide a documented lint/test workflow so future contributors can verify code before deploying.
+
+#### Scenario: Lint command enforces TypeScript best practices
+- **WHEN** a developer runs `npm run lint` inside `service-builds/mcp-servers/coda`
+- **THEN** ESLint executes with `eslint:recommended` + `@typescript-eslint/recommended`
+- **AND** lint fails if middleware/routes violate TypeScript/React best practices (unused vars, unsafe any, missing deps)
+- **AND** README documents this requirement for all contributors
+
+#### Scenario: Jest test suite validates OAuth-critical paths
+- **WHEN** `npm test` executes
+- **THEN** Jest (configured via `ts-jest`) runs the unit suite for metadata endpoints and Stytch middleware
+- **AND** tests cover success + failure paths (missing token, invalid audience)
+- **AND** CI/deployment checklists require a passing test run before redeploying droplet services
+
 #### Scenario: Encryption key can be rotated
 - **WHEN** `rotateKey(oldKey, newKey)` called
 - **THEN** all tokens in service re-encrypted with new key
@@ -235,5 +252,5 @@ The MCP deployment SHALL encrypt stored service tokens at rest using AES-256-GCM
 ---
 
 **Spec Version**: 2.0 (OAuth 2.1 Compliance)
-**Last Updated**: 2025-11-14
+**Last Updated**: 2025-11-16
 **Status**: UPDATED for Stytch OAuth 2.1 strategy
