@@ -36,8 +36,9 @@ app.get('/health', (req: AuthenticatedRequest, res: Response) => {
     auth: {
       provider: 'stytch',
       oauth_compliant: true,
-      rfc_8414_endpoint: '/.well-known/oauth-authorization-server',
-      rfc_9728_endpoint: '/.well-known/oauth-protected-resource'
+      stytch_domain: config.stytch.domain,
+      authorization_server: `${config.stytch.domain}/.well-known/oauth-authorization-server`,
+      protected_resource: `${config.baseUrl}/.well-known/oauth-protected-resource`
     },
     timestamp: new Date().toISOString()
   });
@@ -172,12 +173,14 @@ export function startServer(): void {
       console.log(`🚀 Coda MCP server started (Phase 2: Stytch OAuth 2.1)`);
       console.log(`   URL: http://${config.host}:${config.port}`);
       console.log(`   Auth: Stytch OAuth 2.1 with PKCE`);
+      console.log(`   Stytch Domain: ${config.stytch.domain}`);
       console.log(`   Coda API: ${config.codaApiBaseUrl}`);
-      console.log(`   Metadata:`);
-      console.log(`     - RFC 8414: http://${config.host}:${config.port}/.well-known/oauth-authorization-server`);
-      console.log(`     - RFC 9728: http://${config.host}:${config.port}/.well-known/oauth-protected-resource`);
-      console.log(`   Health: http://${config.host}:${config.port}/health`);
-      console.log(`   MCP: http://${config.host}:${config.port}/mcp`);
+      console.log(`   Endpoints:`);
+      console.log(`     - MCP: http://${config.host}:${config.port}/mcp`);
+      console.log(`     - Health: http://${config.host}:${config.port}/health`);
+      console.log(`     - Protected Resource Metadata (RFC 9728): http://${config.host}:${config.port}/.well-known/oauth-protected-resource`);
+      console.log(`   Auth Server (hosted by Stytch):`);
+      console.log(`     - ${config.stytch.domain}/.well-known/oauth-authorization-server`);
     });
 
     // Graceful shutdown

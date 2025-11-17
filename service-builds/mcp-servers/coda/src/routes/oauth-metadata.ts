@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { config } from '../config';
 
 const router = Router();
 
@@ -23,16 +24,13 @@ const router = Router();
  * @see https://datatracker.ietf.org/doc/html/rfc9728
  */
 router.get('/.well-known/oauth-protected-resource', (req: Request, res: Response) => {
-  const baseUrl = process.env.BASE_URL || 'https://coda.bestviable.com';
-  const stytchDomain = process.env.STYTCH_DOMAIN || 'https://coda.bestviable.com';
-
   res.json({
     // The resource identifier - this MCP server
-    resource: baseUrl,
+    resource: config.baseUrl,
 
     // Authorization server that issues tokens for this resource
     // This should be your Stytch project domain
-    authorization_servers: [stytchDomain],
+    authorization_servers: [config.stytch.domain],
 
     // OAuth scopes this MCP server supports
     // MCP clients will request these scopes when authorizing
@@ -64,10 +62,8 @@ router.get('/.well-known/oauth-protected-resource', (req: Request, res: Response
  */
 router.get('/.well-known/jwks.json', async (req: Request, res: Response) => {
   try {
-    const stytchDomain = process.env.STYTCH_DOMAIN || 'https://coda.bestviable.com';
-
     // Proxy to Stytch JWKS endpoint
-    const response = await fetch(`${stytchDomain}/.well-known/jwks.json`);
+    const response = await fetch(`${config.stytch.domain}/.well-known/jwks.json`);
 
     if (!response.ok) {
       throw new Error(`Stytch JWKS fetch failed: ${response.statusText}`);
