@@ -2,6 +2,8 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import axios from 'axios';
+import path from 'path';
+import fs from 'fs';
 import { authenticate, AuthenticatedRequest } from './middleware/stytch-auth';
 import oauthMetadataRouter from './routes/oauth-metadata';
 import { config, validateConfig } from './config';
@@ -21,8 +23,36 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Register OAuth 2.1 metadata endpoints (must be before auth middleware)
-// These endpoints provide RFC 8414 and RFC 9728 compliant metadata
 app.use(oauthMetadataRouter);
+
+// Serve authorization UI (Vite bundle)
+const authorizationUiCandidates = [
+  path.join(__dirname, 'authorization-ui'),
+  path.join(__dirname, '../dist/authorization-ui'),
+  path.join(process.cwd(), 'dist/authorization-ui'),
+  path.join(process.cwd(), 'authorization-ui'),
+];
+const authorizationUiDir = authorizationUiCandidates.find((candidate) => fs.existsSync(candidate));
+if (!authorizationUiDir) {
+  console.warn('[Auth UI] No static bundle directory found. Checked:', authorizationUiCandidates);
+}
+
+if (authorizationUiDir) {
+  console.log(`[Auth UI] Serving static assets from: ${authorizationUiDir}`);
+  app.use('/oauth', express.static(authorizationUiDir));
+  app.get('/oauth/authorize', (_req: Request, res: Response) => {
+    const indexPath = path.join(authorizationUiDir, 'index.html');
+    let html = fs.readFileSync(indexPath, 'utf8');
+    const publicToken = process.env.STYTCH_PUBLIC_TOKEN || '';
+    const redirectUrl = process.env.STYTCH_OAUTH_REDIRECT_URI || `${config.baseUrl}/oauth/authorize`;
+    html = html
+      .replace(/__STYTCH_PUBLIC_TOKEN__/g, publicToken)
+      .replace(/__OAUTH_REDIRECT_URL__/g, redirectUrl);
+    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(html);
+  });
+}
 
 // Apply Stytch OAuth 2.1 authentication middleware
 app.use(authenticate);
@@ -144,7 +174,7 @@ app.post('/mcp', async (req: AuthenticatedRequest, res: Response) => {
 });
 
 // Error handling middleware
-app.use((err: Error, req: Request, res: Response, next: any) => {
+app.use((err: Error, req: Request, res: Response, _next: any) => {
   console.error('[ERROR] Unhandled error:', err);
   res.status(500).json({
     error: 'Internal server error',

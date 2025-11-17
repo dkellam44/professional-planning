@@ -23,27 +23,16 @@ const router = Router();
  * @see https://datatracker.ietf.org/doc/html/rfc9728
  */
 router.get('/.well-known/oauth-protected-resource', (req: Request, res: Response) => {
-  const baseUrl = process.env.BASE_URL || 'https://coda.bestviable.com';
-  const stytchDomain = process.env.STYTCH_DOMAIN || 'https://coda.bestviable.com';
+  const baseUrl = (process.env.BASE_URL || 'https://coda.bestviable.com').replace(/\/$/, '');
+  const stytchDomain = (process.env.STYTCH_DOMAIN || 'https://api.stytch.com').replace(/\/$/, '');
 
   res.json({
-    // The resource identifier - this MCP server
-    resource: baseUrl,
-
-    // Authorization server that issues tokens for this resource
-    // This should be your Stytch project domain
+    resource: `${baseUrl}/mcp`,
     authorization_servers: [stytchDomain],
 
     // OAuth scopes this MCP server supports
     // MCP clients will request these scopes when authorizing
-    scopes_supported: [
-      'openid',
-      'email',
-      'profile',
-      'mcp.read',
-      'mcp.write',
-      'mcp.tools'
-    ],
+    scopes_supported: ['openid', 'email', 'profile', 'coda.read', 'coda.write'],
 
     // How bearer tokens should be provided
     bearer_methods_supported: ['header'],
@@ -53,35 +42,6 @@ router.get('/.well-known/oauth-protected-resource', (req: Request, res: Response
   });
 });
 
-/**
- * JWKS Endpoint (JSON Web Key Set)
- *
- * Provides public keys for validating JWT access tokens
- * Proxies to Stytch's JWKS endpoint
- *
- * MCP clients may use this to validate tokens locally,
- * though we validate tokens server-side via Stytch API.
- */
-router.get('/.well-known/jwks.json', async (req: Request, res: Response) => {
-  try {
-    const stytchDomain = process.env.STYTCH_DOMAIN || 'https://coda.bestviable.com';
-
-    // Proxy to Stytch JWKS endpoint
-    const response = await fetch(`${stytchDomain}/.well-known/jwks.json`);
-
-    if (!response.ok) {
-      throw new Error(`Stytch JWKS fetch failed: ${response.statusText}`);
-    }
-
-    const keys = await response.json();
-    res.json(keys);
-  } catch (error) {
-    console.error('[OAUTH] Failed to fetch JWKS:', error);
-    res.status(500).json({
-      error: 'internal_server_error',
-      message: 'Failed to fetch JWKS from authorization server',
-    });
-  }
-});
+// JWKS handled by Stytch; MCP clients should fetch from the authorization server directly
 
 export default router;

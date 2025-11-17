@@ -1,0 +1,39 @@
+:root {
+  color: #0b1522;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #081229, #030711 60%);
+}
+
+.auth-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.auth-card {
+  width: min(480px, 100%);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 25px 65px rgba(0, 0, 0, 0.35);
+  padding: 2rem 1.5rem;
+}
+
+.auth-card h2 {
+  margin-top: 0;
+  font-weight: 600;
+  color: #0b1522;
+}
+
+.auth-error {
+  color: white;
+  text-align: center;
+  font-size: 1.125rem;
+  margin-top: 20vh;
+}

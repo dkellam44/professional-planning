@@ -7,15 +7,12 @@ services:
       dockerfile: Dockerfile
     container_name: coda-mcp
     restart: unless-stopped
+    env_file:
+      - .env
     # Port binding handled by Traefik reverse proxy
     # ports:
     #   - "8080:8080"
     environment:
-      # Stytch OAuth 2.1 Configuration
-      - STYTCH_PROJECT_ID=${STYTCH_PROJECT_ID}
-      - STYTCH_SECRET=${STYTCH_SECRET}
-      - STYTCH_DOMAIN=${STYTCH_DOMAIN}
-
       # Coda API Configuration
       - CODA_API_TOKEN=${CODA_API_TOKEN}
       - CODA_API_BASE_URL=https://coda.io/apis/v1

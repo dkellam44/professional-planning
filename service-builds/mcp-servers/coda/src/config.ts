@@ -17,6 +17,7 @@ export interface Config {
   stytch: {
     projectId: string;
     secret: string;
+    domain: string;
   };
 
   // Legacy: Cloudflare Access configuration (deprecated, kept for backward compatibility)
@@ -43,6 +44,12 @@ function getOptionalEnvVar(name: string, defaultValue: string): string {
   return process.env[name] || defaultValue;
 }
 
+function getStytchDomain(): string {
+  return process.env.STYTCH_DOMAIN
+    || process.env.STYTCH_PROJECT_DOMAIN
+    || 'https://api.stytch.com';
+}
+
 export const config: Config = {
   // Server configuration
   port: parseInt(getOptionalEnvVar('PORT', '8080'), 10),
@@ -57,6 +64,7 @@ export const config: Config = {
   stytch: {
     projectId: getRequiredEnvVar('STYTCH_PROJECT_ID'),
     secret: getRequiredEnvVar('STYTCH_SECRET'),
+    domain: getStytchDomain(),
   },
 
   // Legacy: Cloudflare Access configuration (deprecated)
@@ -76,6 +84,7 @@ export function validateConfig(): void {
   console.log('✅ Configuration validated successfully');
   console.log(`   Auth provider: Stytch OAuth 2.1`);
   console.log(`   Stytch Project ID: ${config.stytch.projectId}`);
+  console.log(`   Stytch Domain: ${config.stytch.domain}`);
   console.log(`   Base URL: ${config.baseUrl}`);
   console.log(`   Coda API: ${config.codaApiBaseUrl}`);
   console.log(`   Port: ${config.port}`);

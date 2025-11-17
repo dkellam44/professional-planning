@@ -7,9 +7,13 @@ WORKDIR /app
 # Install build dependencies for native modules
 RUN apk add --no-cache python3 make g++
 
-# Copy package.json (without package-lock.json for fresh install)
+# Copy package manifests and configs
 COPY package.json ./
+COPY package-lock.json ./
 COPY tsconfig.json ./
+COPY tsconfig.eslint.json ./
+COPY vite.config.ts ./
+COPY authorization-ui ./authorization-ui
 
 # Install dependencies
 RUN npm install
