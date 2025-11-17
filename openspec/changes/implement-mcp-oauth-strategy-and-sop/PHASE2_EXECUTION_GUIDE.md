@@ -50,7 +50,7 @@ Codex analysis identified potential bugs in current code:
 
 #### 1.1 Audit WWW-Authenticate Header Format
 
-**File**: `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/middleware/cloudflare-access-auth.ts`
+**File**: `/Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda/src/middleware/stytch-auth.ts`
 
 **Current (potentially broken)**:
 ```typescript
@@ -67,7 +67,7 @@ res.set('WWW-Authenticate', 'Bearer realm="MCP Server", resource_metadata_uri="h
 **Action**:
 ```bash
 # Search for WWW-Authenticate usage
-grep -n "WWW-Authenticate" /Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/middleware/cloudflare-access-auth.ts
+grep -n "WWW-Authenticate" /Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda/src/middleware/stytch-auth.ts
 
 # Document findings
 # If using resource_metadata, add to fix list
@@ -79,7 +79,7 @@ grep -n "WWW-Authenticate" /Users/davidkellam/workspace/portfolio/integrations/m
 
 #### 1.2 Verify Routing Order
 
-**File**: `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/http-server.ts`
+**File**: `/Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda/src/http-server.ts`
 
 **Issue**: If auth middleware routes before metadata endpoints, discovery will fail
 
@@ -98,7 +98,7 @@ app.post('/mcp', mcpHandler);
 **Action**:
 ```bash
 # Check current routing structure
-grep -n "app\.use\|app\.get\|app\.post" /Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/http-server.ts
+grep -n "app\.use\|app\.get\|app\.post" /Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda/src/http-server.ts
 
 # Document current order
 ```
@@ -124,11 +124,11 @@ if (decoded.aud !== "https://coda.bestviable.com/mcp") {
 
 **Action**:
 ```bash
-# Search for JWT validation code
-grep -A 10 "jwt.verify\|verifyJwt" /Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/middleware/cloudflare-access-auth.ts
+# Search for current token validation code
+grep -A 10 "authenticateJwt\|introspect" /Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda/src/middleware/stytch-auth.ts
 
 # Check if aud claim is validated
-grep -n "\.aud\|audience" /Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/middleware/cloudflare-access-auth.ts
+grep -n "\.aud\|audience" /Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda/src/middleware/stytch-auth.ts
 ```
 
 **Acceptance**: List of required security fixes documented
@@ -180,6 +180,8 @@ Create and configure Stytch B2B project for MCP authentication.
 5. Generate credentials
 
 **Acceptance**: Project created, credentials displayed
+
+> ℹ️ **Credential rotation reminder**: `.env` currently contains `STYTCH_PROJECT_ID=project-live-543e711c-431a-4958-ac10-9ee5af154558` and `STYTCH_SECRET=secret-live-…` from the existing **B2C** project. Creating a new B2B project will issue different project IDs, secrets, and issuer domains. Plan for credential updates locally, in `docker-compose`, and on the droplet immediately after the B2B project goes live.
 
 ---
 
@@ -236,7 +238,7 @@ STYTCH_SECRET=secret-test-...
 **Where to save** (local development):
 ```bash
 # Create local .env if doesn't exist
-cd /Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda
+cd /Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda
 echo "STYTCH_PROJECT_ID=project-test-..." >> .env
 echo "STYTCH_SECRET=secret-test-..." >> .env
 ```
@@ -267,7 +269,7 @@ Add Stytch Node.js SDK to project dependencies.
 
 #### 3.1 Update package.json
 
-**File**: `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/package.json`
+**File**: `/Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda/package.json`
 
 **Add dependency**:
 ```json
@@ -290,7 +292,7 @@ Add Stytch Node.js SDK to project dependencies.
 
 **Action**:
 ```bash
-cd /Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda
+cd /Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda
 
 # Add Stytch
 npm install stytch@^27.0.0
@@ -305,7 +307,7 @@ npm uninstall jsonwebtoken jwks-rsa
 
 #### 3.2 Update .env.example
 
-**File**: `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/.env.example`
+**File**: `/Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda/.env.example`
 
 **Add Stytch variables**:
 ```bash
@@ -356,7 +358,7 @@ Create discovery endpoints for OAuth 2.1 compliance.
 
 #### 4.1 Create Metadata Routes File
 
-**File**: `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/routes/oauth-metadata.ts`
+**File**: `/Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda/src/routes/oauth-metadata.ts`
 
 **Template**:
 ```typescript
@@ -422,7 +424,7 @@ export default router;
 
 #### 4.3 Register Routes in http-server.ts
 
-**File**: `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/http-server.ts`
+**File**: `/Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda/src/http-server.ts`
 
 **CRITICAL**: Routing order matters!
 
@@ -497,7 +499,7 @@ This is the most critical section. Must implement ALL 4 mandatory security check
 
 #### 5.1 Create Stytch Middleware File
 
-**File**: `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/middleware/stytch-auth.ts`
+**File**: `/Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda/src/middleware/stytch-auth.ts`
 
 **Basic structure**:
 ```typescript
@@ -724,7 +726,7 @@ res.status(403).json({
 
 #### 5.5 Replace Cloudflare Access Middleware
 
-**File**: `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/http-server.ts`
+**File**: `/Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda/src/http-server.ts`
 
 **Remove**:
 ```typescript
@@ -770,7 +772,7 @@ Add Stytch environment variables to config system.
 
 #### 6.1 Update src/config.ts
 
-**File**: `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/config.ts`
+**File**: `/Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda/src/config.ts`
 
 **Add Stytch configuration**:
 ```typescript
@@ -818,7 +820,7 @@ validateConfig();
 
 #### 6.2 Update docker-compose.yml
 
-**File**: `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/docker-compose.yml`
+**File**: `/Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda/docker-compose.yml`
 
 **Add Stytch environment variables**:
 ```yaml
@@ -898,7 +900,7 @@ Verify implementation works locally before deploying.
 #### 7.1 Build Locally
 
 ```bash
-cd /Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda
+cd /Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda
 
 # Install dependencies
 npm install
@@ -1038,13 +1040,13 @@ Deploy Stytch-enabled MCP server to production droplet.
 cd /Users/davidkellam/workspace/portfolio
 
 # SCP updated files
-scp -r integrations/mcp/servers/coda/* tools-droplet-agents:/root/portfolio/integrations/mcp/servers/coda/
+scp -r service-builds/mcp-servers/coda/* tools-droplet-agents:/root/portfolio/service-builds/mcp-servers/coda/
 ```
 
 **Alternative** (if using git):
 ```bash
 # Push to git repository
-git add integrations/mcp/servers/coda
+git add service-builds/mcp-servers/coda
 git commit -m "feat: Add Stytch OAuth 2.1 authentication"
 git push
 
@@ -1065,7 +1067,7 @@ git pull
 ssh tools-droplet-agents
 
 # Navigate to project
-cd /root/portfolio/integrations/mcp/servers/coda
+cd /root/portfolio/service-builds/mcp-servers/coda
 
 # Edit .env
 nano .env
@@ -1099,7 +1101,7 @@ NODE_ENV=production
 
 ```bash
 # On droplet
-cd /root/portfolio/integrations/mcp/servers/coda
+cd /root/portfolio/service-builds/mcp-servers/coda
 
 # Stop container
 docker-compose down
@@ -1238,7 +1240,7 @@ www-authenticate: Bearer realm="MCP Server", resource_metadata_uri="https://coda
 
 #### 9.4 Update Health Endpoint
 
-**File**: `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/src/http-server.ts`
+**File**: `/Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda/src/http-server.ts`
 
 **Add OAuth compliance indicator**:
 ```typescript
@@ -1474,16 +1476,13 @@ Finalize Phase 2 with proper documentation and cleanup.
 #### 11.1 Archive Deprecated Cloudflare Access Middleware
 
 ```bash
-cd /Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda
+cd /Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda
 
-# Create archive directory
-mkdir -p archive/2025-11-15-cloudflare-access
-
-# Move old middleware
-mv src/middleware/cloudflare-access-auth.ts archive/2025-11-15-cloudflare-access/
-
-# Add note
-cat > archive/2025-11-15-cloudflare-access/README.md << 'EOF'
+# Only archive if the legacy file still exists
+if [ -f src/middleware/cloudflare-access-auth.ts ]; then
+  mkdir -p archive/2025-11-15-cloudflare-access
+  mv src/middleware/cloudflare-access-auth.ts archive/2025-11-15-cloudflare-access/
+  cat > archive/2025-11-15-cloudflare-access/README.md <<'EOF'
 # Archived: Cloudflare Access Authentication
 
 **Date**: 2025-11-15
@@ -1494,6 +1493,9 @@ Kept for reference and potential rollback.
 
 **Replacement**: src/middleware/stytch-auth.ts
 EOF
+else
+  echo "Legacy Cloudflare middleware already removed"
+fi
 ```
 
 **⚠️ Don't delete**: May need for rollback
@@ -1504,7 +1506,7 @@ EOF
 
 #### 11.2 Update README.md
 
-**File**: `/Users/davidkellam/workspace/portfolio/integrations/mcp/servers/coda/README.md`
+**File**: `/Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda/README.md`
 
 **Add Stytch setup section**:
 ```markdown
@@ -1614,11 +1616,117 @@ curl https://coda.bestviable.com/health
 ---
 
 ### Deliverables
-- [ ] Cloudflare Access middleware archived
+- [ ] Cloudflare Access middleware archived (if still present)
 - [ ] README.md updated
 - [ ] Health endpoint confirms OAuth compliance
 - [ ] STYTCH_SETUP_GUIDE.md created
 - [ ] tasks.md marked complete
+
+---
+
+## Section 12: Linting & Test Infrastructure (45 min)
+
+### Objective
+Stand up linting + automated tests so regressions surface before deployment.
+
+### Tasks
+
+#### 12.1 Add ESLint Configuration
+
+```bash
+cd /Users/davidkellam/workspace/portfolio/service-builds/mcp-servers/coda
+cat > .eslintrc.cjs <<'EOF'
+module.exports = {
+  root: true,
+  parser: '@typescript-eslint/parser',
+  parserOptions: {
+    project: ['./tsconfig.json'],
+    tsconfigRootDir: __dirname,
+  },
+  plugins: ['@typescript-eslint'],
+  extends: [
+    'eslint:recommended',
+    'plugin:@typescript-eslint/recommended'
+  ],
+  env: {
+    node: true,
+    es2021: true,
+  },
+};
+EOF
+```
+
+*(Optional)* add `tsconfig.eslint.json` if lint needs separate compiler options.
+
+**Acceptance**: `npm run lint` runs without config errors and fails on deliberate lint violations.
+
+#### 12.2 Configure Jest for TypeScript
+
+```bash
+cat > jest.config.ts <<'EOF'
+import type { Config } from 'jest';
+
+const config: Config = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  roots: ['<rootDir>/src'],
+  testMatch: ['**/__tests__/**/*.test.ts'],
+  moduleFileExtensions: ['ts', 'tsx', 'js'],
+};
+
+export default config;
+EOF
+
+npm install --save-dev ts-jest @types/jest
+```
+
+Update `package.json` `test` script to `"jest --runInBand"`.
+
+**Acceptance**: `npm test` executes successfully against TypeScript sources.
+
+#### 12.3 Seed Baseline Tests
+
+```bash
+mkdir -p src/__tests__
+cat > src/__tests__/oauth-metadata.test.ts <<'EOF'
+import request from 'supertest';
+import { app } from '../http-server';
+
+describe('OAuth metadata', () => {
+  it('returns PRM without auth', async () => {
+    await request(app)
+      .get('/.well-known/oauth-protected-resource')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.authorization_servers).toContain('https://api.stytch.com');
+      });
+  });
+});
+EOF
+```
+
+Add `src/__tests__/stytch-auth.test.ts` covering missing-token and invalid-audience paths using mocked requests/responses.
+
+**Acceptance**: Jest suite fails if metadata schema or auth logic regresses.
+
+#### 12.4 Document Developer Workflow
+
+Add README section:
+
+```markdown
+## Development Workflow
+
+- npm run lint
+- npm test
+- docker-compose up --build
+```
+
+**Acceptance**: README tells contributors to run lint/tests before deployment.
+
+### Deliverables
+- [ ] `.eslintrc.cjs` (and optional `tsconfig.eslint.json`) committed
+- [ ] `jest.config.ts` + baseline tests committed
+- [ ] README updated with lint/test workflow
 
 ---
 
@@ -1671,7 +1779,7 @@ If OAuth integration fails:
 ```bash
 # SSH to droplet
 ssh tools-droplet-agents
-cd /root/portfolio/integrations/mcp/servers/coda
+cd /root/portfolio/service-builds/mcp-servers/coda
 
 # Restore old middleware
 cp archive/2025-11-15-cloudflare-access/cloudflare-access-auth.ts src/middleware/
@@ -1721,8 +1829,9 @@ curl -H "Authorization: Bearer test-token" https://coda.bestviable.com/mcp
 | 9. External Verification | 30 min | 5:15 | Section 8 |
 | 10. ChatGPT/Claude.ai Testing | 60 min | 6:15 | Section 9 |
 | 11. Cleanup & Docs | 30 min | 6:45 | Section 10 |
+| 12. Lint/Test Tooling | 45 min | 7:30 | Section 11 |
 
-**Total**: ~6.75 hours (within 4-6 hour estimate with buffer)
+**Total**: ~7.5 hours (includes tooling buffer beyond the original 4-6 hour estimate)
 
 ---
 

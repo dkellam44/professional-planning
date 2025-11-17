@@ -44,6 +44,12 @@ function getOptionalEnvVar(name: string, defaultValue: string): string {
   return process.env[name] || defaultValue;
 }
 
+function getStytchDomain(): string {
+  return process.env.STYTCH_DOMAIN
+    || process.env.STYTCH_PROJECT_DOMAIN
+    || 'https://api.stytch.com';
+}
+
 export const config: Config = {
   // Server configuration
   port: parseInt(getOptionalEnvVar('PORT', '8080'), 10),
@@ -59,6 +65,7 @@ export const config: Config = {
     projectId: getRequiredEnvVar('STYTCH_PROJECT_ID'),
     secret: getRequiredEnvVar('STYTCH_SECRET'),
     domain: getRequiredEnvVar('STYTCH_DOMAIN'),
+    domain: getStytchDomain(),
   },
 
   // Legacy: Cloudflare Access configuration (deprecated)

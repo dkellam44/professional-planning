@@ -31,17 +31,16 @@ router.get('/.well-known/oauth-protected-resource', (req: Request, res: Response
     // Authorization server that issues tokens for this resource
     // This should be your Stytch project domain
     authorization_servers: [config.stytch.domain],
+  const baseUrl = (process.env.BASE_URL || 'https://coda.bestviable.com').replace(/\/$/, '');
+  const stytchDomain = (process.env.STYTCH_DOMAIN || 'https://api.stytch.com').replace(/\/$/, '');
+
+  res.json({
+    resource: `${baseUrl}/mcp`,
+    authorization_servers: [stytchDomain],
 
     // OAuth scopes this MCP server supports
     // MCP clients will request these scopes when authorizing
-    scopes_supported: [
-      'openid',
-      'email',
-      'profile',
-      'mcp.read',
-      'mcp.write',
-      'mcp.tools'
-    ],
+    scopes_supported: ['openid', 'email', 'profile', 'coda.read', 'coda.write'],
 
     // How bearer tokens should be provided
     bearer_methods_supported: ['header'],
@@ -79,5 +78,6 @@ router.get('/.well-known/jwks.json', async (req: Request, res: Response) => {
     });
   }
 });
+// JWKS handled by Stytch; MCP clients should fetch from the authorization server directly
 
 export default router;
