@@ -42,7 +42,7 @@ const devBearerToken = process.env.BEARER_TOKEN;
 const buildWwwAuthenticateHeader = (error: string, description: string): string =>
   `Bearer realm="MCP Server", error="${error}", error_description="${description}", resource_metadata_uri="${metadataUri}"`;
 
-const decodeJwtClaims = (token: string): Record<string, any> => {
+export const decodeJwtClaims = (token: string): Record<string, any> => {
   const parts = token.split('.');
   if (parts.length < 2) {
     throw new Error('invalid_token_format');
@@ -118,6 +118,15 @@ export async function authenticate(
     const authResult = await client.sessions.authenticateJwt({ session_jwt: accessToken });
     const claims = decodeJwtClaims(accessToken);
 
+    if (process.env.LOG_LEVEL === 'debug') {
+      console.debug('[DEBUG] Stytch token validation', {
+        audienceClaim: claims.aud,
+        issuerClaim: claims.iss,
+        expiration: claims.exp,
+        subject: claims.sub,
+      });
+    }
+
     const audienceClaim = Array.isArray(claims.aud) ? claims.aud[0] : claims.aud;
     if (audienceClaim !== expectedAudience) {
       const header = buildWwwAuthenticateHeader('invalid_token', 'Token audience mismatch');
@@ -171,16 +180,18 @@ export async function authenticate(
 
     next();
   } catch (error: any) {
-    // Log authentication failure
-    console.error('[AUTH] Stytch token validation failed:', error.error_type || error.message);
+    // Log authentication failure with detailed Stytch error info
+    const stytchErrorType = error?.error_type || error?.error?.error_type || 'unknown';
+    console.error('[AUTH] Stytch token validation failed:', stytchErrorType, error.message);
 
-    // Return 401 with WWW-Authenticate header
-    const wwwAuthValue = buildWwwAuthenticateHeader('invalid_token', 'The access token is invalid or expired');
+    // Return 401 with WWW-Authenticate header and include original error type for debugging
+    const wwwAuthValue = buildWwwAuthenticateHeader('invalid_token', `The access token is invalid or expired (${stytchErrorType})`);
 
     res.setHeader('WWW-Authenticate', wwwAuthValue);
     res.status(401).json({
       error: 'unauthorized',
       message: 'Invalid or expired access token',
+      stytch_error_type: stytchErrorType,
       timestamp: new Date().toISOString(),
     });
   }

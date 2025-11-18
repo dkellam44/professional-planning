@@ -5,7 +5,10 @@ import axios from 'axios';
 import path from 'path';
 import fs from 'fs';
 import { authenticate, AuthenticatedRequest } from './middleware/stytch-auth';
+import debugAuthInfoRouter from './routes/debug-auth-info';
 import oauthMetadataRouter from './routes/oauth-metadata';
+import connectorOpenAiRouter from './routes/connector-openai';
+import connectorClaudeRouter from './routes/connector-claude';
 import { config, validateConfig } from './config';
 
 // Create Express app
@@ -98,6 +101,12 @@ app.get('/v1/oauth/callback', (_req: Request, res: Response) => {
 });
 
 // Apply Stytch OAuth 2.1 authentication middleware
+// Register debug auth info route (dev only)
+app.use(debugAuthInfoRouter);
+app.use(connectorOpenAiRouter);
+app.use(connectorClaudeRouter);
+
+// Apply Stytch OAuth 2.1 authentication middleware
 app.use(authenticate);
 
 // Health check endpoint (skips auth via middleware)
@@ -158,7 +167,7 @@ app.post('/mcp', async (req: AuthenticatedRequest, res: Response) => {
 
     // Forward request to Coda API
     const method = req.body.method || 'GET';
-    const axiosConfig: any ={
+    const axiosConfig: any = {
       method: method,
       url: `${config.codaApiBaseUrl}${req.body.path || ''}`,
       headers: {
@@ -167,7 +176,7 @@ app.post('/mcp', async (req: AuthenticatedRequest, res: Response) => {
         'User-Agent': 'BestViable-Coda-MCP/1.0.0'
       },
       timeout: 30000 // 30 second timeout
-     
+
     };
 
     // Only add data for non-GET requests
@@ -192,12 +201,12 @@ app.post('/mcp', async (req: AuthenticatedRequest, res: Response) => {
 
   } catch (error) {
     console.error('[ERROR] MCP request failed:', error);
-    
+
     if (axios.isAxiosError(error)) {
       // Handle Coda API errors
       const status = error.response?.status || 500;
       const data = error.response?.data || { message: 'Unknown error' };
-      
+
       res.status(status).json({
         error: 'Coda API error',
         message: data.message || data.error || 'Request failed',
