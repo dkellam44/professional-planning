@@ -11,8 +11,22 @@ import { config, validateConfig } from './config';
 // Create Express app
 const app = express();
 
-// Security middleware
-app.use(helmet());
+// Security middleware - relaxed CSP for OAuth UI
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      "script-src": ["'self'", "'unsafe-inline'"], // Allow inline scripts for config injection
+      "style-src": ["'self'", "'unsafe-inline'", "https:"], // Allow inline styles
+      "connect-src": [
+        "'self'",
+        "https://api.stytch.com", // Stytch API
+        "https://*.stytch.com", // Stytch B2C tenant domains
+        "https://static.cloudflareinsights.com" // Cloudflare analytics
+      ],
+    },
+  },
+}));
 app.use(cors({
   origin: true, // Allow all origins (OAuth 2.1 with PKCE handles auth)
   credentials: true
@@ -39,20 +53,49 @@ if (!authorizationUiDir) {
 
 if (authorizationUiDir) {
   console.log(`[Auth UI] Serving static assets from: ${authorizationUiDir}`);
+
+  // Serve authorization UI assets (must be before auth middleware)
+  app.use('/assets', express.static(path.join(authorizationUiDir, 'assets')));
   app.use('/oauth', express.static(authorizationUiDir));
-  app.get('/oauth/authorize', (_req: Request, res: Response) => {
-    const indexPath = path.join(authorizationUiDir, 'index.html');
-    let html = fs.readFileSync(indexPath, 'utf8');
-    const publicToken = process.env.STYTCH_PUBLIC_TOKEN || '';
-    const redirectUrl = process.env.STYTCH_OAUTH_REDIRECT_URI || `${config.baseUrl}/oauth/authorize`;
-    html = html
-      .replace(/__STYTCH_PUBLIC_TOKEN__/g, publicToken)
-      .replace(/__OAUTH_REDIRECT_URL__/g, redirectUrl);
+
+  // Explicit handler for /oauth/authorize (must be before auth middleware)
+  // This serves the React app with <IdentityProvider /> component for Connected Apps flow
+  app.get('/oauth/authorize', (req: Request, res: Response) => {
+    // Read the HTML file and inject config values
+    const htmlPath = path.join(authorizationUiDir, 'index.html');
+    let html = fs.readFileSync(htmlPath, 'utf-8');
+
+    // Replace placeholder with actual public token
+    html = html.replace('__STYTCH_PUBLIC_TOKEN__', process.env.STYTCH_PUBLIC_TOKEN || '');
+
     res.setHeader('Content-Type', 'text/html');
-    res.setHeader('Cache-Control', 'no-store');
+    res.send(html);
+  });
+
+  // OAuth callback endpoint - handles Google OAuth redirect
+  // Serves the same React app which will authenticate the token and redirect to /oauth/authorize
+  app.get('/oauth/callback', (req: Request, res: Response) => {
+    // Read the HTML file and inject config values
+    const htmlPath = path.join(authorizationUiDir, 'index.html');
+    let html = fs.readFileSync(htmlPath, 'utf-8');
+
+    // Replace placeholder with actual public token
+    html = html.replace('__STYTCH_PUBLIC_TOKEN__', process.env.STYTCH_PUBLIC_TOKEN || '');
+
+    res.setHeader('Content-Type', 'text/html');
     res.send(html);
   });
 }
+
+// OAuth callback endpoints (must be before auth middleware)
+// Stytch redirects here after Google/SSO authentication
+app.get('/v1/oauth/callback', (_req: Request, res: Response) => {
+  // This endpoint receives the OAuth callback from Stytch
+  // The Stytch React component handles the actual token exchange
+  // Just redirect back to the authorization page with the query params
+  const queryString = new URL(_req.url, `http://${_req.headers.host}`).search;
+  res.redirect(`/oauth/authorize${queryString}`);
+});
 
 // Apply Stytch OAuth 2.1 authentication middleware
 app.use(authenticate);
