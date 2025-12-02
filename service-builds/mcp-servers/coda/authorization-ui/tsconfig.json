@@ -3,7 +3,8 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "lib": ["DOM", "ES2020"],
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "rootDir": "./src"
   },
   "include": ["./src"],
   "exclude": ["../dist", "../node_modules"]
