@@ -76,7 +76,6 @@ After deployment, create separate PR to:
 - Always check if capability already exists
 - Prefer modifying existing specs over creating duplicates
 - Use `openspec show [spec]` to review current state
-- Decide what resourses are required to complete task and how to aquire them. Some are referenced in plan.md
 - If request is ambiguous, ask 1–2 clarifying questions before scaffolding
 
 ### Search Guidance
