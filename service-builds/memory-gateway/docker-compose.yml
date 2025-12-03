@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  memory-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: memory-gateway:0.1.0
+    container_name: memory-gateway
+    ports:
+      - "127.0.0.1:8090:8090"
+    networks:
+      - docker_proxy
+      - docker_syncbricks
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=n8n
+      - POSTGRES_USER=n8n
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - QDRANT_URL=http://qdrant:6333
+      - VALKEY_HOST=valkey
+      - VALKEY_PORT=6379
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - MEM0_API_KEY=${MEM0_API_KEY}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LOG_LEVEL=INFO
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.memory-gateway.rule=Host(`memory.bestviable.com`)"
+      - "traefik.http.routers.memory-gateway.entrypoints=websecure"
+      - "traefik.http.routers.memory-gateway.tls.certresolver=letsencrypt"
+      - "traefik.http.services.memory-gateway.loadbalancer.server.port=8090"
+      - "traefik.http.routers.memory-gateway-http.rule=Host(`memory.bestviable.com`)"
+      - "traefik.http.routers.memory-gateway-http.entrypoints=web"
+      - "traefik.http.routers.memory-gateway-http.middlewares=redirect-to-https"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    mem_limit: 200m
+    cpus: "0.5"
+
+networks:
+  docker_proxy:
+    external: true
+  docker_syncbricks:
+    external: true
