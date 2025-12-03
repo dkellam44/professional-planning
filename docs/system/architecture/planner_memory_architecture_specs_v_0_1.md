@@ -1,10 +1,23 @@
 # Planner OS & Memory Architecture Specs (v0.1)
 
+> **⚠️ STATUS: SUPERSEDED**
+>
+> This document contains initial draft specifications (created 2025-11-30).
+>
+> **Use these instead for current truth**:
+> - **Planner & Memory Architecture**: `../../openspec/changes/add-planner-memory-system/` (OpenSpec ACTIVE)
+> - **Coda Schema**: `/ventures/best-viable-erp/coda-schema.md` (Authoritative reference)
+> - **Pattern Ontology**: `/ventures/best-viable-erp/pattern-ontology.md` (Design philosophy)
+>
+> This file is kept for **historical context only**. Do not use for implementation or architectural decisions.
+>
+> **Superseded Date**: 2025-12-02
+
 This document contains two coordinated specifications:
 1. **Planner Architecture Spec (Updated)** – Akiflow/Motion-style planning & scheduling system.
 2. **Memory Architecture Spec (v0.1)** – Enterprise‑pattern memory system for agents, planning, coding workflows, and future SaaS.
 
-Both specs are modular, updatable, and designed to serve Founder HQ + future ventures.
+Both specs are modular, updatable, and designed to serve BestViable ERP + future ventures.
 
 ---
 

@@ -17,7 +17,7 @@
 ## Morning (10 min)
 
 1. Check `/agents/CURRENT_FOCUS.md` - What's the priority?
-2. Open Founder HQ (Coda) - Any prospect responses?
+2. Open BestViable ERP (Coda) - Any prospect responses?
 3. Set focus: Offers → Outreach → Pipeline
 
 ---
@@ -68,7 +68,7 @@ Have clear offer?
 - **Offers:** `/ventures/ops-studio/offers/`
 - **Pipeline:** `/ventures/ops-studio/pipeline/outreach_tracker.md`
 - **Learning:** `/ventures/ops-studio/archive/`
-- **Coda:** Founder HQ (deals, tasks, metrics)
+- **Coda:** BestViable ERP (deals, tasks, metrics)
 
 ---
 

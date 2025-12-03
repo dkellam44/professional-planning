@@ -72,3 +72,33 @@
 - Coda MCP remains for: External clients (ChatGPT, Claude.ai), OAuth flows
 
 **Non-Breaking**: Coda MCP OAuth 2.1 implementation continues unchanged
+
+---
+
+## Strategic Context (Updated 2025-12-02)
+
+**Status**: Phase 1 PRIORITY - This approach is now the recommended Coda access strategy for local CLI workflows.
+
+**Key Decisions**:
+1. **Pattern-specific MCP tools archived**: `coda-mcp-pattern-integration` change archived as over-engineered for personal use (generic CRUD sufficient)
+2. **Pattern tables already exist**: `coda-pattern-tables-implementation` change archived (Coda schema already has Service Blueprints, Workflows, Process Templates)
+3. **Hybrid approach**: Lightweight scripts for Phase 1 (0-2 months), custom MCP server with CIMD OAuth for Phase 2 (2-6 months)
+4. **Token efficiency validated**: 95-99% savings (Anthropic research) makes scripts ideal for Claude Code CLI contexts
+
+**Integration with Planner & Memory Architecture**:
+- Planner Engine will use lightweight scripts to query Coda (Service Blueprints, Workflows, Process Templates)
+- Observer Agent will use scripts to post reflections to Coda Daily Thread
+- Execution runs will be created via `create_row.py` script (user adding `execution_runs` table manually)
+- Future: Custom MCP server (Phase 2) will provide generic CRUD for external clients (ChatGPT, Open WebUI)
+
+**Remaining Work**:
+- Complete 5 script implementations (get_table, list_rows, create_row, update_row, delete_row)
+- Measure actual token savings in production use
+- Document integration patterns with Planner/Observer services
+
+**Future Phases**:
+- Phase 2 (2-6 months): Build custom MCP server with MCP 2025-11-25 spec (CIMD OAuth, Tasks API)
+- Phase 4 (6+ months): Integrate with Open WebUI for personal chat interface
+- Phase 5 (12+ months): Evaluate pattern-specific tools if building multi-tenant SaaS
+
+See `/Users/davidkellam/.claude/plans/coda-access-strategy.md` for full strategic analysis.
