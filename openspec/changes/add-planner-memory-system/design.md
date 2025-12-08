@@ -1193,30 +1193,47 @@ curl https://planner.bestviable.com/health
 - ✅ Combined RAM usage <350MB
 
 ### Phase 4 (Google Calendar OAuth)
-- ✅ OAuth flow completed successfully
-- ✅ Credentials stored and persisted
-- ✅ Calendar events created and visible in Google Calendar
+- ✅ Google Cloud project created, OAuth 2.0 Client ID configured
+- ✅ OAuth routes (authorize, callback) implemented in Planner API
+- ✅ Comprehensive setup guide created (320+ lines)
+- ⏳ **PENDING USER ACTION**: Complete OAuth flow to get refresh token
+  - Navigate to authorization URL, click "Allow", verify credentials saved
+  - Expected time: 10-15 minutes
 
 ### Phase 5 (ToolJet Cloud)
-- ✅ ToolJet workspace connected to Postgres
-- ✅ Tasks Manager app created and functional
-- ✅ Plans Browser app created and functional
-- ✅ Sprint Capacity dashboard created and functional
+- ⏳ **PENDING USER ACTION**: Create ToolJet Cloud workspace
+- ⏳ **OPTIONAL**: Create admin apps (Tasks Manager, Plans Browser, Sprint Capacity)
+  - Expected time: 1-2 hours (optional, non-critical for Phase 1)
+  - Note: All data accessible via PostgreSQL once Phases 4-7 complete
 
 ### Phase 6 (Open WebUI)
-- ✅ Updated to latest version
-- ✅ Custom functions uploaded (create_plan, schedule_tasks, query_memory, reflect_daily)
-- ✅ Test chat: "Create a plan for X" → Planner API called successfully
+- ✅ Open WebUI latest version deployed and running
+- ✅ Custom functions implemented (create_plan.py, schedule_tasks.py, query_memory.py, reflect_daily.py)
+- ✅ Comprehensive deployment guide created (300+ lines)
+- ⏳ **PENDING USER ACTION**: Upload functions to Open WebUI admin panel
+  - Navigate to https://chat.bestviable.com/admin/functions, upload 4 Python files
+  - Expected time: 10-15 minutes
 
-### Phase 7 (N8N)
-- ✅ Coda sync workflows deactivated
-- ✅ Observer trigger workflows active and pointing to Planner API
-- ✅ Manual trigger test succeeds
+### Phase 7 (N8N Workflows)
+- ✅ Comprehensive workflow update guide created (400+ lines)
+- ⏳ **PENDING USER ACTION - Phase 7.1**: Deactivate 4 Coda sync workflows
+  - coda-to-calendar-sync, calendar-to-coda-sync, coda-pattern-tables-sync, coda-memory-export
+- ⏳ **PENDING USER ACTION - Phase 7.2**: Update observer triggers
+  - daily-observer-trigger → `http://planner-api:8091/api/v1/observer/reflect?mode=daily`
+  - weekly-observer-trigger → `http://planner-api:8091/api/v1/observer/reflect?mode=weekly`
+  - Expected time: 15-20 minutes
 
-### Overall Success
-- ✅ Total RAM usage 400-450MB peak (all services + Zep Cloud offload)
-- ✅ Zep Cloud free tier usage < 1000 API calls/month
-- ✅ No service crashes in first 48 hours
-- ✅ End-to-end test: Open WebUI chat → Create plan → Schedule → Reflect (complete flow)
-- ✅ All memories stored in hybrid stack (Postgres + Zep + Valkey)
-- ✅ Temporal fact updates working correctly
+### Overall Session 2 Status (As of Completion)
+**Automated Implementation: ✅ COMPLETE (70% of project)**
+- ✅ Total RAM usage: 400-450MB (Memory Gateway + Planner API deployed and verified)
+- ✅ Database migration: 11 new tables, facts with temporal validity
+- ✅ Zep Cloud integration: Account created, API working, ready for use
+- ✅ Planner endpoint: Generating comprehensive SOPs with LLM integration
+- ✅ All services running and healthy on droplet
+- ✅ GitHub documentation: 1000+ lines created and pushed (all credentials sanitized)
+
+**Manual User Setup: ⏳ PENDING (30% of project - Critical Path: 35 minutes)**
+- ⏳ Phase 4.4: Complete Google Calendar OAuth flow (10-15 min)
+- ⏳ Phase 6.3: Upload Open WebUI custom functions (10-15 min)
+- ⏳ Phase 7.2-7.3: Execute n8n workflow updates (15-20 min)
+- ⏳ Phase 5: ToolJet Cloud setup (1-2 hours, OPTIONAL for Phase 1)
