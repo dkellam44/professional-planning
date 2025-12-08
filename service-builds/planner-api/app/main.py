@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routes import health, observer, planner, scheduler
+from app.routes import health, observer, oauth, planner, scheduler
 from app.services import gcal, llm, memory, postgres
 
 logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO))
@@ -45,6 +45,7 @@ app.add_middleware(
 )
 
 app.include_router(health.router)
+app.include_router(oauth.router)
 app.include_router(planner.router)
 app.include_router(scheduler.router)
 app.include_router(observer.router)

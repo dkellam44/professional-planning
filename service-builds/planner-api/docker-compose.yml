@@ -24,20 +24,19 @@ services:
       - CLIENT_ID=${CLIENT_ID:-1}
       - GCAL_CREDENTIALS_PATH=/app/credentials/gcal.json
       - GCAL_TIMEZONE=America/Los_Angeles
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
     volumes:
-      # Mount Google Calendar credentials
-      - ./credentials:/app/credentials:ro
+      # Mount Google Calendar credentials (read-write for OAuth token storage)
+      - ./credentials:/app/credentials
     networks:
+      - docker_proxy
       - portfolio-network
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.planner-api.rule=Host(`planner.bestviable.com`)"
-      - "traefik.http.routers.planner-api.entrypoints=websecure"
-      - "traefik.http.routers.planner-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.planner-api.entrypoints=web"
       - "traefik.http.services.planner-api.loadbalancer.server.port=8091"
-      - "traefik.http.routers.planner-api-http.rule=Host(`planner.bestviable.com`)"
-      - "traefik.http.routers.planner-api-http.entrypoints=web"
-      - "traefik.http.routers.planner-api-http.middlewares=redirect-to-https"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8091/health"]
       interval: 15s
@@ -49,5 +48,7 @@ services:
     cpus: "0.5"
 
 networks:
+  docker_proxy:
+    external: true
   portfolio-network:
     external: true

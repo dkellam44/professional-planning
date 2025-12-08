@@ -27,8 +27,14 @@ async def initialize() -> None:
     """Initialize Google Calendar service."""
     global _service, _credentials
 
-    if _service:
-        return
+    if _service is not None:  # Allow reinitialization after OAuth
+        # Only return if service was already initialized before
+        try:
+            check_ok, _ = await check_health()
+            if check_ok:
+                return
+        except Exception:
+            pass
 
     try:
         _credentials = load_credentials()
@@ -40,11 +46,17 @@ async def initialize() -> None:
         _credentials = None
 
 
-def load_credentials() -> Credentials:
+def load_credentials() -> Optional[Credentials]:
     """Load Google Calendar credentials from JSON file.
 
     This function looks for credentials at the path specified in settings.
     In production, this should be mounted as a volume in Docker.
+
+    Returns:
+        Credentials object if found and valid, None if OAuth not yet completed.
+
+    Raises:
+        FileNotFoundError: If client secrets file not found.
     """
     creds = None
     token_path = settings.gcal_credentials_path.replace(".json", "_token.json")
@@ -53,26 +65,17 @@ def load_credentials() -> Credentials:
     if os.path.exists(token_path):
         creds = Credentials.from_authorized_user_file(token_path, SCOPES)
 
-    # If no valid credentials, authenticate
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            if not os.path.exists(settings.gcal_credentials_path):
-                raise FileNotFoundError(
-                    f"Google Calendar credentials not found at {settings.gcal_credentials_path}"
-                )
-
-            flow = InstalledAppFlow.from_client_secrets_file(
-                settings.gcal_credentials_path, SCOPES
-            )
-            # This would require manual intervention in production
-            # Consider using service account credentials instead
-            creds = flow.run_local_server(port=0)
-
-        # Save credentials for next run
+    # If no valid credentials, check if we can refresh
+    if creds and creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+        # Save refreshed credentials
         with open(token_path, "w") as token:
             token.write(creds.to_json())
+
+    # If still no valid credentials, return None (OAuth flow not completed yet)
+    if not creds or not creds.valid:
+        logger.warning("Google Calendar: No valid token found at %s. Complete OAuth flow first.", token_path)
+        return None
 
     return creds
 

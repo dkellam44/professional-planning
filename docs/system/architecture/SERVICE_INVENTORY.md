@@ -2,14 +2,14 @@
 
 Complete inventory of all Docker containers running in the infrastructure post-Traefik migration and droplet cleanup (2025-11-14). This document provides operational details, health status, and maintenance information for all services.
 
-**Last Updated**: 2025-11-14 (Traefik migration, deprecated nginx-proxy + acme-companion)
+**Last Updated**: 2025-12-08 (Added planner-api and memory-gateway services, Phase 4 OAuth complete)
 
 ## Infrastructure Overview
 
 **Droplet Specifications**: 4GB RAM, 80GB SSD, 2 vCPUs (upgraded from 2GB on 2025-11-06)
 **Reverse Proxy**: Traefik v3.0 (deployed 2025-11-13, replacing nginx-proxy)
-**Total Services**: 12 containers (3 deprecated: stopped, not removed)
-**Memory Utilization**: ~3.3GB / 3.8GB (87%) - approaching orange threshold
+**Total Services**: 14 containers (includes planner-api, memory-gateway)
+**Memory Utilization**: ~3.5GB / 3.8GB (92%) - approaching red threshold
 **Storage Utilization**: 49GB / 77GB (63%)
 **Deployment Pattern**: Traefik + Cloudflare Tunnel (HTTP-only, CF terminates SSL)
 **User Structure**: Non-root user `david` with sudo access
@@ -19,7 +19,7 @@ Complete inventory of all Docker containers running in the infrastructure post-T
 
 | Status Count | Services |
 |--------------|----------|
-| ✅ **Healthy (9)** | traefik, postgres, qdrant, n8n, coda-mcp, openweb, dozzle, uptime-kuma, cloudflared |
+| ✅ **Healthy (11)** | traefik, postgres, qdrant, n8n, coda-mcp, openweb, dozzle, uptime-kuma, cloudflared, planner-api, memory-gateway |
 | ✅ **Healthy (3)** | archon-server, archon-ui, archon-mcp |
 | ⚠️ **Unhealthy (1)** | traefik (healthcheck failing but traffic routing works) |
 | ❌ **Exited (2)** | nginx-proxy (deprecated 2025-11-13), acme-companion (deprecated 2025-11-13) |
@@ -84,7 +84,7 @@ traefik.http.services.SERVICE.loadbalancer.server.port: "8080"
 
 **Configuration**: Connects to Cloudflare edge network via token-based authentication
 **Tunnel Status**: 4 active QUIC connections (SJC & regional fallbacks)
-**Ingress Routes**: All domains (n8n, coda, openweb, logs, kuma, github, memory, firecrawl, archon, infisical) route through nginx-proxy:80
+**Ingress Routes**: All domains (n8n, coda, openweb, logs, kuma, planner, memory, firecrawl, archon, infisical) route through traefik:80 (Cloudflare terminates SSL)
 
 ---
 
@@ -221,28 +221,98 @@ traefik.http.services.SERVICE.loadbalancer.server.port: "8080"
 
 ---
 
+### 11. planner-api
+**Container**: `planner-api`
+**Image**: `planner-api:0.2.2-oauth` (custom build)
+**Port**: 8091
+**Networks**: `docker_proxy` (external), `portfolio-network` (internal)
+**Status**: ✅ Healthy
+**Health**: ✅ Healthy (health check every 15s)
+**Purpose**: Consolidated planning, scheduling, and observer service with Google Calendar integration
+**Location**: `/home/david/services/planner-api/`
+
+**Access**: https://planner.bestviable.com
+**Dependencies**: postgres (portfolio-network), memory-gateway, Google Calendar API
+**Resource Usage**: ~350MB RAM (mem_limit: 350MB, cpus: 0.5)
+**API Endpoints**:
+- POST `/api/v1/planner/plan` - Generate SOPs from intent
+- POST `/api/v1/scheduler/schedule` - Schedule tasks to Google Calendar
+- POST `/api/v1/observer/reflect` - Daily/weekly reflection generation
+- GET `/oauth/authorize` - Google Calendar OAuth authorization
+- GET `/oauth/callback` - OAuth callback handler
+
+**Configuration**:
+- Google OAuth: Environment variable-based (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
+- Credentials: Mounted at `/app/credentials/` (read-write for token storage)
+- Timezone: America/Los_Angeles
+- LLM Provider: OpenRouter (OPENROUTER_API_KEY)
+- Integrations: Memory Gateway, Langfuse, Coda MCP
+
+**OAuth Status**: ✅ Complete (credentials saved, Google Calendar health: "up")
+**End-to-End Verified**: Plan creation → Scheduling → Google Calendar events
+
+---
+
+### 12. memory-gateway
+**Container**: `memory-gateway`
+**Image**: `memory-gateway:latest` (custom build)
+**Port**: 8090
+**Networks**: `docker_proxy` (external), `portfolio-network` (internal)
+**Status**: ✅ Healthy
+**Health**: ⚠️ Unhealthy in health check but service functional
+**Purpose**: Unified memory interface with Zep Cloud, Postgres, Qdrant, and Valkey integration
+**Location**: `/home/david/services/memory-gateway/`
+
+**Access**: https://memory.bestviable.com
+**Dependencies**: postgres (portfolio-network), qdrant, valkey, Zep Cloud
+**Resource Usage**: ~150MB RAM (mem_limit: 200MB, cpus: 0.25)
+**API Endpoints**:
+- POST `/api/v1/memory/remember` - Store memories (multi-backend)
+- GET `/api/v1/memory/recall` - Query memories (semantic search)
+- POST `/api/v1/memory/facts` - Create durable facts
+
+**Memory Stack**:
+- **Valkey**: Fast cache (1h TTL)
+- **Zep Cloud**: Long-term semantic memory + graph
+- **Qdrant**: Vector search (fallback)
+- **Postgres**: Single source of truth (facts table)
+
+**Configuration**:
+- Zep Cloud: API key-based (ZEP_API_KEY)
+- Postgres: portfolio-network connection
+- Fallback Chain: Valkey → Zep → Qdrant → Postgres
+
+---
+
 ## Network Architecture
 
 ### External Network: `docker_proxy` (172.20.0.0/16)
-Services accessible via Cloudflare Tunnel and nginx-proxy:
-- **nginx-proxy** (ports 80, 443) - reverse proxy ingress
+Services accessible via Cloudflare Tunnel and Traefik:
+- **traefik** (ports 80, 443) - reverse proxy ingress (HTTP-only, CF handles SSL)
 - **cloudflared** - Cloudflare tunnel endpoint
-- **n8n** - external via nginx-proxy VIRTUAL_HOST label
-- **coda-mcp** - external via nginx-proxy VIRTUAL_HOST label
-- **openweb** - external via nginx-proxy VIRTUAL_HOST label
-- **dozzle** - external via nginx-proxy VIRTUAL_HOST label (logs.bestviable.com)
-- **uptime-kuma** - external via nginx-proxy VIRTUAL_HOST label (kuma.bestviable.com)
+- **n8n** - external via Traefik labels
+- **coda-mcp** - external via Traefik labels
+- **openweb** - external via Traefik labels
+- **dozzle** - external via Traefik labels (logs.bestviable.com)
+- **uptime-kuma** - external via Traefik labels (kuma.bestviable.com)
+- **planner-api** - external via Traefik labels (planner.bestviable.com)
+- **memory-gateway** - external via Traefik labels (memory.bestviable.com)
 
 ### Internal Network: `docker_syncbricks` (172.21.0.0/16)
-Backend services isolated from direct external access (only via nginx-proxy):
-- **postgres** - database for n8n
+Backend services isolated from direct external access (only via Traefik):
+- **postgres** - database for n8n and other services
 - **qdrant** - vector database
 - **n8n** - automation workflows
 - **coda-mcp** - MCP server backend
 - **openweb** - chat interface backend
-- **acme-companion** - SSL certificate management (also on docker_proxy)
 
-**Isolation**: Services on this network cannot be directly accessed from the internet; all external traffic routes through nginx-proxy on docker_proxy network.
+### Internal Network: `portfolio-network` (Custom)
+Dedicated network for planner-api and memory-gateway services:
+- **postgres** - shared database access
+- **planner-api** - needs postgres for plans, events, scheduler_runs
+- **memory-gateway** - needs postgres for memories, facts tables
+
+**Isolation**: Services on this network cannot be directly accessed from the internet; all external traffic routes through Traefik on docker_proxy network.
 
 ## Resource Allocation
 

@@ -1,0 +1,4 @@
+FROM planner-api:0.2.2
+
+# Copy the oauth route that was missing (must go into /app/app/routes/)
+COPY app/routes/oauth.py /app/app/routes/

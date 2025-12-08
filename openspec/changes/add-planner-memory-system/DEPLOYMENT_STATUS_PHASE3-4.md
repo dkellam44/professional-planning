@@ -1,24 +1,31 @@
 # Phase 3-4 Deployment Status - COMPLETE ✅
 
 ## Summary
-Successfully completed Phases 3-4 of the Postgres-first memory architecture deployment. Planner API is fully operational with OpenRouter integration. All documentation created and GitHub pushed.
+Successfully completed Phases 3-4 of the Postgres-first memory architecture deployment. Planner API is fully operational with OpenRouter integration, Google Calendar OAuth flow complete and tested end-to-end. All documentation created and GitHub pushed.
 
 ## Completed Tasks ✅
 
 ### Phase 3: Planner API Service Deployment
-- ✅ Built Docker image: `planner-api:0.2.0` (150MB)
+- ✅ Built Docker image: `planner-api:0.2.2-oauth` (150MB)
 - ✅ Deployed to droplet at port 8091
 - ✅ Integrated with Postgres, Memory Gateway, and Google Calendar APIs
 - ✅ Created 3 endpoint modules: planner, scheduler, observer
 - ✅ Verified endpoint responding with comprehensive SOPs
 - **Status**: Healthy, running and operational
 
-### Phase 4: Credentials & API Integration
+### Phase 4: Google Calendar OAuth Integration
 - ✅ Fixed OpenRouter API key (required full docker-compose restart)
 - ✅ Verified Planner endpoint generates accurate SOPs
 - ✅ Created comprehensive Google Calendar OAuth setup guide (320+ lines)
-- ✅ Provided two implementation options (browser-based + manual)
-- **Status**: Ready for OAuth flow completion
+- ✅ Implemented OAuth routes: /oauth/authorize and /oauth/callback
+- ✅ Completed browser-based OAuth 2.0 flow
+- ✅ Fixed DNS configuration (added planner.bestviable.com CNAME)
+- ✅ Fixed Traefik routing (dual network: docker_proxy + portfolio-network)
+- ✅ Fixed volume mount permissions (credentials writable)
+- ✅ Verified credentials saved: /app/credentials/gcal_token.json (729 bytes)
+- ✅ Google Calendar health check: "up"
+- ✅ End-to-end test: Plan created → Scheduled → 7 events in Google Calendar
+- **Status**: Production-ready and verified
 
 ### Phase 5-6: Documentation & Automation
 - ✅ Created `docs/GOOGLE_CALENDAR_OAUTH_SETUP.md` (OAuth flow guide)
@@ -48,19 +55,7 @@ Successfully completed Phases 3-4 of the Postgres-first memory architecture depl
 
 ## Pending Manual Tasks (User Action Required)
 
-### 1. Complete Google Calendar OAuth Flow (10-15 minutes)
-**Guide**: `docs/GOOGLE_CALENDAR_OAUTH_SETUP.md`
-
-**Quick Steps**:
-1. Get `GOOGLE_CLIENT_ID` from `.env` file
-2. Construct authorization URL with client_id
-3. Visit URL and click "Allow"
-4. Credentials auto-saved to `/app/credentials/gcal_token.json`
-5. Verify: `ssh droplet "cat /home/david/services/planner-api/credentials/gcal_token.json | jq ."`
-
-**Expected**: Planner API health shows "google-calendar: up"
-
-### 2. Upload Open WebUI Custom Functions (10-15 minutes)
+### 1. Upload Open WebUI Custom Functions (10-15 minutes)
 **Guide**: `service-builds/open-webui/FUNCTIONS_DEPLOYMENT.md`
 
 **Quick Steps**:
@@ -72,7 +67,7 @@ Successfully completed Phases 3-4 of the Postgres-first memory architecture depl
    - `reflect_daily.py` - Daily reflection generation
 3. Test in chat interface
 
-### 3. Execute n8n Workflow Updates (15-20 minutes)
+### 2. Execute n8n Workflow Updates (15-20 minutes)
 **Guide**: `service-builds/n8n/N8N_OBSERVER_WORKFLOW_UPDATE.md`
 
 **Quick Steps**:
@@ -83,7 +78,7 @@ Successfully completed Phases 3-4 of the Postgres-first memory architecture depl
    - `weekly-observer-trigger` → `http://planner-api:8091/api/v1/observer/reflect?mode=weekly`
 4. Test each workflow manually
 
-### 4. Configure ToolJet Cloud (Optional - Phase 8)
+### 3. Configure ToolJet Cloud (Optional - Phase 8)
 **Recommended for**: Later phase (not blocking current operations)
 
 ## Testing & Validation

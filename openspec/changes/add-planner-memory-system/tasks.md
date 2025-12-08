@@ -154,7 +154,7 @@
 
 ---
 
-## PHASE 4: Google Calendar OAuth Setup (✅ DOCUMENTATION COMPLETE - USER ACTION PENDING)
+## PHASE 4: Google Calendar OAuth Setup (✅ COMPLETE)
 
 ### 4.1 Create Google Cloud Project
 - [x] 4.1.1 Go to https://console.cloud.google.com/
@@ -179,12 +179,17 @@
 - [x] 4.3.5 Sanitize credentials, use placeholders in documentation
 - [x] 4.3.6 Push documentation to GitHub (commit d337784)
 
-### 4.4 Complete OAuth Flow (⏳ PENDING - USER ACTION)
-- [ ] 4.4.1 Visit authorization URL (instructions in docs/GOOGLE_CALENDAR_OAUTH_SETUP.md)
-- [ ] 4.4.2 Sign in with Google account
-- [ ] 4.4.3 Click "Allow" to grant calendar access
-- [ ] 4.4.4 Verify credentials file created: `/app/credentials/gcal_token.json`
-- [ ] 4.4.5 Test calendar event creation via scheduler endpoint
+### 4.4 Complete OAuth Flow (✅ COMPLETE)
+- [x] 4.4.1 Visit authorization URL (instructions in docs/GOOGLE_CALENDAR_OAUTH_SETUP.md)
+- [x] 4.4.2 Sign in with Google account
+- [x] 4.4.3 Click "Allow" to grant calendar access
+- [x] 4.4.4 Verify credentials file created: `/app/credentials/gcal_token.json`
+- [x] 4.4.5 Test calendar event creation via scheduler endpoint
+- [x] 4.4.6 Add DNS record for planner.bestviable.com (CNAME to Cloudflare Tunnel)
+- [x] 4.4.7 Configure docker-compose with dual networks (docker_proxy + portfolio-network)
+- [x] 4.4.8 Fix volume mount permissions (remove :ro flag for credentials)
+- [x] 4.4.9 Verify Google Calendar health check: "up"
+- [x] 4.4.10 End-to-end test: Create plan → Schedule → Events in Google Calendar
 
 ---
 
@@ -372,20 +377,20 @@
 - Phase 8: Documentation - ⏳ PENDING (1-2 hours)
 
 ### Completion Status
-**Automated Tasks**: 11-13 hours completed (70% of implementation)
+**Automated Tasks**: 11-13 hours completed (75% of implementation)
 - All code written, built, deployed, and tested
 - All documentation created, sanitized, and pushed to GitHub
 - All service endpoints operational and verified
+- Phase 4: Google Calendar OAuth flow completed and tested end-to-end
 
-**Manual User Tasks**: 4-6 hours remaining (30% of implementation)
-- Phase 4.4: Complete Google Calendar OAuth flow (10-15 min)
+**Manual User Tasks**: 2-4 hours remaining (25% of implementation)
 - Phase 6.3: Upload Open WebUI functions to admin panel (10-15 min)
 - Phase 7.2-7.3: Execute n8n workflow updates (15-20 min)
 - Phase 5: Configure ToolJet Cloud admin UI (1-2 hours) - Optional for Phase 1
 - Phase 8: Final documentation cleanup (1-2 hours) - Optional
 
 ### Critical Path (Next Session)
-1. **Immediate** (35 minutes): OAuth flow + Open WebUI functions + n8n workflows
+1. **Immediate** (20-25 minutes): Open WebUI functions + n8n workflows
 2. **Optional** (2-3 hours): ToolJet admin UI + Final documentation
 
 ---
