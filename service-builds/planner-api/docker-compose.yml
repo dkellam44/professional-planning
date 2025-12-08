@@ -1,0 +1,53 @@
+services:
+  planner-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: planner-api:0.2.0
+    container_name: planner-api
+    ports:
+      - "127.0.0.1:8091:8091"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=n8n
+      - POSTGRES_USER=n8n
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - MEMORY_GATEWAY_URL=${MEMORY_GATEWAY_URL:-http://memory-gateway:8090}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
+      - CODA_MCP_URL=${CODA_MCP_URL:-http://coda-mcp:8080}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - SERVICE_DOMAIN=${SERVICE_DOMAIN:-planner.bestviable.com}
+      - CLIENT_ID=${CLIENT_ID:-1}
+      - GCAL_CREDENTIALS_PATH=/app/credentials/gcal.json
+      - GCAL_TIMEZONE=America/Los_Angeles
+    volumes:
+      # Mount Google Calendar credentials
+      - ./credentials:/app/credentials:ro
+    networks:
+      - portfolio-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.planner-api.rule=Host(`planner.bestviable.com`)"
+      - "traefik.http.routers.planner-api.entrypoints=websecure"
+      - "traefik.http.routers.planner-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.planner-api.loadbalancer.server.port=8091"
+      - "traefik.http.routers.planner-api-http.rule=Host(`planner.bestviable.com`)"
+      - "traefik.http.routers.planner-api-http.entrypoints=web"
+      - "traefik.http.routers.planner-api-http.middlewares=redirect-to-https"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8091/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    mem_limit: 350m
+    cpus: "0.5"
+
+networks:
+  portfolio-network:
+    external: true

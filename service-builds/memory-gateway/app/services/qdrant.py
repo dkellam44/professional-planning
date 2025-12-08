@@ -31,11 +31,15 @@ async def initialize():
     try:
         client = QdrantClient(url=settings.qdrant_url)
         # Test connection
-        info = client.get_collection(COLLECTION_NAME)
-        logger.info(f"Qdrant initialized. Collection '{COLLECTION_NAME}' exists")
+        try:
+            info = client.get_collection(COLLECTION_NAME)
+            logger.info(f"Qdrant initialized. Collection '{COLLECTION_NAME}' exists")
+        except Exception as e:
+            logger.warning(f"Collection '{COLLECTION_NAME}' does not exist yet: {e}")
+            # Collection will be created on first vector storage
     except Exception as e:
-        logger.error(f"Failed to initialize Qdrant: {e}")
-        raise
+        logger.warning(f"Qdrant connection failed - will operate in degraded mode: {e}")
+        # Don't fail startup, Qdrant is supplementary
 
 
 async def embed_text(text: str) -> List[float]:
@@ -99,7 +103,8 @@ async def store_memory_vector(
         Success status
     """
     if not client:
-        raise RuntimeError("Qdrant client not initialized")
+        logger.warning("Qdrant client not initialized - skipping vector storage")
+        return False
 
     try:
         # Generate embedding
@@ -152,7 +157,8 @@ async def search_memories(
         List of matching memories with scores
     """
     if not client:
-        raise RuntimeError("Qdrant client not initialized")
+        logger.warning("Qdrant client not initialized - returning empty results")
+        return []
 
     try:
         # Generate query embedding

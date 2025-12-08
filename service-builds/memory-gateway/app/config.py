@@ -3,11 +3,18 @@ Configuration Management
 Pydantic settings for environment variables
 """
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 
 
 class Settings(BaseSettings):
     """Application settings from environment variables"""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=False,
+        extra="ignore"
+    )
 
     # Database
     postgres_host: str = "localhost"
@@ -17,7 +24,13 @@ class Settings(BaseSettings):
     postgres_password: str = ""
 
     # Vector Database
-    qdrant_url: str = "http://localhost:6333"
+    qdrant_host: str = "localhost"
+    qdrant_port: int = 6333
+
+    @property
+    def qdrant_url(self) -> str:
+        """Qdrant connection URL"""
+        return f"http://{self.qdrant_host}:{self.qdrant_port}"
 
     # Cache
     valkey_host: str = "localhost"
@@ -30,6 +43,12 @@ class Settings(BaseSettings):
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
 
+    # Zep Cloud (Long-term Memory)
+    zep_api_key: str = ""
+    zep_project_id: str = ""
+    zep_memory_enabled: bool = True
+    zep_memory_url: str = "https://api.zep.com"
+
     # Logging
     log_level: str = "INFO"
 
@@ -37,8 +56,3 @@ class Settings(BaseSettings):
     def postgres_url(self) -> str:
         """PostgreSQL connection URL"""
         return f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
-        extra = "ignore"

@@ -18,7 +18,7 @@ COPY app/ ./app/
 
 # Health check
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
-    CMD python -c "import requests; requests.get('http://localhost:8090/health')" || exit 1
+    CMD python -c "import requests; requests.get('http://localhost:${PORT:-8090}/health')" || exit 1
 
-# Run application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8090"]
+# Run application (port comes from environment variable, default 8090)
+ENTRYPOINT ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8090}"]

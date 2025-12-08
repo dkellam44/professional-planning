@@ -7,9 +7,18 @@ import logging
 import time
 from fastapi import APIRouter, Query, HTTPException
 
-from app.models import MemoryPayload, MemoryResponse, RecallQuery, RecallResponse
-from app.services import postgres, qdrant, valkey
+from app.config import Settings
+from app.models import (
+    MemoryPayload,
+    MemoryResponse,
+    RecallQuery,
+    RecallResponse,
+    FactPayload,
+    FactResponse,
+)
+from app.services import postgres, qdrant, valkey, zep
 
+settings = Settings()
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -49,7 +58,29 @@ async def remember(payload: MemoryPayload):
             logger.error(f"Failed to store in Postgres: {e}")
             raise HTTPException(status_code=500, detail="Database storage failed")
 
-        # 2. Store vector in Qdrant (semantic search)
+        # 2. Store in Zep Cloud (if enabled)
+        zep_session_id = None
+        if settings.zep_memory_enabled:
+            try:
+                zep_session_id = f"client_{payload.client_id}"
+                success = await zep.add_memory(
+                    session_id=zep_session_id,
+                    content=payload.content,
+                    metadata={
+                        "memory_id": memory_id,
+                        "memory_type": payload.memory_type,
+                        **payload.metadata,
+                    },
+                )
+                if success:
+                    stored_in.append("zep")
+                    logger.info(f"Memory {memory_id} stored in Zep Cloud")
+            except Exception as e:
+                logger.error(f"Failed to store in Zep Cloud: {e}")
+                # Don't fail the request, Zep is supplementary
+                logger.warning("Continuing without Zep Cloud storage")
+
+        # 3. Store vector in Qdrant (semantic search)
         try:
             await qdrant.store_memory_vector(
                 memory_id=memory_id,
@@ -65,7 +96,7 @@ async def remember(payload: MemoryPayload):
             # Don't fail the request, Qdrant is supplementary
             logger.warning("Continuing without Qdrant storage")
 
-        # 3. Cache in Valkey (optional)
+        # 4. Cache in Valkey (optional)
         try:
             cache_key = f"memory:{payload.client_id}:{memory_id}"
             await valkey.set_cache(
@@ -75,6 +106,7 @@ async def remember(payload: MemoryPayload):
                     "content": payload.content,
                     "memory_type": payload.memory_type,
                     "metadata": payload.metadata,
+                    "zep_session_id": zep_session_id,
                 },
             )
             stored_in.append("valkey")
@@ -141,44 +173,73 @@ async def recall(
                 search_time_ms=(time.time() - start_time) * 1000,
             )
 
-        # 2. Search in Qdrant (semantic)
+        # 2. Search in Zep Cloud (if enabled, highest quality semantic search)
         results = []
-        try:
-            qdrant_results = await qdrant.search_memories(
-                query=query,
-                client_id=client_id,
-                k=k,
-                memory_type=memory_type,
-            )
-            results = qdrant_results
-            logger.info(f"Found {len(results)} results in Qdrant for client {client_id}")
-        except Exception as e:
-            logger.warning(f"Qdrant search failed: {e}")
-            logger.info("Falling back to Postgres search")
-
-            # 3. Fallback to Postgres (structured query)
+        if settings.zep_memory_enabled:
             try:
-                events = await postgres.get_events(
-                    client_id=client_id,
-                    event_type=f"memory:{memory_type}" if memory_type else None,
+                zep_session_id = f"client_{client_id}"
+                zep_results = await zep.search_memories(
+                    session_id=zep_session_id,
+                    query=query,
                     limit=k,
+                    min_relevance=0.6,
                 )
-
-                # Convert to result format
                 results = [
                     {
-                        "memory_id": event["id"],
-                        "content": event["payload"].get("content", ""),
-                        "memory_type": event["payload"].get("memory_type", "fact"),
-                        "similarity_score": 0.5,  # No score from SQL
-                        "stored_at": event["created_at"],
-                        "metadata": event.get("metadata", {}),
+                        "memory_id": r["metadata"].get("memory_id", "unknown"),
+                        "content": r["content"],
+                        "memory_type": r["metadata"].get("memory_type", "fact"),
+                        "similarity_score": r["similarity_score"],
+                        "stored_at": r["created_at"],
+                        "metadata": r["metadata"],
+                        "source": "zep",
                     }
-                    for event in events
+                    for r in zep_results
                 ]
-            except Exception as e2:
-                logger.error(f"Postgres fallback also failed: {e2}")
-                raise HTTPException(status_code=500, detail="Search failed")
+                logger.info(f"Found {len(results)} results in Zep Cloud for client {client_id}")
+            except Exception as e:
+                logger.warning(f"Zep Cloud search failed: {e}")
+                logger.info("Falling back to Qdrant search")
+
+        # 3. Fallback to Qdrant (if no Zep results)
+        if not results:
+            try:
+                qdrant_results = await qdrant.search_memories(
+                    query=query,
+                    client_id=client_id,
+                    k=k,
+                    memory_type=memory_type,
+                )
+                results = qdrant_results
+                logger.info(f"Found {len(results)} results in Qdrant for client {client_id}")
+            except Exception as e:
+                logger.warning(f"Qdrant search failed: {e}")
+                logger.info("Falling back to Postgres search")
+
+                # 4. Final fallback to Postgres (structured query)
+                try:
+                    events = await postgres.get_events(
+                        client_id=client_id,
+                        event_type=f"memory:{memory_type}" if memory_type else None,
+                        limit=k,
+                    )
+
+                    # Convert to result format
+                    results = [
+                        {
+                            "memory_id": event["id"],
+                            "content": event["payload"].get("content", ""),
+                            "memory_type": event["payload"].get("memory_type", "fact"),
+                            "similarity_score": 0.5,  # No score from SQL
+                            "stored_at": event["created_at"],
+                            "metadata": event.get("metadata", {}),
+                            "source": "postgres",
+                        }
+                        for event in events
+                    ]
+                except Exception as e2:
+                    logger.error(f"Postgres fallback also failed: {e2}")
+                    raise HTTPException(status_code=500, detail="Search failed")
 
         # Cache the results
         try:
@@ -206,3 +267,80 @@ async def recall(
     except Exception as e:
         logger.error(f"Unexpected error in /recall: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/facts", response_model=FactResponse, status_code=201)
+async def create_fact(payload: FactPayload):
+    """
+    Create a durable fact in Zep Cloud knowledge graph
+
+    Durable facts are long-term statements about entities (users, workflows, etc.)
+    that should be retained and retrieved for contextual reasoning.
+
+    Args:
+        payload: Fact content, entity type, entity ID, and type
+
+    Returns:
+        FactResponse with fact ID and storage layers used
+    """
+    try:
+        start_time = time.time()
+        stored_in = []
+        fact_id = None
+
+        # 1. Create fact in Zep Cloud (if enabled)
+        if settings.zep_memory_enabled:
+            try:
+                zep_fact_id = await zep.create_fact(
+                    content=payload.content,
+                    entity_type=payload.entity_type,
+                    entity_id=payload.entity_id,
+                    metadata=payload.metadata,
+                )
+                if zep_fact_id:
+                    fact_id = zep_fact_id
+                    stored_in.append("zep")
+                    logger.info(f"Fact created in Zep Cloud: {zep_fact_id}")
+            except Exception as e:
+                logger.error(f"Failed to create fact in Zep Cloud: {e}")
+                # Don't fail the request, Zep is supplementary
+
+        # 2. Store in Postgres (optional, for audit trail)
+        try:
+            # If we have a fact_id from Zep, use it; otherwise generate one
+            if not fact_id:
+                fact_id = f"{payload.entity_type}_{payload.entity_id}_{int(time.time())}"
+
+            # Store metadata about the fact creation
+            await postgres.store_memory(
+                client_id=0,  # Use 0 for system-level facts
+                content=payload.content,
+                memory_type=f"fact:{payload.fact_type}",
+                metadata={
+                    "fact_id": fact_id,
+                    "entity_type": payload.entity_type,
+                    "entity_id": payload.entity_id,
+                    "fact_type": payload.fact_type,
+                    **(payload.metadata or {}),
+                },
+            )
+            stored_in.append("postgres")
+            logger.info(f"Fact audit logged in Postgres: {fact_id}")
+        except Exception as e:
+            logger.warning(f"Failed to log fact in Postgres: {e}")
+
+        elapsed_ms = (time.time() - start_time) * 1000
+        logger.info(f"Fact {fact_id} created in {len(stored_in)} layers ({elapsed_ms:.1f}ms)")
+
+        return FactResponse(
+            fact_id=fact_id or "unknown",
+            entity_type=payload.entity_type,
+            entity_id=payload.entity_id,
+            fact_type=payload.fact_type,
+            content=payload.content,
+            stored_in=stored_in,
+        )
+
+    except Exception as e:
+        logger.error(f"Unexpected error in /facts: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create fact")

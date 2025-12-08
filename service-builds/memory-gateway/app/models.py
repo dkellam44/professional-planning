@@ -88,6 +88,42 @@ class RecallResponse(BaseModel):
 
 
 # ============================================================================
+# Facts (Durable Statements)
+# ============================================================================
+
+
+class FactPayload(BaseModel):
+    """Fact creation request"""
+
+    content: str = Field(..., description="Fact statement")
+    entity_type: str = Field(
+        ...,
+        description="Type of entity: user, workflow, engagement, project, venture",
+    )
+    entity_id: str = Field(..., description="Entity identifier")
+    fact_type: str = Field(
+        default="observation",
+        description="Fact type: preference, constraint, identity, pattern, result",
+    )
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
+
+
+class FactResponse(BaseModel):
+    """Fact creation response"""
+
+    fact_id: str = Field(..., description="Fact UUID or database ID")
+    entity_type: str = Field(..., description="Entity type")
+    entity_id: str = Field(..., description="Entity ID")
+    fact_type: str = Field(..., description="Fact type")
+    content: str = Field(..., description="Fact statement")
+    stored_in: List[str] = Field(
+        default=[],
+        description="Storage layers: postgres, zep",
+    )
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ============================================================================
 # Error Responses
 # ============================================================================
 

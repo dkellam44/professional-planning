@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import Settings
 from app.routes import memory, health
-from app.services import postgres, qdrant, valkey
+from app.services import postgres, qdrant, valkey, zep
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -37,6 +37,10 @@ async def lifespan(app: FastAPI):
         await qdrant.initialize()
         logger.info("✓ Qdrant client initialized")
 
+        if settings.zep_memory_enabled:
+            await zep.initialize()
+            logger.info("✓ Zep Cloud client initialized")
+
         logger.info("✓ Memory Gateway ready")
     except Exception as e:
         logger.error(f"✗ Startup failed: {e}")
@@ -49,6 +53,8 @@ async def lifespan(app: FastAPI):
     try:
         await postgres.close()
         await valkey.close()
+        if settings.zep_memory_enabled:
+            await zep.close()
         logger.info("✓ Connections closed")
     except Exception as e:
         logger.error(f"✗ Shutdown error: {e}")
@@ -105,10 +111,12 @@ async def global_exception_handler(request, exc):
 
 if __name__ == "__main__":
     import uvicorn
+    import os
 
+    port = int(os.getenv("PORT", 8090))
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=8090,
+        port=port,
         log_level="info",
     )

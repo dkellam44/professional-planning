@@ -1,0 +1,51 @@
+services:
+  planner-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: planner-engine:0.1.0
+    container_name: planner-engine
+    ports:
+      - "127.0.0.1:8091:8091"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=n8n
+      - POSTGRES_USER=n8n
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - MEMORY_GATEWAY_URL=${MEMORY_GATEWAY_URL}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
+      - CODA_MCP_URL=${CODA_MCP_URL:-http://coda-mcp:8080}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - SERVICE_DOMAIN=${SERVICE_DOMAIN:-planner.bestviable.com}
+      - CLIENT_ID=${CLIENT_ID:-1}
+    networks:
+      - docker_proxy
+      - docker_syncbricks
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.planner-engine.rule=Host(`planner.bestviable.com`)"
+      - "traefik.http.routers.planner-engine.entrypoints=websecure"
+      - "traefik.http.routers.planner-engine.tls.certresolver=letsencrypt"
+      - "traefik.http.services.planner-engine.loadbalancer.server.port=8091"
+      - "traefik.http.routers.planner-engine-http.rule=Host(`planner.bestviable.com`)"
+      - "traefik.http.routers.planner-engine-http.entrypoints=web"
+      - "traefik.http.routers.planner-engine-http.middlewares=redirect-to-https"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8091/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    mem_limit: 200m
+    cpus: "0.5"
+
+networks:
+  docker_proxy:
+    external: true
+  docker_syncbricks:
+    external: true
