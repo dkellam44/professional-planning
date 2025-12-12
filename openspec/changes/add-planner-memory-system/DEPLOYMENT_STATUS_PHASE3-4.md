@@ -49,7 +49,7 @@ Successfully completed Phases 3-4 of the Postgres-first memory architecture depl
 | memory-gateway | ⚠️ Unhealthy* | 493MB | https://memory.bestviable.com |
 | n8n | ✅ Healthy | 1.02GB | https://n8n.bestviable.com |
 | postgres | ✅ Healthy | 273MB | localhost:5432 |
-| open-webui | ✅ Healthy | — | https://chat.bestviable.com |
+| open-webui | ✅ Healthy | — | https://openwebui.bestviable.com |
 
 *Memory Gateway shows unhealthy in health check but service is functional
 
@@ -59,7 +59,7 @@ Successfully completed Phases 3-4 of the Postgres-first memory architecture depl
 **Guide**: `service-builds/open-webui/FUNCTIONS_DEPLOYMENT.md`
 
 **Quick Steps**:
-1. Navigate to: https://chat.bestviable.com/admin/functions
+1. Navigate to: https://openwebui.bestviable.com/admin/functions
 2. Upload 4 Python functions from guide:
    - `create_plan.py` - Generate plans from intent
    - `schedule_tasks.py` - Create calendar events

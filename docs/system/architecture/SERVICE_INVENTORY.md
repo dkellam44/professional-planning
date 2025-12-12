@@ -179,7 +179,7 @@ traefik.http.services.SERVICE.loadbalancer.server.port: "8080"
 **Configuration**: OpenRouter API integration for multi-model access
 **Data**: Restored from backup (webui.db, cache, vector_db)
 **Volume**: apps_openweb_data (persistent, ~977MB restored)
-**Access**: https://openweb.bestviable.com (HTTP/2 301 redirect to login)
+**Access**: https://openwebui.bestviable.com (HTTP/2 301 redirect to login)
 **API Key**: OPENROUTER_API_KEY in .env file
 **Resource Usage**: ~600MB RAM
 **Notes**: Database and settings restored from Nov 5, 2025 backup

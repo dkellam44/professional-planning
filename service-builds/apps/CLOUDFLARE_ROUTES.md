@@ -54,42 +54,42 @@ In the tunnel's **Public Hostnames** tab, add 3 ingress rules:
 ```
 Domain: logs.bestviable.com
 Service: HTTP
-URL: http://nginx-proxy:80
+URL: http://traefik:80
 ```
 
 ### Route 2: Open WebUI
 ```
-Domain: openweb.bestviable.com
+Domain: openwebui.bestviable.com
 Service: HTTP
-URL: http://nginx-proxy:80
+URL: http://traefik:80
 ```
 
 ### Route 3: Uptime Kuma
 ```
 Domain: kuma.bestviable.com
 Service: HTTP
-URL: http://nginx-proxy:80
+URL: http://traefik:80
 ```
 
 ### (Optional) Route 4: N8N
 ```
 Domain: n8n.bestviable.com
 Service: HTTP
-URL: http://nginx-proxy:80
+URL: http://traefik:80
 ```
 
 ### (Optional) Route 5: Coda MCP
 ```
 Domain: coda.bestviable.com
 Service: HTTP
-URL: http://nginx-proxy:80
+URL: http://traefik:80
 ```
 
-**All routes point to `nginx-proxy:80` because:**
-- nginx-proxy runs on the `n8n_proxy` network (same as Cloudflare tunnel)
+**All routes point to `traefik:80` because:**
+- Traefik runs on the `docker_proxy` network (same as Cloudflare tunnel)
 - It has auto-discovery enabled via Docker labels
-- It routes based on `VIRTUAL_HOST` labels (openweb.bestviable.com, kuma.bestviable.com, etc.)
-- It also handles SSL termination and certificate renewal via acme-companion
+- It routes based on `Host()` rules in Traefik labels (openwebui.bestviable.com, kuma.bestviable.com, etc.)
+- SSL/TLS is terminated at Cloudflare edge (Traefik runs HTTP-only on port 80)
 
 ---
 
@@ -115,11 +115,11 @@ Once DNS resolves, test HTTPS connectivity:
 ```bash
 # Test each endpoint
 curl -I https://logs.bestviable.com
-curl -I https://openweb.bestviable.com
+curl -I https://openwebui.bestviable.com
 curl -I https://kuma.bestviable.com
 
 # Expected: HTTP 200 or redirect to /
-# SSL cert should be valid (issued by Let's Encrypt via acme-companion)
+# SSL handled by Cloudflare (Traefik runs HTTP-only on port 80)
 ```
 
 ---
@@ -247,7 +247,7 @@ Once routes are added and tested, Phase 3 workflows can use external HTTPS webho
 
 ```
 N8N Webhook: https://n8n.bestviable.com/webhook/memory/assemble
-Open WebUI: https://openweb.bestviable.com
+Open WebUI: https://openwebui.bestviable.com
 Pre-hook: https://n8n.bestviable.com/webhook/memory/assemble
 Post-hook: https://n8n.bestviable.com/webhook/memory/writeback
 ```
@@ -260,7 +260,7 @@ These external URLs are required for Open WebUI to call back into n8n webhooks.
 
 1. Add the 3+ routes in Cloudflare UI (5 mins)
 2. Wait 30s for DNS propagation
-3. Test with `curl -I https://openweb.bestviable.com` (should get HTTP 200)
+3. Test with `curl -I https://openwebui.bestviable.com` (should get HTTP 200)
 4. Proceed to Phase 3: N8N workflow setup
 5. Configure Open WebUI hooks to call n8n webhooks
 

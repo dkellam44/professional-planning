@@ -52,7 +52,7 @@ services:
       - ENABLE_OAUTH_SIGNUP=false
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.openweb.rule=Host(`openweb.bestviable.com`)"
+      - "traefik.http.routers.openweb.rule=Host(`openwebui.bestviable.com`)"
       - "traefik.http.routers.openweb.entrypoints=web"
       - "traefik.http.services.openweb.loadbalancer.server.port=8080"
     volumes:
@@ -62,10 +62,11 @@ services:
         limits:
           memory: 1000m
     healthcheck:
-      test: ["CMD", "sh", "-c", "wget --quiet --tries=1 --spider http://localhost:8080 || exit 1"]
-      interval: 60s
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
+      start_period: 30s
 
   # ============================================================================
   # OPENMEMORY - Memory Backend (DEFERRED - Build custom image in Phase 3)

@@ -111,7 +111,7 @@ docker-compose up -d # Restart with fresh environment loading
 
 ### Phase 6.3: Upload Open WebUI Functions (10-15 min)
 **Guide**: `service-builds/open-webui/FUNCTIONS_DEPLOYMENT.md`
-1. Navigate to https://chat.bestviable.com/admin/functions
+1. Navigate to https://openwebui.bestviable.com/admin/functions
 2. Upload 4 Python files from guide
 3. Test in chat: "Create a plan for X"
 

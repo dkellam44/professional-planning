@@ -1108,7 +1108,7 @@ curl https://planner.bestviable.com/health
 - **Cons**: Chat-centric UX (not ideal for calendar/planning views), requires adaptation of Memory Gateway APIs to Open WebUI's function format, less visual than dashboard options
 - **Fit**: Best for conversational interaction with planning system, good for users who prefer chat over dashboards, aligns with personal chat interface preference
 - **Integration Path**:
-  - Deploy Open WebUI via Docker on droplet (Traefik routing to `chat.bestviable.com`)
+  - Deploy Open WebUI via Docker on droplet (Traefik routing to `openwebui.bestviable.com`)
   - Connect Memory Gateway, Planner, Scheduler APIs as Open WebUI functions
   - Use ChatGPT/Claude subscriptions for LLM calls (offload cost from OpenRouter)
   - Estimated RAM: 200-300MB
@@ -1211,7 +1211,7 @@ curl https://planner.bestviable.com/health
 - ✅ Custom functions implemented (create_plan.py, schedule_tasks.py, query_memory.py, reflect_daily.py)
 - ✅ Comprehensive deployment guide created (300+ lines)
 - ⏳ **PENDING USER ACTION**: Upload functions to Open WebUI admin panel
-  - Navigate to https://chat.bestviable.com/admin/functions, upload 4 Python files
+  - Navigate to https://openwebui.bestviable.com/admin/functions, upload 4 Python files
   - Expected time: 10-15 minutes
 
 ### Phase 7 (N8N Workflows)
