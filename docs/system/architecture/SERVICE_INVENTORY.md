@@ -166,8 +166,8 @@ traefik.http.services.SERVICE.loadbalancer.server.port: "8080"
 
 ## Application Services (Monitoring & Chat)
 
-### 8. openweb
-**Container**: `openweb`
+### 8. openwebui
+**Container**: `openwebui`
 **Image**: ghcr.io/open-webui/open-webui:0.5.0
 **Port**: 8080
 **Networks**: `docker_proxy` (external), `docker_syncbricks` (internal)
@@ -292,7 +292,7 @@ Services accessible via Cloudflare Tunnel and Traefik:
 - **cloudflared** - Cloudflare tunnel endpoint
 - **n8n** - external via Traefik labels
 - **coda-mcp** - external via Traefik labels
-- **openweb** - external via Traefik labels
+- **openwebui** - external via Traefik labels
 - **dozzle** - external via Traefik labels (logs.bestviable.com)
 - **uptime-kuma** - external via Traefik labels (kuma.bestviable.com)
 - **planner-api** - external via Traefik labels (planner.bestviable.com)
@@ -304,7 +304,7 @@ Backend services isolated from direct external access (only via Traefik):
 - **qdrant** - vector database
 - **n8n** - automation workflows
 - **coda-mcp** - MCP server backend
-- **openweb** - chat interface backend
+- **openwebui** - chat interface backend
 
 ### Internal Network: `portfolio-network` (Custom)
 Dedicated network for planner-api and memory-gateway services:
@@ -392,7 +392,7 @@ curl http://localhost:3737/health  # archon-ui
    - **Status**: Can be deployed if needed in future phases
    - **Action**: Monitor if needed, deploy when required
 
-2. **Openweb Data Age**:
+2. **Open WebUI Data Age**:
    - **Status**: Database restored from Nov 5, 2025 backup
    - **Impact**: Minor - chat history preserved, but 1 week old
    - **Resolution**: Data updates continuously as service is used

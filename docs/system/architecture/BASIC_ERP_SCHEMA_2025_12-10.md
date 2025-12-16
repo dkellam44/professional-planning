@@ -1,3 +1,7 @@
+---
+Deprication Notice: 2025-12-09 - Coda has been demoted from the workflow SoT in the BestViable ERP system and replaced with PostgreSQL. This is the foundational ERP schema that needs to be updated for DAG state-tracking and migrated with PostgreSQL(not yet built)
+---
+
 # Coda Schema Reference
 
 **Cross-reference to Authoritative Schema Documentation**
